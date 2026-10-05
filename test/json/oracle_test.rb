@@ -68,7 +68,7 @@ class JSONOracleTest < Minitest::Test
       parsed = message.class.decode_json(expected, registry: set.registry)
       assert_equal message, parsed, "we read the oracle's JSON for #{name} differently: #{expected}"
       # google-protobuf refuses to parse a wrapper at the top level
-      next if name.end_with?("Value") && WRAPPERS.include?(name)
+      next if WRAPPERS.include?(name)
       back = message.class.decode(oracle.encode(oracle.decode_json(actual)))
       assert_equal message, back, "the oracle reads our JSON for #{name} differently: #{actual}"
     end
