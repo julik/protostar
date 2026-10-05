@@ -98,6 +98,17 @@ module Protostar
         end
       end
 
+      VISIBILITIES = {
+        nil => nil, :local => :local, :export => :export, :VISIBILITY_LOCAL => :local,
+        :VISIBILITY_EXPORT => :export, :VISIBILITY_UNSET => nil
+      }.freeze
+
+      # :local or :export from either spelling; nil when unset
+      # @api private
+      def self.visibility(value)
+        VISIBILITIES.fetch(value) { raise Error, "unknown visibility #{value.inspect}" }
+      end
+
       # Inclusive bounds of an Integer or a Range
       # @api private
       def self.bounds(item)
@@ -117,7 +128,7 @@ module Protostar
 
         # A message type
         # @param name [String]
-        # @param visibility [Symbol, nil] :VISIBILITY_LOCAL or :VISIBILITY_EXPORT (edition 2024)
+        # @param visibility [Symbol, nil] :local or :export (edition 2024)
         # @param options [Hash, nil]
         # @yieldparam m [Message]
         # @return [Message]
@@ -125,7 +136,7 @@ module Protostar
           name = name.to_s
           descriptor = Schema::Message.new(name: name, full_name: qualify(name), file: @file_draft.descriptor,
             containing_message: containing_message, index: @messages.size)
-          draft = Message.new(@file_draft, descriptor, visibility, options)
+          draft = Message.new(@file_draft, descriptor, Draft.visibility(visibility), options)
           @messages << draft
           @file_draft.register(descriptor)
           block&.call(draft)
@@ -139,7 +150,7 @@ module Protostar
           name = name.to_s
           descriptor = Schema::Enum.new(name: name, full_name: qualify(name), file: @file_draft.descriptor,
             containing_message: containing_message, index: @enums.size)
-          draft = Enum.new(@file_draft, descriptor, scope_name, visibility, options)
+          draft = Enum.new(@file_draft, descriptor, scope_name, Draft.visibility(visibility), options)
           @enums << draft
           @file_draft.register(descriptor)
           block&.call(draft)

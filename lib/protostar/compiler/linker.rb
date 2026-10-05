@@ -712,19 +712,19 @@ module Protostar
         return true unless symbol.type? && !symbol.local?
         descriptor = symbol.object
         visibility = descriptor.visibility
-        if visibility.nil? || visibility == :VISIBILITY_UNSET
+        if visibility.nil?
           visibility = case descriptor.features.default_symbol_visibility
-          when :EXPORT_ALL then :VISIBILITY_EXPORT
-          when :EXPORT_TOP_LEVEL then descriptor.containing_message ? :VISIBILITY_LOCAL : :VISIBILITY_EXPORT
-          when :LOCAL_ALL, :STRICT then :VISIBILITY_LOCAL
-          else :VISIBILITY_EXPORT
+          when :EXPORT_ALL then :export
+          when :EXPORT_TOP_LEVEL then descriptor.containing_message ? :local : :export
+          when :LOCAL_ALL, :STRICT then :local
+          else :export
           end
           explicit = false
         else
           explicit = true
         end
-        return true if visibility == :VISIBILITY_EXPORT
-        reason = if explicit && descriptor.visibility == :VISIBILITY_LOCAL
+        return true if visibility == :export
+        reason = if explicit && descriptor.visibility == :local
           "It is explicitly marked 'local'"
         else
           "It defaulted to local from file-level 'option features.default_symbol_visibility = " \

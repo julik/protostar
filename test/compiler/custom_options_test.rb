@@ -84,6 +84,7 @@ class CompilerCustomOptionsTest < Minitest::Test
   def each_options(ours, golden, type, path = [], &block)
     yield type, ours.options, golden.options, path if ours.has_options?
     OPTIONS.each do |key, child_type|
+      next unless ours.class.descriptor.fields_by_name.key?(key.to_s)
       ours[key.to_s].each_with_index do |child, i|
         each_options(child, golden[key.to_s][i], child_type, path + [key, i], &block)
       end

@@ -350,12 +350,12 @@ module Protostar
       # descriptor.proto's SymbolVisibility for {Message#visibility} and {Enum#visibility}
       # @api private
       def self.visibility(symbol)
-        symbol
+        (symbol == :local) ? :VISIBILITY_LOCAL : :VISIBILITY_EXPORT
       end
 
       # @api private
       def self.visibility_symbol(proto)
-        proto
+        Draft.visibility(proto)
       end
 
       # Message values to and from wire bytes, driven by {Schema::Message}s:

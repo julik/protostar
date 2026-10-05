@@ -171,7 +171,8 @@ module Protostar
 
       # A nested (or top-level) message
       # @param name [String]
-      # @param visibility [Symbol, nil] :VISIBILITY_LOCAL or :VISIBILITY_EXPORT (edition 2024)
+      # @param visibility [Symbol, nil] :local or :export (edition 2024); :VISIBILITY_LOCAL and
+      #   :VISIBILITY_EXPORT are read the same
       # @param options [Hash, nil] MessageOptions verbatim
       # @yieldparam m [MessageBuilder]
       def message(name, visibility: nil, options: nil, **message_options, &block)

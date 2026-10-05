@@ -872,10 +872,10 @@ module Protostar
         container = enum.containing_message
         return false unless container
         local_default = %i[STRICT LOCAL_ALL].include?(@file.features.default_symbol_visibility)
-        exported = !local_default || enum.visibility == :VISIBILITY_EXPORT
+        exported = !local_default || enum.visibility == :export
         return false unless exported
         return false if container.containing_message
-        local = container.visibility == :VISIBILITY_LOCAL || (container.visibility.nil? && local_default)
+        local = container.visibility == :local || (container.visibility.nil? && local_default)
         return false unless local
         container.reserved_ranges.size == 1 && container.reserved_ranges[0] == (1..MAX_FIELD_NUMBER)
       end

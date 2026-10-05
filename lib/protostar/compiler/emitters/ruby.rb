@@ -110,7 +110,7 @@ module Protostar
         def message(out, depth, var, desc, path)
           comment(out, depth, path)
           args = [Literal.string(desc.name)]
-          args << "visibility: #{desc.visibility.inspect}" if desc.visibility
+          args << "visibility: #{Schema::Proto.visibility(desc.visibility).inspect}" if desc.visibility
           args.concat(option_args(desc.options))
           head = call("#{var}.message", args, depth)
           body = +""
@@ -330,7 +330,7 @@ module Protostar
         def enum(out, depth, var, desc, path)
           comment(out, depth, path)
           args = [Literal.string(desc.name)]
-          args << "visibility: #{desc.visibility.inspect}" if desc.visibility
+          args << "visibility: #{Schema::Proto.visibility(desc.visibility).inspect}" if desc.visibility
           args.concat(option_args(desc.options))
           out << ind(depth) << call("#{var}.enum", args, depth) << " do |e|\n"
           desc.values.each_with_index do |v, i|

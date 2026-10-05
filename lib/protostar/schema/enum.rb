@@ -18,7 +18,7 @@ module Protostar
       attr_reader :reserved_ranges
       # @return [Array<String>]
       attr_reader :reserved_names
-      # @return [Symbol, nil] declared `visibility`
+      # @return [Symbol, nil] declared `visibility`: :local or :export (edition 2024), nil when not declared
       attr_reader :visibility
 
       # @api private
