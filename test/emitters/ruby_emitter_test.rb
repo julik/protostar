@@ -94,7 +94,7 @@ class RubyEmitterTest < Minitest::Test
     ]}])
     assert_includes source, '\#{x}'
     assert_includes source, "\\u{200B}"
-    assert_includes source, "\"\\x01\\xFF\".b"
+    assert_includes source, 'unknown_fields: "\xC2\xB8\x02\x01\xFF".b'
   end
 
   def test_comments_come_from_source_info
@@ -169,7 +169,7 @@ class RubyEmitterTest < Minitest::Test
     sources = {"rt/io/opts.proto" => opts, "rt/io/app.proto" => user}
     file = Protostar::Compiler.new.compile(["rt/io/app.proto"], sources: sources).last
     source = Emitters::Ruby.new.definition(file)
-    assert_includes source, "__unknown_fields: [[50001, 0, \"\\a\".b]]"
+    assert_includes source, 'f.message "M", deprecated: true, unknown_fields: "\x88\xB5\x18\a".b'
     refute_includes source, "opts.level"
     pool = Protostar::Schema::Pool.new
     saved = Protostar.generated_pool

@@ -5,6 +5,17 @@ require_relative "protostar/version"
 module Protostar
   class Error < StandardError; end
 
+  # Warns in Ruby's `:deprecated` category (shown under `ruby -w` or
+  # `-W:deprecated`), naming the first caller outside protostar
+  # @api private
+  def self.deprecated(old, replacement)
+    lib = __dir__ + "/"
+    site = caller_locations.find { |l| !l.path.start_with?(lib) }
+    where = site ? "#{site.path}:#{site.lineno}: " : ""
+    warn("#{where}warning: protostar: #{old} is deprecated and goes away in 0.2.0, write #{replacement} " \
+      "(protostar compile writes the new spelling)", category: :deprecated)
+  end
+
   # Short names for the well-known types: `Protostar::Timestamp` is
   # `Protostar::Google::Protobuf::Timestamp`. Each loads its bootstrap file
   # on first use, so `require "protostar"` does not.

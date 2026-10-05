@@ -110,7 +110,7 @@ module Protostar
         def message(out, depth, var, desc, path)
           comment(out, depth, path)
           args = [Literal.string(desc.name)]
-          args << "visibility: #{Schema::Proto.visibility(desc.visibility).inspect}" if desc.visibility
+          args << "visibility: #{desc.visibility.inspect}" if desc.visibility
           args.concat(option_args(desc.options))
           head = call("#{var}.message", args, depth)
           body = +""
@@ -330,7 +330,7 @@ module Protostar
         def enum(out, depth, var, desc, path)
           comment(out, depth, path)
           args = [Literal.string(desc.name)]
-          args << "visibility: #{Schema::Proto.visibility(desc.visibility).inspect}" if desc.visibility
+          args << "visibility: #{desc.visibility.inspect}" if desc.visibility
           args.concat(option_args(desc.options))
           out << ind(depth) << call("#{var}.enum", args, depth) << " do |e|\n"
           desc.values.each_with_index do |v, i|
@@ -371,29 +371,29 @@ module Protostar
         def option_args(options)
           return [] unless options.declared?
           h = dsl_hash(options)
-          if h.empty? || h.key?(:__unknown_fields) || h.key?(:options)
-            return [["options: ", h]]
-          end
-          h.map do |key, value|
-            (key == :__extensions) ? ["extensions: ", value] : ["#{key}: ", value]
-          end
+          return [["options: ", h]] if h.empty? || h.key?(:options)
+          h.map { |key, value| ["#{key}: ", value] }
         end
 
-        # An options message (or a message inside one) as the DSL spells it
-        # verbatim: fields by name, `__extensions` by full name, and
-        # `__unknown_fields` as `[number, wire_type, bytes]`. An extension the
-        # file reaches only through `import option` is written as unknown
-        # bytes, as protoc's own generator embeds it: the generated file does
-        # not load that import, so it may not be there to name the option.
+        # An options message (or a message inside one) as the DSL spells it:
+        # fields by name, `extensions` by full name, `unknown_fields` as wire
+        # bytes; a field named like either of those two takes a String key. An
+        # extension the file reaches only through `import option` is written
+        # as unknown bytes, as protoc's own generator embeds it: the generated
+        # file does not load that import, so it may not be there to name the
+        # option.
         def dsl_hash(value)
-          h = value.fields.transform_values { |v| dsl_value(v) }
+          h = {}
+          value.fields.each { |k, v| h[RESERVED_KEYS.include?(k) ? k.to_s : k] = dsl_value(v) }
           named, unnamed = value.extensions.partition { |f, _| reachable?(f) }
-          h[:__extensions] = named.to_h { |f, v| [f.full_name, dsl_value(v)] } unless named.empty?
+          h[:extensions] = named.to_h { |f, v| [f.full_name, dsl_value(v)] } unless named.empty?
           unknown = value.unknown_fields
           unnamed.each { |f, v| unknown += Schema::MessageValue.new({}, {f => v}).encode(f.extendee) }
-          h[:__unknown_fields] = unknown_triples(unknown) unless unknown.empty?
+          h[:unknown_fields] = unknown.b unless unknown.empty?
           h
         end
+
+        RESERVED_KEYS = %i[extensions unknown_fields].freeze
 
         # Whether an extension is defined by the file or one it imports, so
         # that loading the generated file can find it
@@ -418,18 +418,6 @@ module Protostar
           when Array then value.map { |v| dsl_value(v) }
           else value
           end
-        end
-
-        def unknown_triples(bytes)
-          r = Wire::Reader.new(bytes)
-          out = []
-          until r.eof?
-            number, wire_type = r.read_tag
-            start = r.pos
-            r.skip_field(number, wire_type)
-            out << [number, wire_type, bytes.byteslice(start, r.pos - start)]
-          end
-          out
         end
 
         # A call on one line when it fits. Otherwise the top-level call puts
