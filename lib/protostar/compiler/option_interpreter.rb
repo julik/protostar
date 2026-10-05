@@ -6,12 +6,12 @@ module Protostar
     # `[field, value]` (`value` is itself a list of entries for message
     # fields), accumulated per element the way protoc accumulates unknown
     # fields, so "already set" checks and the merging of `(a).b = 1` with
-    # `(a).c = 2` behave as in protoc. The entries are then folded into the
-    # options hash: options message fields by name, extensions under
-    # `:__extensions` by full name.
+    # `(a).c = 2` behave as in protoc. The entries are then folded into a
+    # {Schema::MessageValue}: options message fields by name, extensions by
+    # their {Schema::Field}.
     #
-    # Option types are read from built descriptors: those in the pool, and
-    # for the file being linked a structural build of it without options, so
+    # Option types are read from descriptors: those in the pool, and for the
+    # file being linked its draft, linked but not yet given options, so
     # options declared and used in the same file (descriptor.proto's own
     # included) resolve the same way.
     #
@@ -38,9 +38,9 @@ module Protostar
       end
 
       # @param pending [Array<Linker::Pending>]
-      # @return [Hash{AST::Node => Hash}] the options hash of every element that declared options
+      # @return [Hash{AST::Node => Schema::MessageValue}] the options of every element that declared options
       def run(pending)
-        @local = Schema::Builder.build(@linker.structural_hash, pool: @pool)
+        @local = @linker.draft.descriptor
         state = pending.map { |p| [p, [], []] }
         state.each { |p, first, _| interpret(p, first, skip_extensions: true) }
         if block_given?
@@ -54,17 +54,14 @@ module Protostar
         state.each { |p, first, second| interpret(p, second, skip_extensions: false, earlier: first) }
         result = {}.compare_by_identity
         state.each do |p, first, second|
-          hash = p.options.known.dup
-          fold(first + second, hash)
-          result[p.node] = hash
+          result[p.node] = fold(first + second, p.options.known)
         end
         result
       end
 
       # A Schema descriptor for a symbol table entry
       def schema_of(symbol)
-        return nil if symbol.nil?
-        symbol.local? ? @local.find_symbol(symbol.full_name) : symbol.object
+        symbol&.object
       end
 
       # The options message to interpret against, protoc's choice: the pool's
@@ -332,9 +329,12 @@ module Protostar
 
       public
 
-      # Folds entries into a hash the way parsing their serialized form would:
-      # repeated fields append, message fields merge, scalars take the last value
-      def fold(entries, into = {})
+      # Folds entries into a value the way parsing their serialized form
+      # would: repeated fields append, message fields merge, scalars take the
+      # last value
+      # @param known [Hash{Symbol => Object}] fields set before any entry (the parser's `map_entry`)
+      # @return [Schema::MessageValue]
+      def fold(entries, known = nil)
         merged = {}.compare_by_identity
         entries.each do |field, value|
           if (field.type == :message || field.type == :group) && !field.repeated?
@@ -344,27 +344,19 @@ module Protostar
             merged[field] << value
           end
         end
+        fields = known ? known.dup : {}
+        extensions = {}
         merged.each do |field, values|
-          target = if field.extension?
-            into[:__extensions] ||= {}
-          else
-            into
-          end
-          key = field.extension? ? field.full_name : field.name.to_sym
-          if field.type == :message || field.type == :group
-            if field.repeated?
-              list = (target[key] ||= [])
-              values.each { |v| list << fold(v) }
-            else
-              target[key] = fold(values, target[key] || {})
-            end
+          target, key = field.extension? ? [extensions, field] : [fields, field.name.to_sym]
+          target[key] = if field.type == :message || field.type == :group
+            field.repeated? ? values.map { |v| fold(v) } : fold(values)
           elsif field.repeated?
-            (target[key] ||= []).concat(values)
+            values
           else
-            target[key] = values.last
+            values.last
           end
         end
-        into
+        Schema::MessageValue.new(fields, extensions)
       end
     end
   end

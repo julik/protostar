@@ -347,14 +347,11 @@ module Protostar
         fixed32: 5, sfixed32: 5, float: 5
       }.freeze
 
-      def self.encode(type, hash)
+      # @param type [Schema::Message]
+      # @param value [Schema::MessageValue]
+      def self.encode(type, value)
         out = "".b
-        fields = type.fields.map { |f| [f, hash[f.name.to_sym]] }
-        (hash[:__extensions] || {}).each do |name, value|
-          ext = type.file.all_extensions.find { |e| e.full_name == name } ||
-            type.extensions.find { |e| e.full_name == name }
-          fields << [ext, value] if ext
-        end
+        fields = type.fields.map { |f| [f, value[f.name]] } + value.extensions.to_a
         fields.sort_by { |f, _| f.number }.each do |field, value|
           next if value.nil?
           if field.repeated?

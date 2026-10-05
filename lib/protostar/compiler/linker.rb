@@ -3,18 +3,40 @@
 module Protostar
   class Compiler
     # Links one parsed file against the pool, the way protoc's
-    # DescriptorBuilder does: registers its symbols, resolves every name,
-    # interprets options, and emits the descriptor hash protoc's
-    # `FileDescriptor::CopyTo` would write. It reports protoc's errors in
-    # protoc's order, each against the AST node and location kind protoc
-    # reports it at; {Validator} adds the checks protoc runs once the file is built.
+    # DescriptorBuilder does: drafts a {Schema::File} as it registers the
+    # file's symbols, resolves every name onto the draft, interprets options
+    # into it, and freezes it. It reports protoc's errors in protoc's order,
+    # each against the AST node and location kind protoc reports it at;
+    # {Validator} adds the checks protoc runs once the file is built.
     #
     # @api private
     class Linker
-      # One error or warning. `node` is the AST node whose recorded position
-      # protoc reports (nil for none), `location` the kind of position, or for
-      # :import the imported file name
-      Problem = ::Struct.new(:severity, :node, :location, :message, :import)
+      # One error or warning
+      class Problem
+        # @return [Symbol] :error or :warning
+        attr_reader :severity
+        # @return [AST::Node, nil] whose recorded position protoc reports, nil for none
+        attr_reader :node
+        # @return [Symbol, nil] the kind of position (:name, :number, ...), or :import
+        attr_reader :location
+        # @return [String]
+        attr_reader :message
+        # @return [String, nil] for an :import problem, the imported file name
+        attr_reader :import
+
+        def initialize(severity:, message:, node: nil, location: nil, import: nil)
+          @severity = severity
+          @node = node
+          @location = location
+          @message = message
+          @import = import
+          freeze
+        end
+
+        def error?
+          @severity == :error
+        end
+      end
 
       MAX_FIELD_NUMBER = 536_870_911
       INT32_MAX = 2**31 - 1
@@ -31,7 +53,29 @@ module Protostar
       }.freeze
 
       # The options of one element awaiting interpretation
-      Pending = ::Struct.new(:node, :kind, :name_scope, :element_name, :path, :options, :result)
+      class Pending
+        # @return [AST::Node]
+        attr_reader :node
+        # @return [Symbol] which options message applies: a key of {OPTIONS_TYPES}
+        attr_reader :kind
+        # @return [String] the scope custom option names are looked up from
+        attr_reader :name_scope
+        # @return [Array<Integer>] source path of the element's `options` field
+        attr_reader :path
+
+        def initialize(node:, kind:, name_scope:, path:)
+          @node = node
+          @kind = kind
+          @name_scope = name_scope
+          @path = path
+          freeze
+        end
+
+        # @return [AST::Options] the uninterpreted options
+        def options
+          @node.options
+        end
+      end
 
       # @return [Array<Problem>]
       attr_reader :problems
@@ -72,6 +116,7 @@ module Protostar
         @pending = []
         @hints = {}
         @locations = ast.locations
+        @descriptors = {}.compare_by_identity
       end
 
       # @return [OptionInterpreter, nil] set once options have been interpreted
@@ -91,7 +136,7 @@ module Protostar
 
       # @return [Boolean] whether any error was reported
       def errors?
-        @problems.any? { |p| p.severity == :error }
+        @problems.any?(&:error?)
       end
 
       # Runs every phase up to building the {Schema::File}
@@ -109,30 +154,14 @@ module Protostar
         @file
       end
 
-      # The CopyTo hash of the file with the given options per element
-      # @param options [Hash{AST::Node => Hash}] compare_by_identity
-      # @return [Hash]
-      def descriptor_hash(options)
-        @option_hashes = options
-        h = {name: @ast.name}
-        h[:package] = @ast.package if @ast.package && !@ast.package.empty?
-        h[:dependency] = @ast.dependency.dup unless @ast.dependency.empty?
-        h[:public_dependency] = @ast.public_dependency.dup unless @ast.public_dependency.empty?
-        h[:weak_dependency] = @ast.weak_dependency.dup unless @ast.weak_dependency.empty?
-        h[:option_dependency] = @ast.option_dependency.dup unless @ast.option_dependency.empty?
-        h[:message_type] = @ast.message_type.map { |m| message_hash(m) } unless @ast.message_type.empty?
-        h[:enum_type] = @ast.enum_type.map { |e| enum_hash(e) } unless @ast.enum_type.empty?
-        h[:service] = @ast.service.map { |s| service_hash(s) } unless @ast.service.empty?
-        h[:extension] = @ast.extension.map { |f| field_hash(f) } unless @ast.extension.empty?
-        put_options(h, @ast)
-        case @edition
-        when :EDITION_PROTO2 then nil
-        when :EDITION_PROTO3 then h[:syntax] = "proto3"
-        else
-          h[:syntax] = "editions"
-          h[:edition] = @edition
-        end
-        h
+      # @return [Schema::Draft::File] the file as drafted so far
+      attr_reader :draft
+
+      # The descriptor drafted for an AST node: the file, a message, field,
+      # oneof, extension range, enum, enum value, service or method
+      # @return [Schema::Descriptor, nil]
+      def descriptor_of(node)
+        node.is_a?(AST::File) ? @draft.descriptor : @descriptors[node]
       end
 
       # Every element in protoc's VisitDescriptors order, as [node, kind]
@@ -150,19 +179,19 @@ module Protostar
 
       # Records an error against a node's recorded position
       def error(node, location, message)
-        @problems << Problem.new(:error, node, location, message)
+        @problems << Problem.new(severity: :error, node: node, location: location, message: message)
       end
 
       def warning(node, location, message)
-        @problems << Problem.new(:warning, node, location, message)
+        @problems << Problem.new(severity: :warning, node: node, location: location, message: message)
       end
 
       def import_error(name, message)
-        @problems << Problem.new(:error, nil, :import, message, name)
+        @problems << Problem.new(severity: :error, location: :import, message: message, import: name)
       end
 
       def import_warning(name, message)
-        @problems << Problem.new(:warning, nil, :import, message, name)
+        @problems << Problem.new(severity: :warning, location: :import, message: message, import: name)
       end
 
       # @return [Integer]
@@ -172,11 +201,6 @@ module Protostar
 
       def legacy?
         LEGACY_EDITIONS.include?(@edition)
-      end
-
-      # The interpreted options hash of a node (nil when it declared none)
-      def options_of(node)
-        @option_hashes&.[](node)
       end
 
       private
@@ -263,11 +287,25 @@ module Protostar
         end
         @ast.full_name = @ast.name
         @ast.path = []
-        @ast.message_type.each_with_index { |m, i| build_message(m, nil, i, [4, i]) }
-        @ast.enum_type.each_with_index { |e, i| build_enum(e, nil, i, [5, i]) }
+        @draft = Schema::File.draft(@ast.name, package: package, syntax: draft_syntax,
+          edition: legacy? ? nil : @edition, dependencies: @ast.dependency,
+          public_dependencies: @ast.public_dependency, weak_dependencies: @ast.weak_dependency,
+          option_dependencies: @ast.option_dependency)
+        @ast.message_type.each_with_index { |m, i| build_message(m, nil, i, [4, i], @draft) }
+        @ast.enum_type.each_with_index { |e, i| build_enum(e, nil, i, [5, i], @draft) }
         @ast.service.each_with_index { |s, i| build_service(s, i) }
-        @ast.extension.each_with_index { |f, i| build_field(f, nil, i, [7, i], extension: true) }
-        pend(@ast, :file, "#{package}.dummy", @ast.name, [8])
+        @ast.extension.each_with_index { |f, i| build_field(f, nil, i, [7, i], @draft, extension: true) }
+        pend(@ast, :file, "#{package}.dummy", [8])
+        @draft.__seal
+      end
+
+      # protoc's CopyTo writes no `syntax` for proto2
+      def draft_syntax
+        case @edition
+        when :EDITION_PROTO2 then nil
+        when :EDITION_PROTO3 then :proto3
+        else :editions
+        end
       end
 
       def scope_of(parent)
@@ -278,13 +316,13 @@ module Protostar
         scope.empty? ? name : "#{scope}.#{name}"
       end
 
-      def pend(node, kind, name_scope, element_name, path)
+      def pend(node, kind, name_scope, path)
         return unless node.options
-        @pending << Pending.new(node, kind, name_scope, element_name, path, node.options)
+        @pending << Pending.new(node: node, kind: kind, name_scope: name_scope, path: path)
       end
 
       def add_symbol(kind, node, full_name)
-        existing = @table.add(kind, full_name, node)
+        existing = @table.add(kind, full_name, descriptor_of(node))
         return true unless existing
         if existing.file_name == @ast.name
           dot = full_name.rindex(".")
@@ -308,28 +346,35 @@ module Protostar
         h[:location] = location
       end
 
-      def build_message(message, parent, index, path)
+      def build_message(message, parent, index, path, scope)
         message.parent = parent
         message.index = index
         message.path = path
         message.full_name = qualify(scope_of(parent), message.name)
         full_name = message.full_name
+        draft = scope.message(message.name, visibility: message.visibility)
+        @descriptors[message] = draft.descriptor
 
-        message.oneof_decl.each_with_index do |oneof, i|
+        oneofs = message.oneof_decl.each_with_index.map do |oneof, i|
           oneof.parent = message
           oneof.index = i
           oneof.path = path + [8, i]
           oneof.full_name = "#{full_name}.#{oneof.name}"
-          pend(oneof, :oneof, oneof.full_name, oneof.full_name, oneof.path + [2])
+          @descriptors[oneof] = draft.oneof(oneof.name)
+          pend(oneof, :oneof, oneof.full_name, oneof.path + [2])
           add_symbol(:oneof, oneof, oneof.full_name)
+          @descriptors[oneof]
         end
-        message.field.each_with_index { |f, i| build_field(f, message, i, path + [2, i], extension: false) }
-        message.enum_type.each_with_index { |e, i| build_enum(e, message, i, path + [4, i]) }
+        message.field.each_with_index do |f, i|
+          build_field(f, message, i, path + [2, i], draft, extension: false, oneofs: oneofs)
+        end
+        message.enum_type.each_with_index { |e, i| build_enum(e, message, i, path + [4, i], draft) }
         message.extension_range.each_with_index do |range, i|
           range.parent = message
           range.index = i
           range.path = path + [5, i]
           range.full_name = full_name
+          @descriptors[range] = draft.extension_range(range.start..(range.end - 1))
           if range.start <= 0
             hint(message, range, :number, range.start, range.end)
             error(range, :number, "Extension numbers must be positive integers.")
@@ -337,10 +382,11 @@ module Protostar
           if range.start >= range.end
             error(range, :number, "Extension range end number must be greater than start number.")
           end
-          pend(range, :extension_range, full_name, full_name, range.path + [3])
+          pend(range, :extension_range, full_name, range.path + [3])
         end
-        message.extension.each_with_index { |f, i| build_field(f, message, i, path + [6, i], extension: true) }
+        message.extension.each_with_index { |f, i| build_field(f, message, i, path + [6, i], draft, extension: true) }
         message.reserved_range.each do |range|
+          draft.reserved(range.start..(range.end - 1))
           if range.start <= 0
             hint(message, range, :number, range.start, range.end)
             error(range, :number, "Reserved numbers must be positive integers.")
@@ -349,8 +395,9 @@ module Protostar
             error(range, :number, "Reserved range end number must be greater than start number.")
           end
         end
-        pend(message, :message, full_name, full_name, path + [7])
-        message.nested_type.each_with_index { |m, i| build_message(m, message, i, path + [3, i]) }
+        draft.reserved(*message.reserved_name)
+        pend(message, :message, full_name, path + [7])
+        message.nested_type.each_with_index { |m, i| build_message(m, message, i, path + [3, i], draft) }
         add_symbol(:message, message, full_name)
 
         ranges = message.reserved_range
@@ -396,12 +443,22 @@ module Protostar
         end
       end
 
-      def build_field(field, parent, index, path, extension:)
+      def build_field(field, parent, index, path, scope, extension:, oneofs: nil)
         field.parent = parent
         field.index = index
         field.path = path
         field.extension = extension
         field.full_name = qualify(scope_of(parent), field.name)
+        type = field.type && Schema::Field::TYPES.fetch(field.type)
+        kwargs = {label: Schema::Field::LABELS.fetch(field.label || :LABEL_OPTIONAL),
+                  default: field.default_value && default_text(field), json_name: field.json_name,
+                  optional: field.proto3_optional ? true : false}
+        @descriptors[field] = if extension
+          scope.extension(field.name, field.number, type, field.type_name, extendee: field.extendee, **kwargs)
+        else
+          oneof = field.oneof_index && oneofs[field.oneof_index]
+          scope.field(field.name, field.number, type, field.type_name, oneof: oneof, **kwargs)
+        end
         if field.label == :LABEL_REQUIRED && extension
           error(field, :type, "The extension #{field.full_name} cannot be required.")
         end
@@ -427,16 +484,18 @@ module Protostar
           hint(parent, field, :number)
           error(field, :number, "Field numbers cannot be greater than #{MAX_FIELD_NUMBER}.")
         end
-        pend(field, :field, field.full_name, field.full_name, path + [8])
+        pend(field, :field, field.full_name, path + [8])
         add_symbol(:field, field, field.full_name)
       end
 
-      def build_enum(enum, parent, index, path)
+      def build_enum(enum, parent, index, path, scope_draft)
         enum.parent = parent
         enum.index = index
         enum.path = path
         scope = scope_of(parent)
         enum.full_name = qualify(scope, enum.name)
+        draft = scope_draft.enum(enum.name, visibility: enum.visibility)
+        @descriptors[enum] = draft.descriptor
         error(enum, :name, "Enums must contain at least one value.") if enum.value.empty?
         inner = {}
         enum.value.each_with_index do |value, i|
@@ -444,7 +503,8 @@ module Protostar
           value.index = i
           value.path = path + [2, i]
           value.full_name = qualify(scope, value.name)
-          pend(value, :enum_value, value.full_name, value.full_name, value.path + [3])
+          @descriptors[value] = draft.value(value.name, value.number)
+          pend(value, :enum_value, value.full_name, value.path + [3])
           added_outer = add_symbol(:enum_value, value, value.full_name)
           added_inner = !inner.key?(value.name)
           inner[value.name] = true
@@ -455,10 +515,12 @@ module Protostar
             "of their type, not children of it.  Therefore, \"#{value.name}\" must be unique within #{outer}, not " \
             "just within \"#{enum.name}\".")
         end
-        pend(enum, :enum, enum.full_name, enum.full_name, path + [3])
+        pend(enum, :enum, enum.full_name, path + [3])
         add_symbol(:enum, enum, enum.full_name)
 
         ranges = enum.reserved_range
+        ranges.each { |range| draft.reserved(range.start..range.end) }
+        draft.reserved(*enum.reserved_name)
         ranges.each do |range|
           if range.start > range.end
             error(range, :number, "Reserved range end number must be greater than start number.")
@@ -489,15 +551,19 @@ module Protostar
         service.index = index
         service.path = [6, index]
         service.full_name = qualify(@ast.package.to_s, service.name)
+        draft = @draft.service(service.name)
+        @descriptors[service] = draft.descriptor
         service.rpcs.each_with_index do |method, i|
           method.parent = service
           method.index = i
           method.path = service.path + [2, i]
           method.full_name = "#{service.full_name}.#{method.name}"
-          pend(method, :method, method.full_name, method.full_name, method.path + [4])
+          @descriptors[method] = draft.rpc(method.name, method.input_type, method.output_type,
+            client_streaming: method.client_streaming, server_streaming: method.server_streaming)
+          pend(method, :method, method.full_name, method.path + [4])
           add_symbol(:method, method, method.full_name)
         end
-        pend(service, :service, service.full_name, service.full_name, service.path + [3])
+        pend(service, :service, service.full_name, service.path + [3])
         add_symbol(:service, service, service.full_name)
       end
 
@@ -546,7 +612,7 @@ module Protostar
             return
           end
           return unless visible?(extendee, field, :extendee, "target of extend")
-          field.resolved_extendee = extendee
+          @draft.__resolve_extendee(descriptor_of(field), extendee.object)
           holder = extendee
           unless extension_number?(extendee, field.number)
             error(field, :number, "\"#{extendee.full_name}\" does not declare #{field.number} as an extension number.")
@@ -578,14 +644,14 @@ module Protostar
               error(field, :type, "\"#{field.type_name}\" is not a message type.")
               return
             end
-            field.resolved_type = type
+            @draft.__resolve_type(descriptor_of(field), type.object)
             error(field, :default_value, "Messages can't have default values.") if field.default_value
           else
             if type.kind != :enum
               error(field, :type, "\"#{field.type_name}\" is not an enum type.")
               return
             end
-            field.resolved_type = type
+            @draft.__resolve_type(descriptor_of(field), type.object)
             if field.default_value
               if !Lexer.identifier?(field.default_value)
                 error(field, :default_value, "Default value for an enum field must be an identifier.")
@@ -617,7 +683,7 @@ module Protostar
       end
 
       def holder_key(holder)
-        holder.is_a?(SymbolTable::Symbol) ? holder.full_name : holder&.full_name
+        holder&.full_name
       end
 
       def next_available_number(message)
@@ -633,19 +699,11 @@ module Protostar
       end
 
       def extension_number?(symbol, number)
-        if symbol.local?
-          symbol.object.extension_range.any? { |r| r.start <= number && number < r.end }
-        else
-          symbol.object.extension_number?(number)
-        end
+        symbol.object.extension_number?(number)
       end
 
       def enum_value_names(symbol)
-        if symbol.local?
-          symbol.object.value.map(&:name)
-        else
-          symbol.object.values.map(&:name)
-        end
+        symbol.object.values.map(&:name)
       end
 
       # Symbol::IsVisibleFrom: edition 2024 `local` types are invisible outside their file
@@ -684,7 +742,7 @@ module Protostar
         elsif input.kind != :message
           error(method, :input_type, "\"#{method.input_type}\" is not a message type.")
         elsif visible?(input, method, :input_type)
-          method.resolved_input = input
+          @draft.__resolve_rpc(descriptor_of(method), input: input.object)
         end
         output = @table.lookup(method.output_type, method.full_name)
         if output.nil?
@@ -692,7 +750,7 @@ module Protostar
         elsif output.kind != :message
           error(method, :output_type, "\"#{method.output_type}\" is not a message type.")
         elsif visible?(output, method, :output_type)
-          method.resolved_output = output
+          @draft.__resolve_rpc(descriptor_of(method), output: output.object)
         end
       end
 
@@ -743,9 +801,15 @@ module Protostar
           @unknown_option_imports.each { |name| import_error(name, missing_import_message(name)) }
         end
         return if errors?
+        # option types declared in this file are read from the draft itself,
+        # linked and with its structural features
+        @draft.resolve(@pool)
         @interpreter = OptionInterpreter.new(self, @pool, @options_fallback)
-        @option_hashes = @interpreter.run(@pending) { |features| check_features(features) }
+        options = @interpreter.run(@pending) { |features| check_features(features) }
+        options.each { |node, value| @draft.set_options(descriptor_of(node), value) }
         @locations = SourceInfo.rewrite_option_paths(@ast.locations, @interpreter.interpreted_paths)
+      rescue Schema::Error => e
+        error(nil, nil, e.message)
       end
 
       FEATURE_UNKNOWNS = {
@@ -758,7 +822,7 @@ module Protostar
 
       # ResolveFeaturesImpl's checks, in VisitDescriptors order, once the
       # non-extension options (`features` among them) are known
-      # @param features [Hash{AST::Node => Hash}] the `features` each element sets
+      # @param features [Hash{AST::Node => Schema::MessageValue}] the `features` each element sets
       def check_features(features)
         each_element do |node, kind|
           raw = features[node]
@@ -777,84 +841,19 @@ module Protostar
       end
 
       def build_schema
-        hash = descriptor_hash(@option_hashes)
-        @descriptor = hash
         if @source_info
-          hash = hash.merge(source_code_info: {location: @locations.map(&:to_h)})
+          @draft.source_info = @locations.map(&:to_schema)
         end
-        @file = Schema::Builder.build(hash, pool: @pool)
+        @file = @draft.resolve(@pool).freeze!
       rescue Schema::Error => e
         error(nil, nil, e.message)
         @file = nil
       end
 
-      public
-
-      # @return [Hash, nil] the descriptor hash of the built file, without source info
-      attr_reader :descriptor
-
-      # The structural hash (no options interpreted) used to resolve option
-      # types against this file's own declarations
-      def structural_hash
-        descriptor_hash({}.compare_by_identity)
-      end
-
-      private
-
-      def put_options(h, node)
-        return unless node.options
-        interpreted = @option_hashes[node]
-        h[:options] = interpreted || node.options.known.dup
-      end
-
-      def message_hash(message)
-        h = {name: message.name}
-        h[:field] = message.field.map { |f| field_hash(f) } unless message.field.empty?
-        h[:extension] = message.extension.map { |f| field_hash(f) } unless message.extension.empty?
-        h[:nested_type] = message.nested_type.map { |m| message_hash(m) } unless message.nested_type.empty?
-        h[:enum_type] = message.enum_type.map { |e| enum_hash(e) } unless message.enum_type.empty?
-        unless message.extension_range.empty?
-          h[:extension_range] = message.extension_range.map do |r|
-            range = {start: r.start, end: r.end}
-            put_options(range, r)
-            range
-          end
-        end
-        unless message.oneof_decl.empty?
-          h[:oneof_decl] = message.oneof_decl.map do |o|
-            oneof = {name: o.name}
-            put_options(oneof, o)
-            oneof
-          end
-        end
-        put_options(h, message)
-        h[:reserved_range] = message.reserved_range.map { |r| {start: r.start, end: r.end} } unless message.reserved_range.empty?
-        h[:reserved_name] = message.reserved_name.dup unless message.reserved_name.empty?
-        h[:visibility] = message.visibility if message.visibility
-        h
-      end
-
-      def field_hash(field)
-        h = {name: field.name, number: field.number, label: field.label}
-        type = field.type
-        if field.resolved_type
-          type ||= (field.resolved_type.kind == :message) ? :TYPE_MESSAGE : :TYPE_ENUM
-          h[:type_name] = ".#{field.resolved_type.full_name}"
-        end
-        h[:type] = type
-        h[:extendee] = ".#{field.resolved_extendee.full_name}" if field.resolved_extendee
-        h[:default_value] = default_text(field, type) if field.default_value
-        h[:json_name] = field.json_name || Schema.json_name(field.name)
-        h[:oneof_index] = field.oneof_index if field.oneof_index
-        put_options(h, field)
-        h[:proto3_optional] = true if field.proto3_optional
-        h
-      end
-
       # FieldDescriptor::DefaultValueAsString over the parsed default
-      def default_text(field, type)
+      def default_text(field)
         text = field.default_value
-        case type
+        case field.type
         when :TYPE_FLOAT
           Compiler.simple_ftoa(parse_float_default(text))
         when :TYPE_DOUBLE
@@ -871,37 +870,6 @@ module Protostar
         when "nan", "-nan" then Float::NAN
         else Float(text)
         end
-      end
-
-      def enum_hash(enum)
-        h = {name: enum.name}
-        h[:value] = enum.value.map do |v|
-          value = {name: v.name, number: v.number}
-          put_options(value, v)
-          value
-        end
-        h.delete(:value) if enum.value.empty?
-        put_options(h, enum)
-        h[:reserved_range] = enum.reserved_range.map { |r| {start: r.start, end: r.end} } unless enum.reserved_range.empty?
-        h[:reserved_name] = enum.reserved_name.dup unless enum.reserved_name.empty?
-        h[:visibility] = enum.visibility if enum.visibility
-        h
-      end
-
-      def service_hash(service)
-        h = {name: service.name}
-        unless service.rpcs.empty?
-          h[:method] = service.rpcs.map do |m|
-            method = {name: m.name, input_type: ".#{m.resolved_input.full_name}",
-                      output_type: ".#{m.resolved_output.full_name}"}
-            put_options(method, m)
-            method[:client_streaming] = true if m.client_streaming
-            method[:server_streaming] = true if m.server_streaming
-            method
-          end
-        end
-        put_options(h, service)
-        h
       end
 
       # absl::CUnescape, as far as validity goes

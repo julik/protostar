@@ -50,6 +50,23 @@ module Protostar
         nil
       end
 
+      # The same value with every extension, here and in nested values, looked
+      # up again by full name; one that is not found stays as it was. A copy
+      # of a file in another pool keys its options by that pool's extensions.
+      # @api private
+      # @param extension [#call] full name to extension {Field}
+      # @return [MessageValue]
+      def rekey(extension)
+        nested = ->(v) { v.is_a?(MessageValue) ? v.rekey(extension) : v }
+        fields = @fields.transform_values { |v| v.is_a?(Array) ? v.map(&nested).freeze : nested.call(v) }
+        extensions = @extensions.to_h do |field, v|
+          [extension.call(field.full_name) || field, v.is_a?(Array) ? v.map(&nested).freeze : nested.call(v)]
+        end
+        return self if fields == @fields && extensions.keys.zip(@extensions.keys).all? { |a, b| a.equal?(b) } &&
+          extensions.values.zip(@extensions.values).all? { |a, b| a.equal?(b) }
+        self.class.new(fields.freeze, extensions.freeze, @unknown_fields)
+      end
+
       # @return [Boolean] nothing set, not even unknown fields
       def empty?
         @fields.empty? && @extensions.empty? && @unknown_fields.empty?
@@ -211,7 +228,9 @@ module Protostar
         def build(spec, extension, owner)
           case spec
           when nil then nil
-          when MessageValue then new(spec.fields, spec.extensions, spec.unknown_fields, declared: true)
+          when MessageValue
+            value = spec.rekey(extension)
+            new(value.fields, value.extensions, value.unknown_fields, declared: true)
           when Hash
             value = MessageValue.from_hash(spec, extension, owner)
             new(value.fields, value.extensions, value.unknown_fields, declared: true)

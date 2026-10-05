@@ -153,12 +153,8 @@ module Protostar
       end
 
       # The Schema descriptor for an AST node
-      def schema_of(node, kind)
-        case kind
-        when :file then @file
-        when :extension_range then @file.find_symbol(node.parent.full_name).extension_range_descriptors[node.index]
-        else @file.find_symbol(node.full_name)
-        end
+      def schema_of(node, _kind)
+        @linker.descriptor_of(node)
       end
 
       def schema_options(node, kind)

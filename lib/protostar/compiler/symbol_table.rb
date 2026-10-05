@@ -2,8 +2,8 @@
 
 module Protostar
   class Compiler
-    # The names visible while one file is linked: its own symbols, read from
-    # the AST as they are defined, and everything in the pool. Lookups follow
+    # The names visible while one file is linked: its own symbols, drafted
+    # as the linker meets them, and everything in the pool. Lookups follow
     # protoc's DescriptorBuilder (FindSymbol and LookupSymbolNoPlaceholder):
     # the same first-component scoping rule as {Schema::Resolver}, with a
     # symbol in another file visible only through a direct import or a chain
@@ -11,20 +11,38 @@ module Protostar
     #
     # @api private
     class SymbolTable
-      # A named thing: `kind` is :message, :enum, :enum_value, :field,
-      # :oneof, :service, :method or :package; `object` is the AST node for
-      # the file being linked and the Schema descriptor otherwise
-      Symbol = ::Struct.new(:kind, :full_name, :file_name, :object) do
+      # A named thing
+      class Symbol
+        # @return [Symbol] :message, :enum, :enum_value, :field, :oneof, :service, :method or :package
+        attr_reader :kind
+        # @return [String]
+        attr_reader :full_name
+        # @return [String] the file defining it
+        attr_reader :file_name
+        # @return [Schema::Descriptor, nil] the descriptor (drafted, for the file being
+        #   linked); nil for a package
+        attr_reader :object
+
+        def initialize(kind:, full_name:, file_name:, object:, local: false)
+          @kind = kind
+          @full_name = full_name
+          @file_name = file_name
+          @object = object
+          @local = local
+          freeze
+        end
+
         def type?
-          kind == :message || kind == :enum
+          @kind == :message || @kind == :enum
         end
 
         def aggregate?
-          kind == :message || kind == :package || kind == :enum || kind == :service
+          @kind == :message || @kind == :package || @kind == :enum || @kind == :service
         end
 
+        # @return [Boolean] defined by the file being linked
         def local?
-          object.is_a?(AST::Node)
+          @local
         end
       end
 
@@ -65,11 +83,13 @@ module Protostar
       attr_reader :local
 
       # Registers a symbol of the file being linked
+      # @param descriptor [Schema::Descriptor] as drafted
       # @return [Symbol, nil] the existing symbol when the name is taken
-      def add(kind, full_name, node)
+      def add(kind, full_name, descriptor)
         existing = find_any(full_name)
         return existing if existing
-        @local[full_name] = Symbol.new(kind, full_name, @file_name, node)
+        @local[full_name] = Symbol.new(kind: kind, full_name: full_name, file_name: @file_name, object: descriptor,
+          local: true)
         nil
       end
 
@@ -95,10 +115,11 @@ module Protostar
           return sym
         end
         if (descriptor = @pool.find_symbol(full_name))
-          return Symbol.new(SCHEMA_KINDS.fetch(descriptor.class), full_name, descriptor.file.name, descriptor)
+          return Symbol.new(kind: SCHEMA_KINDS.fetch(descriptor.class), full_name: full_name,
+            file_name: descriptor.file.name, object: descriptor)
         end
         if (owner = @packages[full_name])
-          return Symbol.new(:package, full_name, owner, nil)
+          return Symbol.new(kind: :package, full_name: full_name, file_name: owner, object: nil)
         end
         nil
       end
