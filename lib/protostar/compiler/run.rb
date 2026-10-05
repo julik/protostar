@@ -115,6 +115,9 @@ module Protostar
           missing << dep if load(dep).nil?
         end
         @pending.pop
+        # protoc's BuildFile gives up quietly on a file that imports itself,
+        # once the recursion has been reported
+        return @done[name] = nil if ast.dependency.include?(name)
 
         linker = Linker.new(ast, pool: @pool, missing: missing, direct: direct && @protoc_cli,
           options_fallback: ->(type) { @compiler.builtin_options_type(type) }, source_info: @source_info,

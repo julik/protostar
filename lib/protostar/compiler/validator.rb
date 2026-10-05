@@ -97,7 +97,7 @@ module Protostar
       def target_constraints(node, kind, run)
         options = schema_options(node, kind)
         return if options.nil? || options.empty?
-        type = @linker.interpreter&.options_type(Linker::OPTIONS_TYPES.fetch(kind))
+        type = options_message(kind)
         return unless type
         target, label = TARGET_TYPES.fetch(kind)
         check_targets(options.to_h, type, target, label, run)
@@ -125,8 +125,8 @@ module Protostar
         hash.each do |key, value|
           if key == :__extensions
             value.each do |name, ext_value|
-              field = @linker.table.find_any(name)&.then { |s| @linker.interpreter.schema_of(s) }
-              next unless field.is_a?(Schema::Field)
+              field = extension_field(name)
+              next unless field
               check_target(field, ext_value, target, label, run)
             end
             next
@@ -146,6 +146,18 @@ module Protostar
         Array(field.repeated? ? value : [value]).each do |v|
           check_targets(v, field.message_type, target, label, run) if v.is_a?(Hash)
         end
+      end
+
+      # A built extension by full name: this file's or the pool's
+      def extension_field(name)
+        found = @file.find_symbol(name) || @linker.pool.find_symbol(name)
+        found if found.is_a?(Schema::Field) && found.extension?
+      end
+
+      # The options message an element's options are read with
+      def options_message(kind)
+        name = Linker::OPTIONS_TYPES.fetch(kind)
+        @file.find_message(name) || @linker.interpreter&.options_type(name)
       end
 
       # The Schema descriptor for an AST node
@@ -892,7 +904,7 @@ module Protostar
           next unless node.options
           hash = @linker.options_of(node)
           next if hash.nil? || hash.empty?
-          type = @linker.interpreter.options_type(Linker::OPTIONS_TYPES.fetch(kind))
+          type = options_message(kind)
           features = hash[:features]
           if features && (feature_type = type.fields_by_name["features"]&.message_type)
             lifetimes(features, feature_type, edition, node)
@@ -904,7 +916,7 @@ module Protostar
       def lifetimes(hash, type, edition, node)
         hash.each do |key, value|
           fields = if key == :__extensions
-            value.map { |name, v| [@linker.table.find_any(name)&.then { |s| @linker.interpreter.schema_of(s) }, v] }
+            value.map { |name, v| [extension_field(name), v] }
           elsif key == :__unknown_fields
             []
           else

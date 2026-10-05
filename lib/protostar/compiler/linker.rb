@@ -39,6 +39,8 @@ module Protostar
       attr_reader :ast
       # @return [SymbolTable]
       attr_reader :table
+      # @return [Schema::Pool]
+      attr_reader :pool
       # @return [Symbol] the file's edition (EDITION_PROTO2 or EDITION_PROTO3 for legacy syntax)
       attr_reader :edition
       # @return [Schema::File, nil] the built file, when linking succeeded
@@ -643,7 +645,7 @@ module Protostar
       end
 
       # Symbol::IsVisibleFrom: edition 2024 `local` types are invisible outside their file
-      def visible?(symbol, node, location, usage = "used")
+      def visible?(symbol, node, location, usage = "")
         return true unless @protoc_cli
         return true unless symbol.type? && !symbol.local?
         descriptor = symbol.object
