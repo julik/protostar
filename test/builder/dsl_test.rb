@@ -246,6 +246,17 @@ class BuilderDslTest < Minitest::Test
     assert_equal Person.new, Person.build
   end
 
+  def test_message_class_follows_nesting
+    seen = []
+    build do |pb|
+      seen << pb.message_class
+      pb.address { seen << pb.message_class }
+      pb.friends([1]) { pb.homes([2]) { seen << pb.message_class } }
+      seen << pb.message_class
+    end
+    assert_equal [Person, Address, Address, Person], seen
+  end
+
   def test_field_methods_return_the_builder
     pb = Protostar::Builder.new(Person)
     assert_same pb, pb.name("x")

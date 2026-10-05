@@ -1,0 +1,598 @@
+diff --git a/Appraisals b/Appraisals
+index 777d68e..544f98e 100644
+--- a/Appraisals
++++ b/Appraisals
+@@ -1,9 +1,7 @@
+ appraise "rails-7-2" do
+   gem "rails", "~> 7.2.0"
+-  gem "google-protobuf", "~> 3.25", "< 4.0"
+ end
+ 
+ appraise "rails-8-0" do
+   gem "rails", "~> 8.0.2"
+-  gem "google-protobuf", "~> 4.0", "< 5.0"
+ end
+\ No newline at end of file
+diff --git a/lib/pbbuilder.rb b/lib/pbbuilder.rb
+index 5b76670..fa109bd 100644
+--- a/lib/pbbuilder.rb
++++ b/lib/pbbuilder.rb
+@@ -1,7 +1,7 @@
+ # frozen_string_literal: true
+ 
++require "protostar"
+ require "pbbuilder/errors"
+-require "pbbuilder/protobuf_extension"
+ require "pbbuilder/railtie" if defined?(Rails)
+ 
+ # Pbbuilder makes it easy to create a protobuf message using the builder pattern.
+@@ -26,12 +26,16 @@ require "pbbuilder/railtie" if defined?(Rails)
+ #
+ # message.name => "Hello"
+ #
+-# It basically works exactly like jbuilder. The main difference is that it can use introspection to figure out what kind
+-# of protobuf message it needs to create.
+-
++# Underneath, a Protostar::Builder writes the message's wire bytes as the
++# DSL runs; target! decodes them once. Assigning a list to a repeated field
++# replaces what earlier assignments gave, and a later value of a singular
++# field wins, as when the message was assigned to field by field.
+ class Pbbuilder < BasicObject
+   def initialize(message)
+-    @message = message
++    @klass = message.class
++    # a message that already has fields gets what the block writes laid over it in target!
++    @base = message.encode.empty? ? nil : message
++    @builder = _new_builder
+ 
+     yield self if ::Kernel.block_given?
+   end
+@@ -41,106 +45,48 @@ class Pbbuilder < BasicObject
+   end
+ 
+   def attributes!
+-    @message.to_h
++    target!.to_h
+   end
+ 
+   def respond_to_missing?(field)
+     !!_descriptor_for_field(field)
+   end
+ 
+-  # When calling for ex: response.drivers, where response is a Google::Protobuf object, 'drivers' is not a method on that. These
+-  # methods (or messages in our case) get added here. This is of course based on what kind of message it is. Singular, an array
+-  # (repeated) etc. with their arguments.
++  # Writes a field. With a block: a nested message, or one element of a
++  # repeated message field per item of the collection given. With a value:
++  # the value (a Hash for a map). With an object and attribute names:
++  # those attributes of it (of each of its elements for a repeated field).
+   def set!(field, *args, &block)
+     name = field.to_s
+     descriptor = _descriptor_for_field(name)
+     ::Kernel.raise ::ArgumentError, "Unknown field: #{name}" if descriptor.nil?
+ 
+-    # An block is used to pass on it's children
+     if ::Kernel.block_given?
+-      ::Kernel.raise ::ArgumentError, "can't pass block to non-message field" unless descriptor.type == :message
++      ::Kernel.raise ::ArgumentError, "can't pass block to non-message field" unless descriptor.message_type && !descriptor.map?
+ 
+-      if descriptor.label == :repeated
+-        # example syntax that should end up here:
+-        #    pb.field @array { |element| pb.name element.name }
++      if descriptor.repeated?
+         ::Kernel.raise ::ArgumentError, "wrong number of arguments #{args.length} (expected 1)" unless args.length == 1
+-        collection = args.first
+-        _append_repeated(name, descriptor, collection, &block)
++        ::Kernel.raise ::ArgumentError, "expected Enumerable" unless args.first.respond_to?(:map)
+       else
+-        # example syntax that should end up here:
+-        #   pb.field { pb.name "hello" }
+         ::Kernel.raise ::ArgumentError, "wrong number of arguments (expected 0)" unless args.empty?
+-
+-        message = (@message[name] ||= _new_message_from_descriptor(descriptor))
+-        _scope(message, &block)
+       end
+-    # No block given, but with 1 argument
++      @builder.set!(name, *args, &block)
+     elsif args.length == 1
+-      arg = args.first
+-      if descriptor.label == :repeated
+-        if arg.respond_to?(:to_hash)
+-          # example syntax that should end up here:
+-          #   pb.fields {"one" => "two"}
+-
+-          arg.to_hash.each { |k, v| @message[name][k] = v }
+-        elsif arg.respond_to?(:to_ary) && !descriptor.type.eql?(:message)
+-          # pb.fields ["one", "two"]
+-
+-          @message[name].replace arg.to_ary
+-        elsif arg.respond_to?(:to_ary) && descriptor.type.eql?(:message)
+-          # pb.friends [Person.new(name: "Johnny Test"), Person.new(name: "Max Verstappen")]
+-          #
+-          # Accepts both objects that can be to_hash-translated into keyword arguments
+-          # for creating a nested proto message object and actual proto message objects
+-          # which can be assigned "as is". With "as-is" assignment the proto message can be stored
+-          # in memory and reused
+-          nested_messages = arg.map do |arg_member_message_or_hash|
+-            # If the arg passed already is a proto message and is the same as the
+-            # field expects - just use it as-is
+-            if arg_member_message_or_hash.is_a?(descriptor.subtype.msgclass)
+-              arg_member_message_or_hash
+-            else
+-              descriptor.subtype.msgclass.new(arg_member_message_or_hash)
+-            end
+-          end
+-          @message[name].replace(nested_messages)
+-        else
+-          # example syntax that should end up here:
+-          #   pb.fields "one"
+-          @message[name].replace [arg]
+-        end
+-      else
+-        # example syntax that should end up here:
+-        #   pb.field "value"
+-
+-        @message[name] = arg
+-      end
++      @builder.set!(name, args.first)
+     else
+-      # example syntax that should end up here:
+-      #   pb.field @value, :id, :name, :url
+-      element = args.shift
+-      if descriptor.label == :repeated
+-        # If the message field that's being assigned is a repeated field, then we assume that `element` is enumerable.
+-        # This way you can do something like pb.repeated_field @array, :id, :name
+-        # This will create a message out of every object in @array, copying over the :id and :name values.
+-        set!(name, element) do |item|
+-          extract!(item, *args)
+-        end
+-      else
+-        set!(name) do
+-          extract!(element, *args)
+-        end
+-      end
++      @builder.set!(name, *args)
+     end
++    self
+   end
+ 
+   # Shorthand command for getting a few attributes from an object.
+   #     pb.extract! racer, :name, :id, :age
+   def extract!(element, *args)
+-    args.each { |arg| @message[arg.to_s] = element.send(arg) }
++    @builder.extract!(element, *args)
++    self
+   end
+ 
+-  # Merges object into a protobuf message, mainly used for caching.
++  # Merges a Hash of field names to values into the message, mainly used for caching.
+   #
+   # @param object [Hash]
+   def merge!(object)
+@@ -148,45 +94,17 @@ class Pbbuilder < BasicObject
+ 
+     object.each do |key, value|
+       next if value.respond_to?(:empty?) && value.empty?
++      ::Kernel.raise ::ArgumentError, "Unknown field #{key}" if _descriptor_for_field(key).nil?
+ 
+-      descriptor = _descriptor_for_field(key)
+-      ::Kernel.raise ::ArgumentError, "Unknown field #{key}" if descriptor.nil?
+-
+-      if descriptor.label == :repeated
+-        # optional empty fields don't show up in @message object,
+-        # we recreate empty message, so we can fill it with values
+-        if @message[key.to_s].nil?
+-          @message[key.to_s] = _new_message_from_descriptor(descriptor)
+-        end
+-
+-        if value.respond_to?(:to_hash)
+-          value.to_hash.each {|k, v| @message[key.to_s][k] = v}
+-        elsif value.respond_to?(:to_ary)
+-          elements = value.map do |obj|
+-            descriptor.subtype ? descriptor.subtype.msgclass.new(obj) : obj
+-          end
+-
+-          @message[key.to_s].replace(elements)
+-        end
+-      else
+-        if descriptor.type == :message
+-          @message[key.to_s] = descriptor.subtype.msgclass.new(value)
+-        else
+-          # pb.fields {"one" => "two"}
+-          # pb.boolean true || false
+-          # pb.field_name do
+-          #    pb.tags ["ok", "cool"]
+-          # end
+-
+-          @message[key.to_s] = value
+-        end
+-      end
++      @builder.set!(key.to_s, value)
+     end
++    self
+   end
+ 
+   # @return Initialized message object
+   def target!
+-    @message
++    message = @klass.decode(@builder.target!)
++    @base ? _overlay(@base, message) : message
+   end
+ 
+   # @param field string
+@@ -194,56 +112,56 @@ class Pbbuilder < BasicObject
+     descriptor = _descriptor_for_field(field)
+     ::Kernel.raise ::ArgumentError, "Unknown field #{field}" if descriptor.nil?
+ 
+-    _new_message_from_descriptor(descriptor)
++    _message_class(descriptor).new
++  end
++
++  # The bytes written so far, starting afresh. One builder renders every
++  # element of a collection partial, each taken this way.
++  def _take_bytes!
++    bytes = @builder.target!
++    @builder = _new_builder
++    bytes
++  end
++
++  # Writes messages that are already encoded (rendered collection partials) into a field
++  def _set_encoded!(field, list)
++    @builder.encoded!(field.to_s, list)
++    self
+   end
+ 
+   private
+ 
+-  # Lookup the field name (or 'attribute' name, for ex "best_friend") on the Google descriptor (Google::Protobuf::Descriptor) of our
+-  # message object.
++  def _new_builder
++    ::Protostar::Builder.new(@klass, overwrites: true, repeated: :replace)
++  end
++
+   # @param field string
++  # @return [Protostar::Schema::Field, nil]
+   def _descriptor_for_field(field)
+-    @message.class.descriptor.lookup(field.to_s)
++    @builder.message_class.descriptor.field(field.to_s)
+   end
+ 
+-  # Appends protobuf objects to our 'repeated' attribute. This can create a list of items to a repeated field.
+-  #
+-  # @param name string
+-  # @param descriptor Google::Protobuf::FieldDescriptor
+-  # @param collection hash
+-  # @param &block
+-  def _append_repeated(name, descriptor, collection, &block)
+-    ::Kernel.raise ::ArgumentError, "expected Enumerable" unless collection.respond_to?(:map)
+-    elements = collection.map do |element|
+-      message = _new_message_from_descriptor(descriptor)
+-      _scope(message) { block.call(element) }
++  def _message_class(descriptor)
++    ::Kernel.raise ::ArgumentError, "can't pass block to non-message field" unless descriptor.message_type
++
++    ::Protostar::Types.find(descriptor.message_type.full_name)
++  end
++
++  # What assigning the fields of `source` one by one to `target` gives:
++  # nested messages merge into the ones already there, map entries are
++  # added, everything else (repeated fields included) is replaced.
++  def _overlay(target, source)
++    source.to_h.each_key do |name|
++      value = source[name]
++      current = target[name]
++      if current.is_a?(::Protostar::Message) && value.is_a?(::Protostar::Message)
++        _overlay(current, value)
++      elsif current.is_a?(::Hash)
++        target[name] = current.merge(value)
++      else
++        target[name] = value
++      end
+     end
+-
+-    @message[name].push(*elements)
+-  end
+-
+-  # Yields a Protobuf object in the scope of message and provided values.
+-  # This will 'assign' the field values as it were to the message attributes.
+-  #
+-  # @param message Google::Protobuf::(field_type)
+-  def _scope(message)
+-    old_message = @message
+-    @message = message
+-    yield
+-    message
+-  ensure
+-    @message = old_message
+-  end
+-
+-  # Builds up an empty protobuf message based on the given descriptor.
+-  #
+-  # @param descriptor Google::Protobuf::FieldDescriptor
+-  def _new_message_from_descriptor(descriptor)
+-    ::Kernel.raise ::ArgumentError, "can't pass block to non-message field" unless descriptor.type == :message
+-
+-    # Here we're using Protobuf reflection to create an instance of the message class
+-    message_descriptor = descriptor.subtype
+-    message_class = message_descriptor.msgclass
+-    message_class.new
++    target
+   end
+ end
+diff --git a/lib/pbbuilder/collection_renderer.rb b/lib/pbbuilder/collection_renderer.rb
+index 9a3535c..91a4921 100644
+--- a/lib/pbbuilder/collection_renderer.rb
++++ b/lib/pbbuilder/collection_renderer.rb
+@@ -4,19 +4,15 @@ require 'action_view/renderer/collection_renderer'
+ 
+ class Pbbuilder
+   class CollectionRenderer < ::ActionView::CollectionRenderer # :nodoc:
+-    def initialize(lookup_context, options, &scope)
+-      super(lookup_context, options)
+-      @scope = scope
+-    end
+-
+     private
+ 
++    # Each element's body is its wire bytes, which is also what collection caching stores
+     def build_rendered_template(content, template, layout = nil)
+-      super(content || pb.attributes!, template)
++      super(content || pb._take_bytes!, template)
+     end
+ 
+     def build_rendered_collection(templates, _spacer)
+-      pb_parent.set!(field, templates.map(&:body))
++      pb_parent._set_encoded!(field, templates.map(&:body))
+     end
+ 
+     def pb
+diff --git a/lib/pbbuilder/protobuf_extension.rb b/lib/pbbuilder/protobuf_extension.rb
+deleted file mode 100644
+index b6dfdf6..0000000
+--- a/lib/pbbuilder/protobuf_extension.rb
++++ /dev/null
+@@ -1,9 +0,0 @@
+-# frozen_string_literal: true
+-
+-require "google/protobuf/message_exts"
+-
+-module Google::Protobuf::MessageExts::ClassMethods
+-  def build(*args, &block)
+-    Pbbuilder.new(new(*args), &block).target!
+-  end
+-end
+diff --git a/lib/pbbuilder/template.rb b/lib/pbbuilder/template.rb
+index 0085db3..cd9a4f3 100644
+--- a/lib/pbbuilder/template.rb
++++ b/lib/pbbuilder/template.rb
+@@ -13,6 +13,7 @@ class PbbuilderTemplate < Pbbuilder
+ 
+   def initialize(context, message)
+     @context = context
++    @fragments = FragmentStore.new(context)
+     super(message)
+   end
+ 
+@@ -76,20 +77,19 @@ class PbbuilderTemplate < Pbbuilder
+   # 'pb.cache! "cache-key" do; end'
+   # 'pb.cache! "cache-key", expire_in: 1.min do; end'
+   #
++  # The cache holds the wire bytes the block wrote; a hit appends them.
++  #
+   # @param key String
+   # @param options Hash
+   #
+   # @return nil
+   def cache!(key=nil, options={})
+     if @context.controller.perform_caching
+-      value = _cache_fragment_for(key, options) do
+-        _scope(target!) { yield self }.to_h.compact_blank
+-      end
+-
+-      merge! value
++      @builder.cache!(_cache_key(key, options), **options) { yield self }
+     else
+       yield
+     end
++    nil
+   end
+ 
+   # Conditionally caches the protobuf message depending on the condition given as first parameter. Has the same
+@@ -136,51 +136,48 @@ class PbbuilderTemplate < Pbbuilder
+     end
+ 
+     CollectionRenderer
+-      .new(@context.lookup_context, options) { |&block| _scope(message[field.to_s], &block) }
++      .new(@context.lookup_context, options)
+       .render_collection_with_partial(collection, partial, @context, nil)
+   end
+ 
+-  # Writes to cache, if cache with keys is missing.
+-  #
+-  # @return fragment value
+-  def _cache_fragment_for(key, options, &block)
+-    key = _cache_key(key, options)
+-    _read_fragment_cache(key, options) || _write_fragment_cache(key, options, &block)
++  def _new_builder
++    ::Protostar::Builder.new(@klass, overwrites: true, repeated: :replace, cache_store: @fragments)
+   end
+ 
+-  # Reads from cache
+-  #
+-  # @param key string
+-  # @params options hash
+-  #
+-  # @return string
+-  def _read_fragment_cache(key, options = nil)
+-    @context.controller.instrument_fragment_cache :read_fragment, key do
+-      ::Rails.cache.read(key, options)
++  # Rails.cache, read and written with the controller's fragment cache instrumentation.
++  # Protostar::Builder#cache! calls fetch.
++  class FragmentStore
++    def initialize(context)
++      @context = context
++    end
++
++    def read(key, options = nil)
++      @context.controller.instrument_fragment_cache :read_fragment, key do
++        ::Rails.cache.read(key, options)
++      end
+     end
+-  end
+ 
+-  # Writes into cache and returns value
+-  #
+-  # @param key string
+-  # @params options hash
+-  #
+-  # @return string contents of a cache
+-  def _write_fragment_cache(key, options = nil)
+-    @context.controller.instrument_fragment_cache :write_fragment, key do
+-      yield.tap do |value|
+-        begin
+-          ::Rails.cache.write(key, value, options)
+-        rescue ::SystemCallError
+-          # In case `ActiveSupport::Cache::FileStore` in Rails is used as a cache,
+-          # `File.atomic_write` can have a race condition and fails to rename temporary file.
+-          # We're attempting to recover from that by catching this specific error and returning a value.
+-          #
+-          # @see https://github.com/rails/rails/pull/44151
+-          # @see https://github.com/rails/rails/blob/main/activesupport/lib/active_support/core_ext/file/atomic.rb#L50
+-          value
+-        end
++    def write(key, value, options = nil)
++      @context.controller.instrument_fragment_cache :write_fragment, key do
++        ::Rails.cache.write(key, value, options)
+       end
++    rescue ::SystemCallError
++      # In case `ActiveSupport::Cache::FileStore` in Rails is used as a cache,
++      # `File.atomic_write` can have a race condition and fails to rename temporary file.
++      # We're attempting to recover from that by catching this specific error and returning a value.
++      #
++      # @see https://github.com/rails/rails/pull/44151
++      # @see https://github.com/rails/rails/blob/main/activesupport/lib/active_support/core_ext/file/atomic.rb#L50
++      value
++    end
++
++    def fetch(key, options = nil)
++      value = read(key, options)
++      return value unless value.nil?
++
++      value = yield
++      write(key, value, options)
++      value
+     end
+   end
+ 
+@@ -200,7 +197,8 @@ class PbbuilderTemplate < Pbbuilder
+       key = url_for(key).split('://', 2).last if ::Hash === key
+     end
+ 
+-    ::ActiveSupport::Cache.expand_cache_key(key, :ppbuilder)
++    # entries hold wire bytes, not the Hashes earlier versions kept under :ppbuilder
++    ::ActiveSupport::Cache.expand_cache_key(key, :pbbuilder_bytes)
+   end
+ 
+   def _fragment_name_with_digest(key, options)
+diff --git a/pbbuilder.gemspec b/pbbuilder.gemspec
+index e873a73..1145336 100644
+--- a/pbbuilder.gemspec
++++ b/pbbuilder.gemspec
+@@ -14,7 +14,7 @@ Gem::Specification.new do |spec|
+   spec.files = `git ls-files`.split("\n")
+   spec.test_files = `git ls-files -- test/*`.split("\n")
+ 
+-  spec.add_dependency "google-protobuf", ">= 3.25", "< 5.0"
++  spec.add_dependency "protostar"
+   spec.add_dependency "activesupport"
+   spec.add_development_dependency "m"
+   spec.add_development_dependency "pry"
+diff --git a/test/test_helper.rb b/test/test_helper.rb
+index f0cf6eb..c7b571e 100644
+--- a/test/test_helper.rb
++++ b/test/test_helper.rb
+@@ -13,8 +13,7 @@ require "action_view"
+ 
+ require "pbbuilder"
+ 
+-require "google/protobuf"
+-require "google/protobuf/field_mask_pb"
++require "protostar"
+ 
+ require "active_support/testing/autorun"
+ require "pry"
+@@ -22,17 +21,18 @@ require "pry"
+ ActiveSupport.test_order = :random
+ 
+ # Regenerate Ruby descriptors from proto if needed, and require them.
+-# This does require protoc to be installed
++# protostar compiles them; no protoc needed
+ proto_file = File.expand_path("test_proto.proto", __dir__)
+ ruby_out = File.expand_path("test_proto_pb.rb", __dir__)
+ if !File.exist?(ruby_out) || File.mtime(ruby_out) < File.mtime(proto_file)
+-  system("protoc --proto_path=#{File.dirname(proto_file)} --ruby_out=#{File.dirname(ruby_out)} #{proto_file}")
++  system(Gem.ruby, Gem.bin_path("protostar", "protostar"), "compile", "--proto_path=#{File.dirname(proto_file)}",
++    "--ruby_out=#{File.dirname(ruby_out)}", proto_file, exception: true)
+ end
+ require_relative "test_proto_pb"
+ 
+ module API
+-  Person = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("pbbuildertest.Person").msgclass
+-  Asset = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("pbbuildertest.Asset").msgclass
++  Person = Pbbuildertest::Person
++  Asset = Pbbuildertest::Asset
+ end
+ 
+ class << Rails
+diff --git a/test/test_proto_pb.rb b/test/test_proto_pb.rb
+index 79ffe37..7144d54 100644
+--- a/test/test_proto_pb.rb
++++ b/test/test_proto_pb.rb
+@@ -1,18 +1,36 @@
+ # frozen_string_literal: true
+-# Generated by the protocol buffer compiler.  DO NOT EDIT!
+-# source: test_proto.proto
+ 
+-require 'google/protobuf'
++# Generated by protostar from test_proto.proto. Do not edit.
+ 
+-require 'google/protobuf/field_mask_pb'
++require "protostar"
++require "protostar/google/protobuf/field_mask_pb"
+ 
+-
+-descriptor_data = "\n\x10test_proto.proto\x12\rpbbuildertest\x1a google/protobuf/field_mask.proto\"\x81\x03\n\x06Person\x12\x0c\n\x04name\x18\x01 \x01(\t\x12&\n\x07\x66riends\x18\x02 \x03(\x0b\x32\x15.pbbuildertest.Person\x12*\n\x0b\x62\x65st_friend\x18\x03 \x01(\x0b\x32\x15.pbbuildertest.Person\x12\x11\n\tnicknames\x18\x04 \x03(\t\x12.\n\nfield_mask\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.FieldMask\x12\x42\n\x0f\x66\x61vourite_foods\x18\x06 \x03(\x0b\x32).pbbuildertest.Person.FavouriteFoodsEntry\x12\x0c\n\x04tags\x18\x07 \x03(\t\x12\x11\n\tlast_name\x18\x08 \x01(\t\x12\x12\n\nboolean_me\x18\t \x01(\x08\x12\"\n\x04logo\x18\n \x01(\x0b\x32\x14.pbbuildertest.Asset\x1a\x35\n\x13\x46\x61vouriteFoodsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"4\n\x05\x41sset\x12\x0b\n\x03url\x18\x01 \x01(\t\x12\x0e\n\x06url_2x\x18\x02 \x01(\t\x12\x0e\n\x06url_3x\x18\x03 \x01(\tb\x06proto3"
+-
+-pool = Google::Protobuf::DescriptorPool.generated_pool
+-pool.add_serialized_file(descriptor_data)
++Protostar::DSL.file(
++  "test_proto.proto",
++  package: "pbbuildertest",
++  syntax: :proto3,
++  dependencies: ["google/protobuf/field_mask.proto"]
++) do |f|
++  f.message "Person" do |m|
++    m.field :name, 1, :string
++    m.field :friends, 2, :message, ".pbbuildertest.Person", label: :repeated
++    m.field :best_friend, 3, :message, ".pbbuildertest.Person"
++    m.field :nicknames, 4, :string, label: :repeated
++    m.field :field_mask, 5, :message, ".google.protobuf.FieldMask"
++    m.map :favourite_foods, 6, :string, :string
++    m.field :tags, 7, :string, label: :repeated
++    m.field :last_name, 8, :string
++    m.field :boolean_me, 9, :bool
++    m.field :logo, 10, :message, ".pbbuildertest.Asset"
++  end
++  f.message "Asset" do |m|
++    m.field :url, 1, :string
++    m.field :url_2x, 2, :string
++    m.field :url_3x, 3, :string
++  end
++end
+ 
+ module Pbbuildertest
+-  Person = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("pbbuildertest.Person").msgclass
+-  Asset = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("pbbuildertest.Asset").msgclass
++  Person = Protostar::DSL.message("pbbuildertest.Person")
++  Asset = Protostar::DSL.message("pbbuildertest.Asset")
+ end

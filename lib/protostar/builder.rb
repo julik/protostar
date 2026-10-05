@@ -173,6 +173,12 @@ module Protostar
       end
     end
 
+    # @return [Class] the class of the message being written: the top-level
+    #   one, or the nested message whose block is running
+    def message_class
+      self.class::CLASSES[@k]
+    end
+
     # Writes a field by name, for names that have no method of their own.
     #
     #   pb.set! :name, "Jane"
