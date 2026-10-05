@@ -31,7 +31,7 @@ module Protostar
 
       # @param ignore_unknown_fields [Boolean] skip unknown field names and enum names
       # @param registry [Types::Registry] where the types inside Any are looked up
-      def initialize(ignore_unknown_fields: false, registry: Types.registry)
+      def initialize(ignore_unknown_fields: false, registry: nil)
         @ignore_unknown = ignore_unknown_fields
         @registry = registry
         @path = []
@@ -372,7 +372,7 @@ module Protostar
         slash = url.rindex("/")
         fail!("type URL #{url.inspect} needs a '/' and a non-empty host") if slash.nil? || slash == 0
         name = url[(slash + 1)..]
-        inner_class = Types.find(name, registry: @registry)
+        inner_class = Types.find(name, registry: @registry || Types.registry)
         fail!("cannot find the type #{name.inspect} of an Any") unless inner_class.is_a?(Class)
         rest = node.except("@type")
         inner = if SPECIAL.key?(inner_class.descriptor.full_name)

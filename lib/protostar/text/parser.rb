@@ -20,7 +20,7 @@ module Protostar
       ANY = "google.protobuf.Any"
       UNSIGNED = [F::UINT32, F::UINT64, F::FIXED32, F::FIXED64].freeze
 
-      def initialize(text, allow_unknown_fields: false, allow_partial: true, registry: Types.registry, pool: nil)
+      def initialize(text, allow_unknown_fields: false, allow_partial: true, registry: nil, pool: nil)
         @tokens = Tokenizer.new(text)
         @allow_unknown = allow_unknown_fields
         @allow_partial = allow_partial
@@ -351,7 +351,7 @@ module Protostar
       def any_expansion(msg, url, token)
         fail!("\"[#{url}]\" expands an Any, but this is a #{msg.class.descriptor.full_name}", token) unless msg.class.descriptor.full_name == ANY
         name = url[(url.rindex("/") + 1)..]
-        klass = Types.find(name, registry: @registry)
+        klass = Types.find(name, registry: @registry || Types.registry)
         fail!("could not find the type \"#{name}\" of an Any", token) unless klass.is_a?(Class)
         accept(":")
         t = @tokens.next

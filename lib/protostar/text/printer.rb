@@ -37,7 +37,7 @@ module Protostar
           type.containing_message.equal?(info.descriptor.containing_message)
       end
 
-      def initialize(single_line: false, expand_any: true, as_utf8: false, registry: Types.registry, pool: nil)
+      def initialize(single_line: false, expand_any: true, as_utf8: false, registry: nil, pool: nil)
         @single_line = single_line
         @expand_any = expand_any
         @as_utf8 = as_utf8
@@ -205,7 +205,7 @@ module Protostar
         return false if url.nil? || url.empty? || !msg.unknown_fields.empty?
         slash = url.rindex("/")
         return false if slash.nil?
-        klass = Types.find(url[(slash + 1)..], registry: @registry)
+        klass = Types.find(url[(slash + 1)..], registry: @registry || Types.registry)
         return false unless klass.is_a?(Class)
         inner = begin
           klass.decode(bytes || "")

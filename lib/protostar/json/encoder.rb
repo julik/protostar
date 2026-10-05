@@ -30,9 +30,9 @@ module Protostar
 
       NULL_VALUE = "google.protobuf.NullValue"
 
-      ESCAPES = (0..0x1f).to_h { |b| [b.chr, format("\\u%04x", b)] }.merge(
+      ESCAPES = Ractor.make_shareable((0..0x1f).to_h { |b| [b.chr, format("\\u%04x", b)] }.merge(
         "\n" => "\\n", "\r" => "\\r", "\t" => "\\t", "\f" => "\\f", "\b" => "\\b", "\"" => "\\\"", "\\" => "\\\\"
-      ).freeze
+      ))
       ESCAPED = /["\\\x00-\x1f]/
 
       # Seconds of 0001-01-01T00:00:00Z and 9999-12-31T23:59:59Z
@@ -46,7 +46,7 @@ module Protostar
       # @param format_enums_as_integers [Boolean]
       # @param registry [Types::Registry] where the types inside Any are looked up
       def initialize(preserve_proto_field_names: false, emit_defaults: false, format_enums_as_integers: false,
-        registry: Types.registry, preserve_proto_fieldnames: nil)
+        registry: nil, preserve_proto_fieldnames: nil)
         @proto_names = preserve_proto_fieldnames.nil? ? preserve_proto_field_names : preserve_proto_fieldnames
         @emit_defaults = emit_defaults
         @enums_as_integers = format_enums_as_integers
@@ -221,7 +221,7 @@ module Protostar
         slash = url.rindex("/")
         fail!("bad type URL #{url.inspect} in Any") if slash.nil? || slash == 0
         name = url[(slash + 1)..]
-        klass = Types.find(name, registry: @registry)
+        klass = Types.find(name, registry: @registry || Types.registry)
         fail!("cannot find the type #{name.inspect} of an Any") unless klass.is_a?(Class)
         klass
       end

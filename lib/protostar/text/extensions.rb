@@ -100,7 +100,7 @@ module Protostar
       end
 
       def resolve(descriptor)
-        Types.find(descriptor.full_name, registry: @registry) || raise(KeyError, descriptor.full_name)
+        Types.find(descriptor.full_name, registry: @registry || Types.registry) || raise(KeyError, descriptor.full_name)
       end
 
       # The file and everything it imports, transitively
