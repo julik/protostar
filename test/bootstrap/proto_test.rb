@@ -30,7 +30,7 @@ class ProtoTest < Minitest::Test
     rebuilt = Protostar::Schema::Builder.from_proto(files.last.to_proto, pool: pool)
     assert_equal EmitterSupport.comparable(files.last.to_h), EmitterSupport.comparable(rebuilt.to_h)
     refute pool.include?(rebuilt.name)
-    assert_equal 9876543210, rebuilt.options.extensions["proto2_unittest.file_opt1"]
+    assert_equal 9876543210, rebuilt.options.extension("proto2_unittest.file_opt1")
     assert compiler
   end
 
@@ -64,7 +64,7 @@ class ProtoTest < Minitest::Test
     rebuilt = Protostar::Schema::Builder.from_proto(bytes, pool: pool)
     options = rebuilt.messages.first.options
     assert_empty options.extensions
-    assert_equal [[50001, 0, "\x07".b], [50002, 2, "\x01a".b], [50002, 2, "\x01b".b]], options.unknown_fields
+    assert_equal "\x88\xb5\x18\x07\x92\xb5\x18\x01a\x92\xb5\x18\x01b".b, options.unknown_fields
     assert_equal bytes, rebuilt.serialize
   end
 
@@ -81,7 +81,7 @@ class ProtoTest < Minitest::Test
   def test_message_set_items
     files, = custom_options
     file = files.last
-    aggregate = file.options.extensions.fetch("proto2_unittest.fileopt")
+    aggregate = file.options.extension("proto2_unittest.fileopt").__legacy_h
     type = file.find_message("proto2_unittest.Aggregate")
     finder = ->(name) { file.find_extension(name) }
     bytes = Codec.encode(type, aggregate, finder)

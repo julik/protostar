@@ -62,46 +62,58 @@ class FeaturesTest < Minitest::Test
 
   def test_merge
     base = F.defaults(:EDITION_2023)
+    declared = ->(**fields) { S::MessageValue.new(fields) }
     assert_same base, base.merge(nil)
-    assert_same base, base.merge({})
-    assert_same base, base.merge(field_presence: :EXPLICIT)
-    merged = base.merge(field_presence: :IMPLICIT, enum_type: :CLOSED)
+    assert_same base, base.merge(declared.call)
+    assert_same base, base.merge(declared.call(field_presence: :EXPLICIT))
+    merged = base.merge(declared.call(field_presence: :IMPLICIT, enum_type: :CLOSED))
     assert_equal :IMPLICIT, merged.field_presence
     assert_equal :CLOSED, merged.enum_type
     assert_equal :PACKED, merged.repeated_field_encoding
     assert merged.frozen?
     assert Ractor.shareable?(merged)
-    assert_equal base.merge(field_presence: :IMPLICIT, enum_type: :CLOSED), merged
+    assert_equal base.with(field_presence: :IMPLICIT, enum_type: :CLOSED), merged
+    assert_same base, base.with(field_presence: :EXPLICIT)
+  end
+
+  # A custom feature set `pb.test`, as unittest_features.proto declares one
+  def custom_features(pool)
+    Protostar::Compiler.new(pool: pool).compile(["google/protobuf/descriptor.proto"], retain_options: true)
+    file = S::File.draft("pbtest.proto", package: "pb", dependencies: ["google/protobuf/descriptor.proto"])
+    file.enum("EnumFeature") { |e| %i[VALUE0 VALUE1 VALUE2 VALUE7].each_with_index { |v, i| e.value(v, i) } }
+    file.message("TestFeatures") do |m|
+      m.field "file_feature", 1, "EnumFeature"
+      m.field "multiple", 2, "EnumFeature"
+    end
+    file.extend(".google.protobuf.FeatureSet") { |e| e.field "test", 9999, "TestFeatures" }
+    pool.add(file.resolve(pool).freeze!)
   end
 
   def inheritance_file
-    hash = {
-      name: "inherit.proto", syntax: "editions", edition: :EDITION_2023, package: "inh",
-      options: {features: {enum_type: :CLOSED, __extensions: {"pb.test" => {file_feature: :VALUE7, multiple: :VALUE1}}}},
-      message_type: [{
-        name: "Outer",
-        options: {features: {field_presence: :IMPLICIT, __extensions: {"pb.test" => {multiple: :VALUE2}}}},
-        field: [
-          {name: "plain", number: 1, label: :LABEL_OPTIONAL, type: :TYPE_INT32},
-          {name: "own", number: 2, label: :LABEL_OPTIONAL, type: :TYPE_INT32,
-           options: {features: {field_presence: :EXPLICIT}}},
-          {name: "member", number: 3, label: :LABEL_OPTIONAL, type: :TYPE_INT32, oneof_index: 0},
-          {name: "reps", number: 4, label: :LABEL_REPEATED, type: :TYPE_INT32}
-        ],
-        oneof_decl: [{name: "choice", options: {features: {utf8_validation: :NONE}}}],
-        nested_type: [{name: "Inner", field: [{name: "deep", number: 1, label: :LABEL_OPTIONAL, type: :TYPE_STRING}]}],
-        enum_type: [{name: "InnerEnum", value: [{name: "INNER_ZERO", number: 0}]}],
-        extension_range: [{start: 100, end: 200, options: {features: {json_format: :LEGACY_BEST_EFFORT}}}],
-        extension: [{name: "scoped_ext", number: 100, label: :LABEL_OPTIONAL, type: :TYPE_INT32, extendee: ".inh.Outer"}]
-      }],
-      enum_type: [{name: "Top", options: {features: {enum_type: :OPEN}},
-                   value: [{name: "TOP_ZERO", number: 0, options: {features: {json_format: :LEGACY_BEST_EFFORT}}},
-                     {name: "TOP_ONE", number: 1}]}],
-      extension: [{name: "file_ext", number: 101, label: :LABEL_OPTIONAL, type: :TYPE_INT32, extendee: ".inh.Outer"}],
-      service: [{name: "Svc", options: {features: {json_format: :LEGACY_BEST_EFFORT}},
-                 method: [{name: "Call", input_type: ".inh.Outer", output_type: ".inh.Outer"}]}]
-    }
-    S::Builder.build(hash, pool: S::Pool.new)
+    pool = S::Pool.new
+    custom_features(pool)
+    file = S::File.draft("inherit.proto", edition: :EDITION_2023, package: "inh", dependencies: ["pbtest.proto"],
+      options: {features: {enum_type: :CLOSED, extensions: {"pb.test" => {file_feature: :VALUE7, multiple: :VALUE1}}}})
+    file.message("Outer", options: {features: {field_presence: :IMPLICIT,
+                                               extensions: {"pb.test" => {multiple: :VALUE2}}}}) do |m|
+      m.field "plain", 1, :int32
+      m.field "own", 2, :int32, options: {features: {field_presence: :EXPLICIT}}
+      m.oneof("choice", options: {features: {utf8_validation: :NONE}}) { |o| o.field "member", 3, :int32 }
+      m.field "reps", 4, :int32, label: :repeated
+      m.message("Inner") { |i| i.field "deep", 1, :string }
+      m.enum("InnerEnum") { |e| e.value "INNER_ZERO", 0 }
+      m.extensions 100..199, options: {features: {json_format: :LEGACY_BEST_EFFORT}}
+      m.extend(".inh.Outer") { |e| e.field "scoped_ext", 100, :int32 }
+    end
+    file.enum("Top", options: {features: {enum_type: :OPEN}}) do |e|
+      e.value "TOP_ZERO", 0, options: {features: {json_format: :LEGACY_BEST_EFFORT}}
+      e.value "TOP_ONE", 1
+    end
+    file.extend(".inh.Outer") { |e| e.field "file_ext", 101, :int32 }
+    file.service("Svc", options: {features: {json_format: :LEGACY_BEST_EFFORT}}) do |s|
+      s.rpc "Call", ".inh.Outer", ".inh.Outer"
+    end
+    file.resolve(pool).freeze!
   end
 
   def test_inheritance
@@ -153,10 +165,11 @@ class FeaturesTest < Minitest::Test
   def test_custom_features_merge_as_messages
     file = inheritance_file
     outer = file.find_message("inh.Outer")
-    assert_equal({"pb.test" => {file_feature: :VALUE7, multiple: :VALUE1}}, file.features.extensions)
-    assert_equal({"pb.test" => {file_feature: :VALUE7, multiple: :VALUE2}}, outer.features.extensions)
+    test = file.dependency_files.first.find_extension("pb.test")
+    assert_equal({test => S::MessageValue.new({file_feature: :VALUE7, multiple: :VALUE1})}, file.features.extensions)
+    assert_equal({test => S::MessageValue.new({file_feature: :VALUE7, multiple: :VALUE2})}, outer.features.extensions)
     assert_equal outer.features.extensions, outer.field("plain").features.extensions
-    assert_equal :VALUE2, outer.features.to_h[:__extensions]["pb.test"][:multiple]
+    assert_equal :VALUE2, outer.features.extensions[test][:multiple]
   end
 
   def test_unchanged_features_are_shared
@@ -168,17 +181,16 @@ class FeaturesTest < Minitest::Test
   end
 
   def test_legacy_proto2_spellings_map_onto_features
-    file = S::Builder.build({
-      name: "legacy2.proto",
-      message_type: [{name: "M", field: [
-        {name: "req", number: 1, label: :LABEL_REQUIRED, type: :TYPE_INT32},
-        {name: "grp", number: 2, label: :LABEL_OPTIONAL, type: :TYPE_GROUP, type_name: ".M.Grp"},
-        {name: "packed", number: 3, label: :LABEL_REPEATED, type: :TYPE_INT32, options: {packed: true}},
-        {name: "plain", number: 4, label: :LABEL_REPEATED, type: :TYPE_INT32},
-        {name: "explicit_unpacked", number: 5, label: :LABEL_REPEATED, type: :TYPE_INT32, options: {packed: false}},
-        {name: "strings", number: 6, label: :LABEL_REPEATED, type: :TYPE_STRING, options: {packed: true}}
-      ], nested_type: [{name: "Grp"}]}]
-    }, pool: S::Pool.new)
+    file = S::File.draft("legacy2.proto")
+    file.message("M") do |m|
+      m.field "req", 1, :int32, label: :required
+      m.group "Grp", 2
+      m.field "packed", 3, :int32, label: :repeated, options: {packed: true}
+      m.field "plain", 4, :int32, label: :repeated
+      m.field "explicit_unpacked", 5, :int32, label: :repeated, options: {packed: false}
+      m.field "strings", 6, :string, label: :repeated, options: {packed: true}
+    end
+    file = file.resolve(S::Pool.new).freeze!
     m = file.find_message("M")
     assert_equal :LEGACY_REQUIRED, m.field("req").features.field_presence
     assert m.field("req").required?
@@ -191,14 +203,13 @@ class FeaturesTest < Minitest::Test
   end
 
   def test_legacy_proto3_spellings_map_onto_features
-    file = S::Builder.build({
-      name: "legacy3.proto", syntax: "proto3",
-      message_type: [{name: "M", field: [
-        {name: "opt", number: 1, label: :LABEL_OPTIONAL, type: :TYPE_INT32, oneof_index: 0, proto3_optional: true},
-        {name: "expanded", number: 2, label: :LABEL_REPEATED, type: :TYPE_INT32, options: {packed: false}},
-        {name: "packed", number: 3, label: :LABEL_REPEATED, type: :TYPE_DOUBLE}
-      ], oneof_decl: [{name: "_opt"}]}]
-    }, pool: S::Pool.new)
+    file = S::File.draft("legacy3.proto", syntax: :proto3)
+    file.message("M") do |m|
+      m.field "opt", 1, :int32, optional: true
+      m.field "expanded", 2, :int32, label: :repeated, options: {packed: false}
+      m.field "packed", 3, :double, label: :repeated
+    end
+    file = file.resolve(S::Pool.new).freeze!
     m = file.find_message("M")
     assert_equal :EXPLICIT, m.field("opt").features.field_presence
     refute m.field("expanded").packed?

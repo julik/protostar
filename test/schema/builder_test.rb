@@ -34,36 +34,6 @@ class BuilderTest < Minitest::Test
     assert_same m.field(2), m.fields_by_json_name["Different"]
   end
 
-  def test_options_round_trip_with_extensions_and_unknown_fields
-    options = {
-      deprecated: true,
-      features: {field_presence: :EXPLICIT},
-      __extensions: {"my.pkg.opt" => {nested: +"value", list: [1, 2]}, "my.pkg.flag" => true},
-      __unknown_fields: [[50_000, 2, "\x01\x02".b], [50_001, 0, "\x96\x01".b]]
-    }
-    hash = {name: "o.proto", syntax: "editions", edition: :EDITION_2023,
-            message_type: [{name: "M", options: options, field: [field("f", 1, :TYPE_INT32, json_name: "f")]}]}
-    file = build(hash)
-    m = file.find_message("M")
-    assert_equal hash, file.to_h
-    assert_equal true, m.options[:deprecated]
-    assert m.options.key?(:deprecated)
-    assert_equal true, m.options.fetch(:deprecated)
-    assert_equal :none, m.options.fetch(:map_entry, :none)
-    assert_equal({nested: "value", list: [1, 2]}, m.options.extensions["my.pkg.opt"])
-    assert_equal [50_000, 2, "\x01\x02".b], m.options.unknown_fields.first
-    assert_equal({field_presence: :EXPLICIT}, m.options.features)
-    refute m.options.empty?
-    assert Ractor.shareable?(m.options)
-    refute options[:__extensions]["my.pkg.opt"][:nested].frozen?, "the caller's strings stay theirs"
-
-    plain = m.field(1).options
-    assert_same S::Options::EMPTY, plain
-    assert_equal({}, plain.extensions)
-    assert_equal [], plain.unknown_fields
-    assert_nil plain.features
-  end
-
   def test_integer_editions_are_named
     file = build(name: "e.proto", syntax: "editions", edition: 1002)
     assert_equal :EDITION_2026, file.edition

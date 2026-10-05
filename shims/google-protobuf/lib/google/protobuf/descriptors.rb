@@ -65,7 +65,7 @@ module Google
         def options_message(type)
           require "google/protobuf/descriptor_pb"
           options = @__schema.options
-          hash = options ? options.to_h : {}
+          hash = options.declared? ? options.__legacy_h : {}
           bytes = Protostar::Schema::Proto::HashCodec.encode(
             Protostar::Schema::Proto.schema(type), hash, @__schema.file.extension_finder(@descriptor_pool.__schema_pool)
           )

@@ -42,37 +42,37 @@ class CompilerCustomOptionsTest < Minitest::Test
 
   def test_unittest_custom_options_values
     file = CompilerSupport.compiler.compile(["google/protobuf/unittest_custom_options.proto"]).last
-    assert_equal 9876543210, file.options.extensions["proto2_unittest.file_opt1"]
+    assert_equal 9876543210, file.options.extension("proto2_unittest.file_opt1")
     message = file.find_message("proto2_unittest.TestMessageWithCustomOptions")
-    assert_equal(-56, message.options.extensions["proto2_unittest.message_opt1"])
-    assert_equal 8765432109, message.field("field1").options.extensions["proto2_unittest.field_opt1"]
+    assert_equal(-56, message.options.extension("proto2_unittest.message_opt1"))
+    assert_equal 8765432109, message.field("field1").options.extension("proto2_unittest.field_opt1")
     enum = file.find_enum("proto2_unittest.TestMessageWithCustomOptions.AnEnum")
-    assert_equal(-789, enum.options.extensions["proto2_unittest.enum_opt1"])
-    assert_equal 123, enum.value("ANENUM_VAL2").options.extensions["proto2_unittest.enum_value_opt1"]
+    assert_equal(-789, enum.options.extension("proto2_unittest.enum_opt1"))
+    assert_equal 123, enum.value("ANENUM_VAL2").options.extension("proto2_unittest.enum_value_opt1")
     method = file.find_service("proto2_unittest.TestServiceWithCustomOptions").rpc("Foo")
-    assert_equal :METHODOPT1_VAL2, method.options.extensions["proto2_unittest.method_opt1"]
+    assert_equal :METHODOPT1_VAL2, method.options.extension("proto2_unittest.method_opt1")
   end
 
   def test_complex_options_merge_like_protoc
     file = CompilerSupport.compiler.compile(["google/protobuf/unittest_custom_options.proto"]).last
-    options = file.find_message("proto2_unittest.VariousComplexOptions").options.extensions
-    opt1 = options.fetch("proto2_unittest.complex_opt1")
+    options = file.find_message("proto2_unittest.VariousComplexOptions").options
+    opt1 = options.extension("proto2_unittest.complex_opt1")
     assert_equal 42, opt1[:foo]
     assert_equal [99, 88], opt1[:foo4]
-    assert_equal 324, opt1[:__extensions]["proto2_unittest.mooo"]
-    assert_equal({moo: 876}, opt1[:__extensions]["proto2_unittest.corge"])
-    opt2 = options.fetch("proto2_unittest.complex_opt2")
-    assert_equal [{waldo: 101}, {waldo: 212}], opt2[:barney]
-    assert_equal({xyzzy: 24}, options.fetch("proto2_unittest.complexopt6"))
+    assert_equal 324, opt1.extension("proto2_unittest.mooo")
+    assert_equal({moo: 876}, opt1.extension("proto2_unittest.corge").to_h)
+    opt2 = options.extension("proto2_unittest.complex_opt2")
+    assert_equal [{waldo: 101}, {waldo: 212}], opt2[:barney].map(&:to_h)
+    assert_equal({xyzzy: 24}, options.extension("proto2_unittest.complexopt6").to_h)
   end
 
   def test_aggregate_values
     file = CompilerSupport.compiler.compile(["google/protobuf/unittest_custom_options.proto"]).last
-    fileopt = file.options.extensions.fetch("proto2_unittest.fileopt")
+    fileopt = file.options.extension("proto2_unittest.fileopt")
     assert_equal 100, fileopt[:i]
     assert_equal "FileAnnotation", fileopt[:s]
-    assert_equal({s: "NestedFileAnnotation"}, fileopt[:sub])
-    assert_equal({__extensions: {"proto2_unittest.fileopt" => {s: "FileExtensionAnnotation"}}}, fileopt[:file])
+    assert_equal({s: "NestedFileAnnotation"}, fileopt[:sub].to_h)
+    assert_equal({"(proto2_unittest.fileopt)": {s: "FileExtensionAnnotation"}}, fileopt[:file].to_h)
     any = fileopt[:any]
     assert_equal "type.googleapis.com/proto2_unittest.AggregateMessageSetElement", any[:type_url]
     assert_equal "\n\x19EmbeddedMessageSetElement".b, any[:value]

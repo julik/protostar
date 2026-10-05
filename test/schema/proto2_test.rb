@@ -101,7 +101,8 @@ class Proto2Test < Minitest::Test
     assert map_field.options.empty?
     assert_equal({}, map_field.to_h[:options])
     refute m.field("oneof_field").to_h.key?(:options)
-    assert_same Protostar::Schema::Options::EMPTY, m.field("oneof_field").options
+    assert map_field.options.declared?
+    refute m.field("oneof_field").options.declared?
     assert m.options.key?(:message_set_wire_format)
     assert_equal false, m.options[:message_set_wire_format]
     refute m.message_set_wire_format?

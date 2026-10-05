@@ -260,7 +260,7 @@ module Protostar
         # @return [self]
         def resolve(pool)
           link(pool)
-          Resolution.new(@descriptor, @fields, @options).call
+          Resolution.new(@descriptor, @fields, @options, pool).call
           @resolved = true
           self
         end
@@ -756,24 +756,83 @@ module Protostar
       # DescriptorBuilder resolves them once options are known
       # @api private
       class Resolution
-        def initialize(file, fields, options)
+        OPTIONS = {
+          Schema::File => FileOptions, Schema::Message => MessageOptions, Field => FieldOptions,
+          Schema::Oneof => OneofOptions, Schema::Enum => EnumOptions, EnumValue => EnumValueOptions,
+          Schema::Service => ServiceOptions, Schema::Method => MethodOptions,
+          ExtensionRange => ExtensionRangeOptions
+        }.freeze
+
+        def initialize(file, fields, specs, pool)
           @file = file
           @fields = fields
-          @options = options
+          @specs = specs
+          @pool = pool
           @features = {}
+          @empty = {}
         end
 
         def call
-          @options.each { |descriptor, spec| descriptor.__link(options: Options.build(spec)) }
+          finder = extension_finder
+          @declared = {}.compare_by_identity
+          @specs.each do |descriptor, spec|
+            options = OPTIONS.fetch(descriptor.class).build(spec, finder, descriptor.full_name)
+            @declared[descriptor] = options if options
+          end
           resolve_features
           parse_defaults
         end
 
         private
 
+        # Custom options are extensions of this file, its imports and theirs,
+        # or else of whatever the pool holds (`import option` files)
+        def extension_finder
+          files = []
+          seen = {}
+          queue = [@file]
+          until queue.empty?
+            f = queue.shift
+            next if seen[f.name]
+            seen[f.name] = true
+            files << f
+            queue.concat(f.dependency_files)
+          end
+          lambda do |name|
+            files.each do |f|
+              found = f.find_extension(name)
+              return found if found
+            end
+            found = @pool&.find_symbol(name)
+            found if found.is_a?(Field) && found.extension?
+          end
+        end
+
+        def declared(descriptor)
+          @declared[descriptor]
+        end
+
+        # Options of this file's messages are bound in tree order, so a
+        # message type elsewhere in the file may not be bound yet
+        def map_entry?(message)
+          return message.map_entry? unless message.file.equal?(@file)
+          declared(message)&.[](:map_entry) == true
+        end
+
+        def bind(descriptor, features)
+          options = @declared[descriptor]
+          bound = if options
+            options.with_features(features)
+          else
+            klass = OPTIONS.fetch(descriptor.class)
+            @empty[[klass, features]] ||= klass.new(features: features)
+          end
+          descriptor.__link(features: features, options: bound)
+        end
+
         def resolve_features
-          file_features = intern(Features.defaults(@file.edition_number).merge(@file.options.features))
-          @file.__link(features: file_features)
+          file_features = intern(Features.defaults(@file.edition_number).merge(declared(@file)&.[](:features)))
+          bind(@file, file_features)
           @file.messages.each { |m| resolve_message_features(m, file_features) }
           @file.enums.each { |e| resolve_enum_features(e, file_features) }
           @file.extensions.each { |f| resolve_field_features(f, file_features) }
@@ -801,14 +860,15 @@ module Protostar
         # protoc's InferLegacyProtoFeatures for proto2 and proto3 files, then the
         # label and type adjustments of DescriptorBuilder::PostProcessFieldFeatures
         def resolve_field_features(field, parent)
-          features = parent.merge(field.options.features)
+          options = declared(field)
+          features = parent.merge(options&.[](:features))
           if @file.syntax != :editions
             legacy = {}
             legacy[:field_presence] = :LEGACY_REQUIRED if field.declared_label == :required
             legacy[:message_encoding] = :DELIMITED if field.declared_type == :group
-            legacy[:repeated_field_encoding] = field.options[:packed] ? :PACKED : :EXPANDED if field.options.key?(:packed)
+            legacy[:repeated_field_encoding] = options[:packed] ? :PACKED : :EXPANDED if options&.key?(:packed)
             legacy[:field_presence] = :EXPLICIT if field.proto3_optional?
-            features = features.merge(legacy)
+            features = features.with(**legacy)
           end
           features = intern(features)
           label = field.declared_label
@@ -816,14 +876,15 @@ module Protostar
           type = field.declared_type
           if type == :message && features.message_encoding == :DELIMITED
             holder = field.extension? ? field.extendee : field.containing_message
-            type = :group unless holder.map_entry? || field.message_type.map_entry?
+            type = :group unless map_entry?(holder) || map_entry?(field.message_type)
           end
-          field.__link(features: features, label: label, type: type)
+          bind(field, features)
+          field.__link(label: label, type: type)
         end
 
         def inherit(parent, descriptor)
-          features = intern(parent.merge(descriptor.options.features))
-          descriptor.__link(features: features)
+          features = intern(parent.merge(declared(descriptor)&.[](:features)))
+          bind(descriptor, features)
           features
         end
 

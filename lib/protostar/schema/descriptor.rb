@@ -13,7 +13,7 @@ module Protostar
       # @return [Features] resolved features
       attr_reader :features
 
-      # @return [Options] declared options, {Options::EMPTY} when none
+      # @return [Options] declared options; once resolved, also the resolved {Options#features}
       def options
         @options || Options::EMPTY
       end
@@ -34,7 +34,7 @@ module Protostar
       private
 
       def options_to_h(h)
-        h[:options] = @options.to_h if @options
+        h[:options] = @options.__legacy_h if @options&.declared?
         h
       end
     end

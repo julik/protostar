@@ -77,7 +77,7 @@ module Protostar
         new(values, Freezer::EMPTY_HASH)
       end
 
-      # @return [Hash{String => Object}] merged explicit custom features by extension full name
+      # @return [Hash{Field => MessageValue}] merged explicit custom features by extension
       attr_reader :extensions
 
       # @api private
@@ -108,50 +108,45 @@ module Protostar
       #   @return [Symbol]
       attr_reader(*NAMES)
 
-      # Overlays a raw `features` option hash (as found in options) on these features
-      # @param raw [Hash, nil]
+      # Overlays a declared `features` option (a FeatureSet) on these features
+      # @param declared [MessageValue, nil]
       # @return [Features] self when the overlay changes nothing
-      def merge(raw)
-        return self if raw.nil? || raw.empty?
+      def merge(declared)
+        return self if declared.nil? || declared.empty?
         values = @values
-        extensions = @extensions
-        raw.each do |key, value|
-          if key == :__extensions
-            extensions = deep_merge(extensions, value)
-          elsif key != :__unknown_fields && NAMES.include?(key) && value.is_a?(Symbol)
-            values = values.merge(key => value) unless values[key] == value
-          end
+        declared.fields.each do |key, value|
+          next unless NAMES.include?(key) && value.is_a?(Symbol)
+          values = values.merge(key => value) unless values[key] == value
         end
+        extensions = MessageValue.merge_values(@extensions, declared.extensions)
         return self if values.equal?(@values) && extensions.equal?(@extensions)
-        Features.new(values, Ractor.make_shareable(extensions))
+        Features.new(values, extensions)
       end
 
-      # @return [Hash] the core features, plus `:__extensions` when any are set
+      # @param values [Hash{Symbol => Symbol}] core features to override
+      # @return [Features] self when nothing changes
+      def with(**values)
+        return self if values.all? { |k, v| @values[k] == v }
+        Features.new(@values.merge(values), @extensions)
+      end
+
+      # @return [Hash{Symbol => Symbol}] the core features by name
       def to_h
-        return @values if @extensions.empty?
-        @values.merge(__extensions: @extensions)
+        @values
       end
 
       def ==(other)
-        other.is_a?(Features) && other.to_h == to_h
+        other.is_a?(Features) && other.to_h == @values && other.extensions == @extensions
       end
       alias_method :eql?, :==
 
       def hash
-        to_h.hash
+        [@values, @extensions].hash
       end
 
       def inspect
-        "#<#{self.class.name} #{to_h.inspect}>"
-      end
-
-      private
-
-      def deep_merge(base, overlay)
-        return base if overlay.nil? || overlay.empty?
-        base.merge(overlay) do |_key, old, new|
-          (old.is_a?(Hash) && new.is_a?(Hash)) ? deep_merge(old, new) : new
-        end
+        custom = @extensions.map { |f, v| " (#{f.full_name}): #{v.inspect}" }.join
+        "#<#{self.class.name} #{@values.inspect}#{custom}>"
       end
     end
   end

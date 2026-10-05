@@ -100,7 +100,7 @@ module Protostar
         type = options_message(kind)
         return unless type
         target, label = TARGET_TYPES.fetch(kind)
-        check_targets(options.to_h, type, target, label, run)
+        check_targets(options, type, target, label, run)
       end
 
       private
@@ -121,20 +121,12 @@ module Protostar
         @linker.each_element(&block)
       end
 
-      def check_targets(hash, type, target, label, run)
-        hash.each do |key, value|
-          if key == :__extensions
-            value.each do |name, ext_value|
-              field = extension_field(name)
-              next unless field
-              check_target(field, ext_value, target, label, run)
-            end
-            next
-          end
-          next if key == :__unknown_fields
-          field = type.fields_by_name[key.to_s]
-          check_target(field, value, target, label, run) if field
+      def check_targets(value, type, target, label, run)
+        value.fields.each do |name, v|
+          field = type.fields_by_name[name.to_s]
+          check_target(field, v, target, label, run) if field
         end
+        value.extensions.each { |field, v| check_target(field, v, target, label, run) }
       end
 
       def check_target(field, value, target, label, run)
@@ -144,7 +136,7 @@ module Protostar
         end
         return unless field.type == :message || field.type == :group
         Array(field.repeated? ? value : [value]).each do |v|
-          check_targets(v, field.message_type, target, label, run) if v.is_a?(Hash)
+          check_targets(v, field.message_type, target, label, run) if v.is_a?(Schema::MessageValue)
         end
       end
 
@@ -169,10 +161,9 @@ module Protostar
         end
       end
 
-      def schema_options(node, _kind)
+      def schema_options(node, kind)
         return nil unless node.options
-        hash = @linker.options_of(node)
-        hash && Schema::Options.new(hash)
+        schema_of(node, kind).options
       end
 
       def validate_options
@@ -424,7 +415,7 @@ module Protostar
         end
         error(node, :name, "Extensions can't be required.") if field.extension? && field.required?
         return if !field.extension? && field.containing_message.map_entry?
-        raw = field.options.features || {}
+        raw = field.options[:features] || Schema::MessageValue::EMPTY
         if raw.key?(:field_presence)
           if field.real_oneof || field.oneof
             error(node, :name, "Oneof fields can't specify field presence.")
@@ -521,7 +512,7 @@ module Protostar
         return if DESCRIPTOR_OPTIONS.include?(extendee.full_name)
         return if extendee.file.name == "google/protobuf/descriptor.proto"
         range = extendee.extension_range_descriptors.find { |r| r.range.cover?(field.number) }
-        return if range.nil? || range.options.equal?(Schema::Options::EMPTY)
+        return if range.nil? || !range.options.declared?
         declarations = range.options[:declaration] || []
         declaration = declarations.find { |d| d[:number] == field.number }
         if declaration&.[](:reserved)
@@ -899,41 +890,36 @@ module Protostar
         edition = @linker.edition_number
         each_element do |node, kind|
           next unless node.options
-          hash = @linker.options_of(node)
-          next if hash.nil? || hash.empty?
+          options = schema_of(node, kind).options
+          next if options.empty?
           type = options_message(kind)
-          features = hash[:features]
+          features = options[:features]
           if features && (feature_type = type.fields_by_name["features"]&.message_type)
             lifetimes(features, feature_type, edition, node)
           end
           # protoc moves features out of the options before this check
-          rest = hash.except(:features)
-          lifetimes(rest, type, edition, node) unless rest.empty?
+          lifetimes(options, type, edition, node, except: :features)
         end
       end
 
-      def lifetimes(hash, type, edition, node)
-        hash.each do |key, value|
-          fields = if key == :__extensions
-            value.map { |name, v| [extension_field(name), v] }
-          elsif key == :__unknown_fields
-            []
-          else
-            [[type.fields_by_name[key.to_s], value]]
-          end
-          fields.each do |field, v|
-            next unless field.is_a?(Schema::Field)
-            if field.type == :message || field.type == :group
-              (field.repeated? ? v : [v]).each { |m| lifetimes(m, field.message_type, edition, node) if m.is_a?(Hash) }
+      def lifetimes(value, type, edition, node, except: nil)
+        fields = value.fields.filter_map do |name, v|
+          [type.fields_by_name[name.to_s], v] unless name == except
+        end
+        (fields + value.extensions.to_a).each do |field, v|
+          next unless field.is_a?(Schema::Field)
+          if field.type == :message || field.type == :group
+            (field.repeated? ? v : [v]).each do |m|
+              lifetimes(m, field.message_type, edition, node) if m.is_a?(Schema::MessageValue)
             end
-            if field.type == :enum
-              (field.repeated? ? v : [v]).each do |name|
-                enum_value = field.enum_type.value(name.is_a?(Symbol) ? name.to_s : name)
-                single_lifetime(edition, enum_value.full_name, enum_value.options[:feature_support], node) if enum_value
-              end
-            end
-            single_lifetime(edition, field.full_name, field.options[:feature_support], node)
           end
+          if field.type == :enum
+            (field.repeated? ? v : [v]).each do |name|
+              enum_value = field.enum_type.value(name.is_a?(Symbol) ? name.to_s : name)
+              single_lifetime(edition, enum_value.full_name, enum_value.options[:feature_support], node) if enum_value
+            end
+          end
+          single_lifetime(edition, field.full_name, field.options[:feature_support], node)
         end
       end
 
