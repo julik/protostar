@@ -180,6 +180,10 @@ module Protostar
           scope = scope_name
           -(scope.empty? ? name : "#{scope}.#{name}")
         end
+
+        def inspect
+          "#<#{self.class.name} #{@descriptor.full_name}>"
+        end
       end
 
       # A file under construction
@@ -708,6 +712,10 @@ module Protostar
 
       # An enum under construction: the block argument of {Scope#enum}
       class Enum
+        def inspect
+          "#<#{self.class.name} #{@descriptor.full_name}>"
+        end
+
         # @return [Schema::Enum]
         attr_reader :descriptor
 
@@ -762,6 +770,10 @@ module Protostar
 
       # A service under construction: the block argument of {File#service}
       class Service
+        def inspect
+          "#<#{self.class.name} #{@descriptor.full_name}>"
+        end
+
         # @return [Schema::Service]
         attr_reader :descriptor
 
