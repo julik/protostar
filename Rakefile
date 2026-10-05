@@ -42,4 +42,26 @@ namespace :bootstrap do
   end
 end
 
+namespace :conformance do
+  desc "Build protobuf's conformance_test_runner into ~/.cache/protostar (needs CMake and a C++ toolchain)"
+  task :build do
+    ruby "script/conformance.rb", "build"
+  end
+
+  desc "Run the binary, JSON and text-format conformance suites against conformance/run_testee"
+  task :run do
+    ruby "script/conformance.rb", "run"
+  end
+
+  desc "Regenerate conformance/generated/*_pb.rb with protostar compile"
+  task :regenerate do
+    ruby "script/conformance.rb", "regenerate"
+  end
+
+  desc "Fail when conformance/generated/*_pb.rb differ from what protostar compile writes"
+  task :check do
+    ruby "script/conformance.rb", "check"
+  end
+end
+
 task default: %i[test standard]

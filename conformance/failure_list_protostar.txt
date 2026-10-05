@@ -1,0 +1,44 @@
+# codec: extensions stay unknown fields, so their strings are not UTF-8 checked; there is no extension API
+Recommended.Editions.ProtobufInput.RejectInvalidUtf8.String.Extension
+
+# json: the stdlib parser collapses a repeated key to its last value before we see the object
+Recommended.Editions_Proto2.JsonInput.FieldNameDuplicate
+Recommended.Editions_Proto3.JsonInput.FieldNameDuplicate
+Recommended.Proto2.JsonInput.FieldNameDuplicate
+Recommended.Proto3.JsonInput.FieldNameDuplicate
+
+# json: a field given by both its proto name and its json_name is not refused
+Recommended.Editions_Proto2.JsonInput.FieldNameDuplicateDifferentCasing1
+Recommended.Editions_Proto2.JsonInput.FieldNameDuplicateDifferentCasing2
+Recommended.Editions_Proto3.JsonInput.FieldNameDuplicateDifferentCasing1
+Recommended.Editions_Proto3.JsonInput.FieldNameDuplicateDifferentCasing2
+Recommended.Proto2.JsonInput.FieldNameDuplicateDifferentCasing1
+Recommended.Proto2.JsonInput.FieldNameDuplicateDifferentCasing2
+Recommended.Proto3.JsonInput.FieldNameDuplicateDifferentCasing1
+Recommended.Proto3.JsonInput.FieldNameDuplicateDifferentCasing2
+
+# json: extensions ("[pkg.ext]" keys) are not supported; there is no extension API
+Recommended.Editions_Proto2.JsonInput.FieldNameExtension.Validator
+Recommended.Proto2.JsonInput.FieldNameExtension.Validator
+
+# json: quoted integers in exponent form ("1e5") are refused
+Required.Editions_Proto2.JsonInput.Int32FieldQuotedExponentialValue.JsonOutput
+Required.Editions_Proto2.JsonInput.Int32FieldQuotedExponentialValue.ProtobufOutput
+Required.Editions_Proto3.JsonInput.Int32FieldQuotedExponentialValue.JsonOutput
+Required.Editions_Proto3.JsonInput.Int32FieldQuotedExponentialValue.ProtobufOutput
+Required.Proto2.JsonInput.Int32FieldQuotedExponentialValue.JsonOutput
+Required.Proto2.JsonInput.Int32FieldQuotedExponentialValue.ProtobufOutput
+Required.Proto3.JsonInput.Int32FieldQuotedExponentialValue.JsonOutput
+Required.Proto3.JsonInput.Int32FieldQuotedExponentialValue.ProtobufOutput
+
+# codec: a tag written as an overlong (10-byte) varint is accepted; protoc refuses tags longer than 5 bytes
+Required.Editions_Proto2.ProtobufInput.BadTag_OverlongVarint
+Required.Editions_Proto3.ProtobufInput.BadTag_OverlongVarint
+Required.Proto2.ProtobufInput.BadTag_OverlongVarint
+Required.Proto3.ProtobufInput.BadTag_OverlongVarint
+
+# json: an empty object for an Any is refused for lack of @type
+Required.Editions_Proto3.JsonInput.AnyWithNoType.JsonOutput
+Required.Editions_Proto3.JsonInput.AnyWithNoType.ProtobufOutput
+Required.Proto3.JsonInput.AnyWithNoType.JsonOutput
+Required.Proto3.JsonInput.AnyWithNoType.ProtobufOutput

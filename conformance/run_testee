@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# The executable conformance_test_runner forks: `rake conformance:run` hands it this path.
+require_relative "testee"
+ProtostarConformance.main
