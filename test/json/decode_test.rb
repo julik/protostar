@@ -32,6 +32,12 @@ class JSONDecodeTest < Minitest::Test
     assert_error(/duplicate key/i, '{"optionalInt32": 1, "optionalInt32": 2}')
   end
 
+  def test_comments_are_not_json
+    # conformance: Recommended.*.JsonInput.JsonWithComments; json 2.x accepts them unless told not to
+    assert_error(/invalid JSON/, %({\n // a comment\n "optionalInt32": 1}))
+    assert_error(/invalid JSON/, '{"optionalInt32": /* x */ 1}')
+  end
+
   def test_integers
     m = decode('{"optionalInt32": "12", "optionalInt64": 100, "optionalUint32": 1.0, "optionalUint64": "18446744073709551615",
       "optionalSint32": 1e2, "optionalSfixed64": "-0", "optionalFixed32": "4294967295"}')
