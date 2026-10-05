@@ -27,6 +27,7 @@ module Protostar
         EDITION_MAX: 0x7FFFFFFF
       }.freeze
 
+      # Edition numbers to their enum names
       EDITION_NAMES = EDITIONS.invert.freeze
 
       # The `edition_defaults` annotations on FeatureSet in descriptor.proto,
