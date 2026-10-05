@@ -236,10 +236,11 @@ class DslTest < Minitest::Test
   end
 
   def test_bad_input
-    assert_raises(DSL::Error) { DSL.file_hash("x.proto") { |f| f.message("M") { |m| m.field :a, 1, :int33 } } }
-    assert_raises(DSL::Error) { DSL.file_hash("x.proto") { |f| f.message("M") { |m| m.field :a, 1, :int32, label: :maybe } } }
-    assert_raises(DSL::Error) { DSL.file_hash("x.proto", syntax: :proto4) }
-    assert_raises(DSL::Error) { DSL.file_hash("x.proto", public_dependencies: ["y.proto"]) }
+    assert_raises(DSL::Error) { dsl("x.proto") { |f| f.message("M") { |m| m.field :a, 1, :int33 } } }
+    assert_raises(DSL::Error) { dsl("x.proto") { |f| f.message("M") { |m| m.field :a, 1, :int32, label: :maybe } } }
+    assert_raises(DSL::Error) { dsl("x.proto", syntax: :proto4) }
+    assert_raises(DSL::Error) { dsl("x.proto", public_dependencies: ["y.proto"]) }
+    refute @pool.include?("x.proto")
     assert_raises(Protostar::Schema::Error) { dsl("dsltest/bad.proto") { |f| f.message("M") { |m| m.field :a, 1, ".Nope" } } }
   end
 
