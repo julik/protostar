@@ -183,6 +183,6 @@ writes the same `orders_pb.rb`.
 ## Other outputs
 
 `--grpc_out=DIR` writes gRPC service stubs (`*_services_pb.rb`) for protos with
-`service` blocks. `--rbs_out=DIR` writes the RBS signatures protoc would write;
-they describe google-protobuf's classes rather than protostar's. `protostar --help`
-lists the rest.
+`service` blocks. `--rbs_out=DIR` next to `--ruby_out` writes RBS signatures
+(`*_pb.rbs`) for these classes; next to `--google_out`, or alone, it writes the ones
+protoc would write for google-protobuf's. `protostar --help` lists the rest.

@@ -3,7 +3,8 @@
 # Generates protostar's own `_pb.rb` files for descriptor.proto, plugin.proto
 # and the well-known types into lib/protostar/google/protobuf/, from the
 # bundled includes, with the native emitter. Constants live under
-# Protostar::Google::Protobuf so they never meet google-protobuf's.
+# Protostar::Google::Protobuf so they never meet google-protobuf's. Their RBS
+# signatures go to sig/protostar/google/protobuf/.
 #
 #   ruby script/bootstrap.rb check       # fails on any difference
 #   ruby script/bootstrap.rb regenerate  # rewrites the files
@@ -13,16 +14,20 @@ require "fileutils"
 
 module Bootstrap
   ROOT = File.expand_path("../lib/protostar", __dir__)
+  SIG = File.expand_path("../sig/protostar", __dir__)
   Emitters = Protostar::Compiler::Emitters
 
-  # @return [Hash{String => String}] path under lib/protostar to source
+  # @return [Hash{String => String}] path to source, Ruby under lib/protostar and RBS under sig/protostar
   def self.generate
     compiler = Protostar::Compiler.new(include_paths: [], bundled_includes: true)
     files = compiler.compile(Emitters::BOOTSTRAP, source_info: true)
     namespaces = files.to_h { |f| [f.name, "Protostar::#{Emitters::Naming.module_path(f).join("::")}"] }
-    emitter = Emitters::Ruby.new(namespaces: namespaces)
-    files.select { |f| Emitters::BOOTSTRAP.include?(f.name) }.to_h do |f|
-      [File.join(ROOT, Emitters::Naming.require_name(f.name) + ".rb"), emitter.file(f)]
+    ruby = Emitters::Ruby.new(namespaces: namespaces)
+    rbs = Emitters::ProtostarRbs.new(namespaces: namespaces)
+    files.select { |f| Emitters::BOOTSTRAP.include?(f.name) }.each_with_object({}) do |f, out|
+      base = Emitters::Naming.require_name(f.name)
+      out[File.join(ROOT, base + ".rb")] = ruby.file(f)
+      out[File.join(SIG, base + ".rbs")] = rbs.file(f)
     end
   end
 

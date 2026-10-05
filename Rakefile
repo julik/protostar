@@ -76,6 +76,13 @@ namespace :examples do
   end
 end
 
+namespace :rbs do
+  desc "Check sig/ (the public API and the well-known types) with rbs validate"
+  task :validate do
+    sh "rbs", "-I", "sig", "validate"
+  end
+end
+
 namespace :shim do
   desc "Run the google-protobuf shim's tests from its directory, with its own bundle"
   task :test do

@@ -66,11 +66,11 @@ module Protostar
       generated = {}
       outputs.each do |output|
         files.each do |file|
-          if output == "rbs" && file.syntax == :editions
+          if output == "rbs" && file.syntax == :editions && !outputs.include?("ruby")
             raise Protostar::Error, "#{file.name}: #{CLI::RBS_EDITIONS}"
           end
           begin
-            generated.merge!(emitter(output, pool).emit([file]))
+            generated.merge!(emitter(output, pool, outputs).emit([file]))
           rescue Emitters::Error => e
             raise Protostar::Error, "#{file.name}: #{e.message}"
           end
@@ -79,11 +79,11 @@ module Protostar
       generated
     end
 
-    def emitter(output, pool)
+    def emitter(output, pool, outputs)
       case output
       when "ruby" then Emitters::Ruby.new
       when "google" then Emitters::GoogleRuby.new(pool: pool)
-      when "rbs" then Emitters::Rbs.new
+      when "rbs" then outputs.include?("ruby") ? Emitters::ProtostarRbs.new : Emitters::Rbs.new
       when "grpc" then Emitters::Grpc.new
       end
     end
