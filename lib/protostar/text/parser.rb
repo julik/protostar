@@ -87,15 +87,23 @@ module Protostar
         add_extensions(msg, extensions) if extensions
       end
 
+      # The text between `[` and `]` as protoc reads it: an extension's full
+      # name, or an Any's type URL whose prefix may hold any URL characters
       def bracketed_name
-        start = @tokens.peek
-        name = +""
-        until accept("]")
-          t = @tokens.next
-          fail!("expected \"]\", got end of input", t) if t.type == :eof
-          name_part = t.type == :identifier || (t.type == :symbol && "./".include?(t.text))
-          fail!("unexpected #{shown(t)} in a bracketed name", t) unless name_part
-          name << t.text
+        name, pos = @tokens.url_chars
+        start = Tokenizer::Token.new(:identifier, name, pos)
+        t = @tokens.peek
+        fail!("unexpected #{shown(t)} in a bracketed name", t) unless t.type == :symbol && t.text == "]"
+        @tokens.next
+        slash = name.rindex("/")
+        type_name = slash ? name[(slash + 1)..] : name
+        if slash
+          fail!("type URL prefix is empty", start) if slash == 0
+          bad = name[0..slash].scan(/%.{0,2}/).find { |e| !/\A%\h\h\z/.match?(e) }
+          fail!("invalid percent escape \"#{bad}\" in a type URL", start) if bad
+        end
+        unless type_name.split(".", -1).all? { |part| /\A[A-Za-z_][A-Za-z0-9_]*\z/.match?(part) }
+          fail!("invalid type name \"#{type_name}\" in brackets", start)
         end
         [name, start]
       end
@@ -106,7 +114,10 @@ module Protostar
         klass = msg.class
         info = lookup(klass, t.text)
         unless info
-          fail!("message type \"#{klass.descriptor.full_name}\" has no field named \"#{t.text}\"", t) unless @allow_unknown
+          # protoc skips reserved names as it skips unknown fields when told to
+          unless @allow_unknown || klass.descriptor.reserved_names.include?(t.text)
+            fail!("message type \"#{klass.descriptor.full_name}\" has no field named \"#{t.text}\"", t)
+          end
           return skip_value
         end
         if !info.repeated && !info.map
@@ -319,12 +330,10 @@ module Protostar
 
       def codepoint(n, t)
         fail!("invalid Unicode escape", t) if n > 0x10FFFF
-        # a lone surrogate has no UTF-8 form; protoc writes it as the three bytes anyway
-        if (0xD800..0xDFFF).cover?(n)
-          [0xE0 | (n >> 12), 0x80 | ((n >> 6) & 0x3F), 0x80 | (n & 0x3F)].pack("C*")
-        else
-          [n].pack("U").b
-        end
+        # protoc writes surrogates as three CESU-8 bytes; the conformance suite
+        # wants them refused, paired or not, and they have no UTF-8 form
+        fail!("Unicode escape of surrogate U+#{n.to_s(16).upcase}", t) if (0xD800..0xDFFF).cover?(n)
+        [n].pack("U").b
       end
 
       def enum(info)
