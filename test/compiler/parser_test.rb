@@ -89,7 +89,7 @@ class CompilerParserTest < Minitest::Test
 
   def test_map_fields_expand_to_entry_messages
     ast = parse("syntax = \"proto3\";\nmessage A {\n  map<string, A> my_map = 1 [features.utf8_validation = NONE];\n}\n")
-    message = ast.to_h[:message_type][0]
+    message = AstHash.file(ast)[:message_type][0]
     assert_equal({name: "my_map", number: 1, label: :LABEL_REPEATED, type_name: "MyMapEntry",
       options: {uninterpreted_option: [{name: [{name_part: "features", is_extension: false},
         {name_part: "utf8_validation", is_extension: false}], identifier_value: "NONE"}]}}, message[:field][0])
@@ -103,12 +103,12 @@ class CompilerParserTest < Minitest::Test
 
   def test_groups_and_synthetic_oneofs
     ast = parse("syntax = \"proto2\";\nmessage A {\n  optional group Data = 1 { optional int32 x = 2; }\n}\n")
-    message = ast.to_h[:message_type][0]
+    message = AstHash.file(ast)[:message_type][0]
     assert_equal({name: "data", number: 1, label: :LABEL_OPTIONAL, type: :TYPE_GROUP, type_name: "Data"}, message[:field][0])
     assert_equal "Data", message[:nested_type][0][:name]
 
     ast = parse("syntax = \"proto3\";\nmessage A {\n  optional int32 a = 1;\n  oneof o { int32 b = 2; }\n  optional int32 _a = 3;\n}\n")
-    message = ast.to_h[:message_type][0]
+    message = AstHash.file(ast)[:message_type][0]
     assert_equal %w[o X_a XX_a], message[:oneof_decl].map { |o| o[:name] }
     assert_equal [1, 0, 2], message[:field].map { |f| f[:oneof_index] }
   end
@@ -118,7 +118,7 @@ class CompilerParserTest < Minitest::Test
       "  optional double a = 1 [default = 1e10];\n" \
       "  optional bytes b = 2 [default = \"\\001\\n'\"];\n" \
       "  optional int32 c = 3 [default = -0x10];\n}\n")
-    fields = ast.to_h[:message_type][0][:field]
+    fields = AstHash.file(ast)[:message_type][0][:field]
     assert_equal ["10000000000", "\\001\\n\\'", "-16"], fields.map { |f| f[:default_value] }
   end
 

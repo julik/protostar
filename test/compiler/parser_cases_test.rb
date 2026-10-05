@@ -12,27 +12,40 @@ class CompilerParserCasesTest < Minitest::Test
   DATA = JSON.parse(File.read(File.expand_path("../corpus/parser_cases/cases.json", __dir__)))
 
   # The files these C++ tests build into their pool before the case
+  # The files the C++ tests build into their pool first, as drafts
+  def self.draft(name, **kwargs, &block)
+    lambda do |pool|
+      file = Protostar::Schema::File.draft(name, **kwargs)
+      block&.call(file)
+      pool.add(file.resolve(pool).freeze!)
+    end
+  end
+
+  DESCRIPTOR = ["google/protobuf/descriptor.proto"].freeze
   SETUPS = {
-    "ParserValidationErrorTest.PackageNameError" => [{name: "bar.proto", message_type: [{name: "foo"}]}],
-    "ParserValidationErrorTest.ImportTwice" => [{name: "bar.proto", message_type: [{name: "foo"}]}],
+    "ParserValidationErrorTest.PackageNameError" => [draft("bar.proto") { |f| f.message("foo") }],
+    "ParserValidationErrorTest.ImportTwice" => [draft("bar.proto") { |f| f.message("foo") }],
     "ParserValidationErrorTest.ImportOptionTwice" => [
       :descriptor,
-      {name: "bar.proto", dependency: ["google/protobuf/descriptor.proto"],
-       extension: [{name: "ext", number: 5000, type: :TYPE_INT64, extendee: "google.protobuf.FieldOptions"}]}
+      draft("bar.proto", dependencies: DESCRIPTOR) do |f|
+        f.extension "ext", 5000, :int64, extendee: "google.protobuf.FieldOptions"
+      end
     ],
     "ParserValidationErrorTest.ImportAndImportOptionTwice" => [
       :descriptor,
-      {name: "bar.proto", dependency: ["google/protobuf/descriptor.proto"], message_type: [{name: "foo"}],
-       extension: [{name: "ext", number: 5000, type: :TYPE_INT64, extendee: "google.protobuf.FieldOptions"}]}
+      draft("bar.proto", dependencies: DESCRIPTOR) do |f|
+        f.message("foo")
+        f.extension "ext", 5000, :int64, extendee: "google.protobuf.FieldOptions"
+      end
     ],
-    "ParserValidationErrorTest.DuplicateFileError" => [{name: "foo.proto"}],
-    "ParserValidationErrorTest.ResolvedUndefinedError" => [{name: "base.proto", package: "base", message_type: [{name: "bar"}]}],
+    "ParserValidationErrorTest.DuplicateFileError" => [draft("foo.proto")],
+    "ParserValidationErrorTest.ResolvedUndefinedError" => [draft("base.proto", package: "base") { |f| f.message("bar") }],
     "ParserValidationErrorTest.ResolvedUndefinedOptionError" => [
       :descriptor,
-      {name: "base2.proto", package: "baz", dependency: ["google/protobuf/descriptor.proto"],
-       message_type: [{name: "Bar", field: [{name: "foo", number: 1, label: :LABEL_OPTIONAL, type: :TYPE_INT32}]}],
-       extension: [{name: "bar", number: 7672757, label: :LABEL_OPTIONAL, type: :TYPE_MESSAGE, type_name: "Bar",
-                    extendee: "google.protobuf.FileOptions"}]}
+      draft("base2.proto", package: "baz", dependencies: DESCRIPTOR) do |f|
+        f.message("Bar") { |m| m.field "foo", 1, :int32 }
+        f.extension "bar", 7672757, "Bar", extendee: "google.protobuf.FileOptions"
+      end
     ]
   }.freeze
 
@@ -172,7 +185,7 @@ class CompilerParserCasesTest < Minitest::Test
       ast = parser.parse
       assert_empty parser.errors
       assert_equal :end, parser.current_token.type
-      assert_equal GoldenHash.convert(c["expected"], "google.protobuf.FileDescriptorProto"), ast.to_h
+      assert_equal GoldenHash.convert(c["expected"], "google.protobuf.FileDescriptorProto"), AstHash.file(ast)
     when "ExpectHasErrors", "ExpectHasEarlyExitErrors"
       parser = Protostar::Compiler::Parser.new(c["input"], require_syntax: c["require_syntax"])
       parser.parse
@@ -210,11 +223,11 @@ class CompilerParserCasesTest < Minitest::Test
   def setup_pool(c, pool)
     files = SETUPS[c["id"]]
     assert files, "#{c["id"]} builds files into its pool; add them to SETUPS" if c["setup"]
-    Array(files).each do |hash|
-      if hash == :descriptor
-        Protostar::Compiler.new(pool: pool).compile(["google/protobuf/descriptor.proto"])
+    Array(files).each do |setup|
+      if setup == :descriptor
+        Protostar::Compiler.new(pool: pool).compile(DESCRIPTOR)
       else
-        pool.add(Protostar::Schema::Builder.build(hash, pool: pool))
+        setup.call(pool)
       end
     end
   end

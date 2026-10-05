@@ -34,6 +34,7 @@ class WellKnownShortNamesTest < Minitest::Test
   end
 
   def test_ruby_struct_is_still_reachable_inside_the_namespace
-    assert_kind_of ::Struct, Protostar::Compiler::Lexer::Token.new
+    assert_same ::Struct, Protostar.module_eval("::Struct", __FILE__, __LINE__)
+    refute_same ::Struct, Protostar::Struct
   end
 end
