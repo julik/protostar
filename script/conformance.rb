@@ -24,15 +24,17 @@ CORPUS = File.join(REPO, "test", "corpus", "protobuf")
 HOME = ENV.fetch("CONFORMANCE_HOME", File.expand_path("~/.cache/protostar/conformance-#{PIN.delete_prefix("v")}"))
 RUNNER = ENV.fetch("CONFORMANCE_RUNNER", File.join(HOME, "bin", "conformance_test_runner"))
 
-# Kept in one place so CI can key its cache on them
-CMAKE_FLAGS = %w[
+# Kept in one place so CI can key its cache on them.
+# jsoncpp is built as a shared library; the rpath lets the runner find it
+# next to itself in bin/, which is all CI caches
+CMAKE_FLAGS = %W[
   -DCMAKE_BUILD_TYPE=Release
   -DCMAKE_CXX_STANDARD=17
   -Dprotobuf_BUILD_CONFORMANCE=ON
   -Dprotobuf_BUILD_TESTS=OFF
   -Dprotobuf_FORCE_FETCH_DEPENDENCIES=ON
   -Dprotobuf_INSTALL=OFF
-  -DBUILD_SHARED_LIBS=OFF
+  -DCMAKE_BUILD_RPATH=#{/darwin/.match?(RUBY_PLATFORM) ? "@executable_path" : "$ORIGIN"}
 ].freeze
 
 # The .proto files the runner sends messages of, with the include root each resolves under
@@ -71,6 +73,9 @@ def build
   sh!(cmake, "--build", build_dir, "--target", "conformance_test_runner", "--parallel", Etc.nprocessors.to_s)
   FileUtils.mkdir_p(File.dirname(RUNNER))
   FileUtils.cp(File.join(build_dir, "conformance_test_runner"), RUNNER)
+  Dir.glob(File.join(build_dir, "_deps", "jsoncpp-build", "**", "libjsoncpp*.{so,dylib}*")).each do |lib|
+    FileUtils.cp(lib, File.dirname(RUNNER))
+  end
   puts "Runner at #{RUNNER}"
 end
 
