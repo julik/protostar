@@ -41,7 +41,8 @@ module Protostar
     # names are made here and nowhere else.
     module Draft
       SYNTAXES = {nil => :proto2, :proto2 => :proto2, :proto3 => :proto3, :editions => :editions}.freeze
-      SCALARS = (Field::TYPES.values - %i[message enum group]).freeze
+      SCALARS = (Field::TYPES.values - %i[message enum group]).to_h { |t| [t, true] }.freeze
+      TYPES = Field::TYPES.values.to_h { |t| [t, true] }.freeze
       LABELS = %i[optional required repeated].freeze
 
       # protoc's name for the entry message of a map field: the field name in
@@ -155,9 +156,10 @@ module Protostar
 
         # One extension field; the arguments of {Message#field} plus the extendee
         # @return [Schema::Field]
-        def extension(name, number, type, type_name = nil, extendee:, **kwargs)
-          field = @file_draft.new_field(self, name, number, type, type_name, extendee: extendee.to_s,
-            index: @extensions.size, **kwargs)
+        def extension(name, number, type, type_name = nil, extendee:, label: :optional, default: nil, json_name: nil,
+          optional: false, options: nil)
+          field = @file_draft.new_field(self, name, number, type, type_name, @extensions.size, extendee.to_s, label,
+            default, json_name, optional, options, nil)
           @extensions << field
           field
         end
@@ -313,8 +315,8 @@ module Protostar
         end
 
         # @api private
-        def new_field(scope, name, number, type, type_name, index:, extendee: nil, label: :optional, default: nil,
-          json_name: nil, optional: false, options: nil, oneof: nil)
+        def new_field(scope, name, number, type, type_name, index, extendee, label, default, json_name, optional, options,
+          oneof)
           name = name.to_s
           raise Error, "#{@descriptor.name}: field #{name} needs an integer number" unless number.is_a?(Integer)
           label = (label || :optional).to_sym
@@ -325,11 +327,11 @@ module Protostar
             type = nil
           elsif !type.nil?
             type = type.to_sym
-            raise Error, "#{@descriptor.name}: unknown field type #{type.inspect} for #{name}" unless Field::TYPES.value?(type)
+            raise Error, "#{@descriptor.name}: unknown field type #{type.inspect} for #{name}" unless TYPES.key?(type)
           end
-          if type_name.nil? && !SCALARS.include?(type)
+          if type_name.nil? && !SCALARS.key?(type)
             raise Error, "#{@descriptor.name}: #{name} needs a type name"
-          elsif type_name && SCALARS.include?(type)
+          elsif type_name && SCALARS.key?(type)
             raise Error, "#{@descriptor.name}: #{name} is a #{type} and cannot have a type name"
           end
           message = scope.is_a?(Message) ? scope.descriptor : nil
@@ -527,8 +529,10 @@ module Protostar
         # @param oneof [String, Symbol, Schema::Oneof, nil] the oneof the field belongs to
         # @param options [Hash, nil]
         # @return [Schema::Field]
-        def field(name, number, type, type_name = nil, **kwargs)
-          field = @file_draft.new_field(self, name, number, type, type_name, index: @fields.size, **kwargs)
+        def field(name, number, type, type_name = nil, label: :optional, default: nil, json_name: nil, optional: false,
+          oneof: nil, options: nil)
+          field = @file_draft.new_field(self, name, number, type, type_name, @fields.size, nil, label, default,
+            json_name, optional, options, oneof)
           @fields << field
           field
         end
@@ -937,7 +941,7 @@ module Protostar
             options.with_features(features)
           else
             klass = OPTIONS.fetch(descriptor.class)
-            @empty[[klass, features]] ||= klass.new(features: features)
+            (@empty[klass] ||= {})[features] ||= klass.new(features: features)
           end
           descriptor.__link(features: features, options: bound)
         end
@@ -975,12 +979,14 @@ module Protostar
           options = declared(field)
           features = parent.merge(options&.[](:features))
           if @file.syntax != :editions
-            legacy = {}
-            legacy[:field_presence] = :LEGACY_REQUIRED if field.declared_label == :required
-            legacy[:message_encoding] = :DELIMITED if field.declared_type == :group
-            legacy[:repeated_field_encoding] = options[:packed] ? :PACKED : :EXPANDED if options&.key?(:packed)
-            legacy[:field_presence] = :EXPLICIT if field.proto3_optional?
-            features = features.with(**legacy)
+            legacy = nil
+            legacy = {field_presence: :LEGACY_REQUIRED} if field.declared_label == :required
+            (legacy ||= {})[:message_encoding] = :DELIMITED if field.declared_type == :group
+            if options&.key?(:packed)
+              (legacy ||= {})[:repeated_field_encoding] = options[:packed] ? :PACKED : :EXPANDED
+            end
+            (legacy ||= {})[:field_presence] = :EXPLICIT if field.proto3_optional?
+            features = features.with(**legacy) if legacy
           end
           features = intern(features)
           label = field.declared_label

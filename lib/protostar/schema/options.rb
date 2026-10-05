@@ -21,9 +21,18 @@ module Protostar
       # @param extensions [Hash{Field => Object}]
       # @param unknown_fields [String] binary
       def initialize(fields = Freezer::EMPTY_HASH, extensions = Freezer::EMPTY_HASH, unknown_fields = EMPTY_BYTES)
-        @fields = fields.frozen? ? fields : fields.dup.freeze
-        @extensions = extensions.frozen? ? extensions : extensions.dup.freeze
-        @unknown_fields = unknown_fields.frozen? ? unknown_fields : unknown_fields.b.freeze
+        @fields = frozen(fields)
+        @extensions = frozen(extensions)
+        @unknown_fields = if unknown_fields.empty?
+          EMPTY_BYTES
+        else
+          unknown_fields.frozen? ? unknown_fields : unknown_fields.b.freeze
+        end
+      end
+
+      private def frozen(hash)
+        return Freezer::EMPTY_HASH if hash.empty?
+        hash.frozen? ? hash : hash.dup.freeze
       end
 
       # @param name [Symbol, String] a field of the message

@@ -85,6 +85,7 @@ module Protostar
         @values = values.freeze
         @extensions = extensions
         NAMES.each { |name| instance_variable_set(:"@#{name}", values.fetch(name)) }
+        @hash = [@values, @extensions].hash
         freeze
       end
 
@@ -140,9 +141,7 @@ module Protostar
       end
       alias_method :eql?, :==
 
-      def hash
-        [@values, @extensions].hash
-      end
+      attr_reader :hash
 
       def inspect
         custom = @extensions.map { |f, v| " (#{f.full_name}): #{v.inspect}" }.join

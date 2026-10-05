@@ -61,7 +61,7 @@ row "  the same, retain_options: true", best { fresh.call.compile([NAME], retain
 row "  the same, source_info: true", best { fresh.call.compile([NAME], source_info: true) }
 row "compile descriptor.proto, fresh Compiler", best { fresh.call.compile(["google/protobuf/descriptor.proto"]) }
 
-files = warm.compile([NAME], source_info: true)
+files = fresh.call.compile([NAME], source_info: true)
 emitter = C::Emitters::Ruby.new
 ruby = files.map { |f| emitter.file(f) }
 row "emit native Ruby, unittest.proto and its 3 imports", best { files.each { |f| emitter.file(f) } }
@@ -84,8 +84,9 @@ row "add_serialized_file, unittest.proto and its 3 imports", best {
   pool = Protostar::Schema::Pool.new
   bytes.each { |b| pool.add_serialized_file(b) }
 }
-row "to_proto of unittest.proto", best { files.last.to_proto }
+row "to_proto of unittest.proto, with source info", best { files.last.to_proto }
 row "serialize unittest.proto, with source info", best { files.last.serialize }
+row "serialize unittest.proto, without source info", best { files.last.serialize(source_info: false) }
 
 if ARGV.include?("corpus")
   protos = Corpus.protos.map do |path|
