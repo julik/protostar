@@ -1,0 +1,44 @@
+// Detached comment before the syntax line.
+
+// Leading comment of the file, with a $dollar in it.
+syntax = "proto3";
+
+package acme.stream_test;
+
+import "google/protobuf/empty.proto";
+import "acme/types.proto";
+
+message Ping {
+  string text = 1;
+  message Nested {
+    int32 n = 1;
+  }
+}
+
+message pong {
+  string text = 1;
+}
+
+// Covers every streaming combination.
+service Streamer {
+  // Unary.
+  rpc Unary(Ping) returns (pong);
+  rpc ClientStream(stream Ping) returns (pong); // Trailing on client stream.
+
+  // A detached comment.
+
+  // Server streaming, leading.
+  rpc ServerStream(Ping) returns (stream pong);
+  rpc Bidi(stream Ping.Nested) returns (stream Ping.Nested);
+  rpc Imported(google.protobuf.Empty) returns (acme.types.Thing);
+  rpc lower_case_method(Ping) returns (Ping) {
+    option deprecated = true;
+  }
+} // Trailing on the service.
+
+service snake_case_service {
+  rpc Call(Ping) returns (Ping);
+}
+
+service Empty {
+}

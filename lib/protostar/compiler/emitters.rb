@@ -5,12 +5,8 @@ module Protostar
     # Code generators. Each takes built {Schema::File}s and returns
     # `{output path => contents}`.
     module Emitters
-      # Raised when a file cannot be emitted (protoc's generator errors)
-      class Error < Compiler::Error
-        def initialize(message)
-          super([Diagnostic.new(nil, nil, nil, message)])
-        end
-      end
+      # Raised when a file cannot be emitted, with protoc's generator message
+      class Error < Protostar::Error; end
 
       # The files whose generated Ruby ships with protostar under
       # `protostar/google/protobuf/`, with constants under
@@ -68,20 +64,33 @@ module Protostar
           end
         end
 
-        # The modules a file's constants live in, outermost first
+        # The modules a file's constants live in, outermost first: protoc's
+        # GeneratePackageModules
         # @param file [Schema::File]
         # @param namespace [String, nil] overrides the package and `ruby_package`
         # @return [Array<String>]
         def module_path(file, namespace = nil)
           return namespace.split("::") if namespace
+          convert = true
           if file.options.key?(:ruby_package)
             package = file.options[:ruby_package]
-            return package.split("::") if package.include?("::")
+            convert = false if package.include?("::")
           else
             package = file.package
           end
-          return [] if package.empty?
-          package.split(".", -1).map { |part| package_to_module(part) }
+          delimiter = convert ? "." : "::"
+          parts = []
+          until package.empty?
+            at = package.index(delimiter)
+            if at
+              parts << package[0, at]
+              package = package[(at + delimiter.size)..]
+            else
+              parts << package
+              package = ""
+            end
+          end
+          convert ? parts.map { |p| package_to_module(p) } : parts
         end
 
         # protoc's check on `ruby_package`
@@ -109,6 +118,41 @@ module Protostar
 
         def upcase(c)
           c.between?("a", "z") ? c.upcase : c
+        end
+      end
+
+      # protoc's io::Printer: text is indented at the start of every line
+      # that is not empty
+      class Printer
+        def initialize
+          @out = +""
+          @indent = ""
+          @at_start = true
+        end
+
+        def print(text)
+          text.each_char do |c|
+            if c == "\n"
+              @at_start = true
+            elsif @at_start
+              @out << @indent
+              @at_start = false
+            end
+            @out << c
+          end
+          self
+        end
+
+        def indent
+          @indent += "  "
+        end
+
+        def outdent
+          @indent = @indent[0...-2]
+        end
+
+        def to_s
+          @out
         end
       end
 
@@ -220,3 +264,6 @@ end
 
 require_relative "emitters/ruby"
 require_relative "emitters/descriptor_set"
+require_relative "emitters/google_ruby"
+require_relative "emitters/rbs"
+require_relative "emitters/grpc"

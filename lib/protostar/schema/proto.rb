@@ -365,9 +365,10 @@ module Protostar
         Proto::HashCodec.encode(Proto.schema(:FileDescriptorProto), hash, extension_finder(pool))
       end
 
-      private
-
-      def extension_finder(pool)
+      # @api private
+      # @return [#call] extension full name to its {Field}, looked up in this
+      #   file, its imports, theirs, and then the pool
+      def extension_finder(pool = nil)
         files = []
         queue = [self]
         seen = {}
