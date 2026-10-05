@@ -82,9 +82,32 @@ module Protostar
         if info.packable
           packed_tag = (info.number << 3) | Wire::LENGTH_DELIMITED
           out << "when #{packed_tag} # #{info.name}, packed\n"
-          out << slow("Protostar::Codec::Decoder.packed(self, values, self.class.__fields[#{i}], r)")
+          out << if VARINT_KINDS.include?(info.kind)
+            packed(info)
+          else
+            slow("Protostar::Codec::Decoder.packed(self, values, self.class.__fields[#{i}], r)")
+          end
         end
         out
+      end
+
+      VARINT_KINDS = [F::INT32, F::INT64, F::UINT32, F::UINT64, F::SINT32, F::SINT64, F::BOOL].freeze
+
+      # A packed run of varints read in the loop rather than an element per
+      # call: the run's end stands in for `limit` while it is read
+      def packed(info)
+        <<~RUBY
+          #{varint("n")}raise Protostar::DecodeError.new("length \#{n} runs past the end of the input", offset: pos) if pos + n > limit
+          list = (values[#{info.index}] ||= [])
+          outer = limit
+          limit = pos + n
+          r.pop_limit(limit)
+          while pos < limit
+          #{read(info)}list << v
+          end
+          limit = outer
+          r.pop_limit(limit)
+        RUBY
       end
 
       # Hands the reader to a Decoder method and picks the position back up
