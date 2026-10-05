@@ -44,8 +44,7 @@ module Protostar
       attr_reader :visible_files
 
       # @api private
-      def initialize(name:, package:, syntax:, edition:, proto_syntax:, dependencies:, public_dependencies:,
-        weak_dependencies:, option_dependencies:, dependency_files:, options:, source_info:)
+      def initialize(name:, package:, syntax:, edition:, proto_syntax:)
         @name = name
         @full_name = name
         @index = 0
@@ -53,16 +52,31 @@ module Protostar
         @syntax = syntax
         @edition = edition
         @proto_syntax = proto_syntax
+        @dependencies = Freezer::EMPTY_ARRAY
+        @public_dependencies = Freezer::EMPTY_ARRAY
+        @weak_dependencies = Freezer::EMPTY_ARRAY
+        @option_dependencies = Freezer::EMPTY_ARRAY
+        @dependency_files = Freezer::EMPTY_ARRAY
+        @messages = @enums = @services = @extensions = Freezer::EMPTY_ARRAY
+        @all_messages = @all_enums = @all_extensions = Freezer::EMPTY_ARRAY
+        @symbols = {}
+        @visible_files = [self]
+      end
+
+      # @api private
+      def __dependencies(dependencies:, public_dependencies:, weak_dependencies:, option_dependencies:, dependency_files:)
         @dependencies = dependencies
         @public_dependencies = public_dependencies
         @weak_dependencies = weak_dependencies
         @option_dependencies = option_dependencies
         @dependency_files = dependency_files
-        @options = options
-        @source_info = source_info
-        @symbols = {}
         @visible_files = compute_visible_files
+        self
       end
+
+      # @api private
+      # @return [String, nil] the `syntax` string the FileDescriptorProto carries
+      attr_reader :proto_syntax
 
       # @return [File] itself, so every descriptor answers `#file`
       def file

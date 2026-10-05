@@ -16,6 +16,11 @@ module Protostar
       # FieldDescriptorProto.Label names to the short label symbols
       LABELS = {LABEL_OPTIONAL: :optional, LABEL_REQUIRED: :required, LABEL_REPEATED: :repeated}.freeze
 
+      # @api private
+      PROTO_TYPES = TYPES.invert.freeze
+      # @api private
+      PROTO_LABELS = LABELS.invert.freeze
+
       # Wire type of a single, unpacked value of each type
       WIRE_TYPES = {
         double: 1, float: 5, int64: 0, uint64: 0, int32: 0, fixed64: 1, fixed32: 5, bool: 0,
@@ -66,15 +71,15 @@ module Protostar
       attr_reader :file
 
       # @api private
-      def initialize(name:, full_name:, number:, proto_label:, proto_type:, type_name:, extendee_name:,
-        raw_default:, json_name:, proto3_optional:, extension:, containing_message:, file:, index:, options:)
+      def initialize(name:, full_name:, number:, label:, type:, type_name:, extendee_name:, raw_default:, json_name:,
+        proto3_optional:, extension:, containing_message:, file:, index:)
         @name = name
         @full_name = full_name
         @number = number
-        @proto_label = proto_label
-        @proto_type = proto_type
-        @label = proto_label && LABELS.fetch(proto_label)
-        @type = proto_type && TYPES.fetch(proto_type)
+        @declared_label = label
+        @declared_type = type
+        @label = label
+        @type = type
         @type_name = type_name
         @extendee_name = extendee_name
         @raw_default = raw_default
@@ -84,11 +89,22 @@ module Protostar
         @containing_message = containing_message
         @file = file
         @index = index
-        @options = options
       end
 
       # @api private
-      attr_reader :raw_default, :extendee_name, :proto_type
+      # @return [String, nil] the default as protoc stores it in `default_value`
+      attr_reader :raw_default
+      # @api private
+      # @return [String, nil] the extendee as written, until it is resolved
+      attr_reader :extendee_name
+      # @api private
+      # @return [Symbol, nil] the label as declared: :repeated, :optional or :required,
+      #   before editions features turn `LEGACY_REQUIRED` into :required
+      attr_reader :declared_label
+      # @api private
+      # @return [Symbol, nil] the type as declared, before editions features turn
+      #   `DELIMITED` message fields into :group; nil while a type name is unresolved
+      attr_reader :declared_type
 
       # @return [Boolean]
       def proto3_optional?
@@ -177,7 +193,8 @@ module Protostar
 
       # @return [Hash] the FieldDescriptorProto hash
       def to_h
-        h = {name: @name, number: @number, label: @proto_label, type: @proto_type}
+        h = {name: @name, number: @number, label: PROTO_LABELS.fetch(@declared_label),
+             type: PROTO_TYPES.fetch(@declared_type)}
         h[:type_name] = ".#{@type_name}" if @type_name
         h[:extendee] = ".#{@extendee.full_name}" if @extension
         h[:default_value] = @raw_default if @raw_default

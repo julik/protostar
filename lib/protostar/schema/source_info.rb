@@ -17,13 +17,18 @@ module Protostar
         # @return [Array<String>]
         attr_reader :leading_detached_comments
 
-        # @api private
-        def initialize(hash)
-          @path = Freezer.call(hash[:path] || [])
-          @span = Freezer.call(hash[:span] || [])
-          @leading_comments = Freezer.call(hash[:leading_comments])
-          @trailing_comments = Freezer.call(hash[:trailing_comments])
-          @leading_detached_comments = Freezer.call(hash[:leading_detached_comments] || [])
+        # @param path [Array<Integer>]
+        # @param span [Array<Integer>]
+        # @param leading_comments [String, nil]
+        # @param trailing_comments [String, nil]
+        # @param leading_detached_comments [Array<String>]
+        def initialize(path:, span:, leading_comments: nil, trailing_comments: nil, leading_detached_comments: [])
+          @path = Freezer.call(path)
+          @span = Freezer.call(span)
+          @leading_comments = Freezer.call(leading_comments)
+          @trailing_comments = Freezer.call(trailing_comments)
+          @leading_detached_comments = Freezer.call(leading_detached_comments)
+          freeze
         end
 
         # @return [Hash]
@@ -41,10 +46,9 @@ module Protostar
       # @return [Array<Location>]
       attr_reader :locations
 
-      # @param hash [Hash] a `SourceCodeInfo` hash (`{location: [...]}`)
-      def initialize(hash)
-        raise Error, "source_code_info must be a Hash, got #{hash.class}" unless hash.is_a?(Hash)
-        @locations = (hash[:location] || []).map { |loc| Location.new(loc) }.freeze
+      # @param locations [Array<Location>] in protoc's order
+      def initialize(locations)
+        @locations = locations.dup.freeze
         @by_path = {}
         @locations.each { |loc| @by_path[loc.path] ||= loc }
         @by_path.freeze

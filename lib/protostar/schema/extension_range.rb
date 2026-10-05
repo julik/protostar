@@ -10,11 +10,10 @@ module Protostar
       attr_reader :range
 
       # @api private
-      def initialize(containing_message:, index:, range:, options:)
+      def initialize(containing_message:, index:, range:)
         @containing_message = containing_message
         @index = index
         @range = range
-        @options = options
         @name = "#{range.begin}..#{range.end}"
         @full_name = "#{containing_message.full_name}.extensions(#{@name})"
       end

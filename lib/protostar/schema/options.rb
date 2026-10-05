@@ -7,6 +7,17 @@ module Protostar
     # under `:__extensions` (keyed by extension full name) and uninterpretable
     # bytes under `:__unknown_fields` as `[number, wire_type, bytes]` triples.
     class Options
+      # @api private
+      # @param spec [Hash, Options, nil]
+      # @return [Options, nil]
+      def self.build(spec)
+        case spec
+        when nil, Options then spec
+        when Hash then new(Freezer.call(spec))
+        else raise Error, "options must be a Hash, got #{spec.class}"
+        end
+      end
+
       # @param hash [Hash] a frozen options hash
       def initialize(hash)
         @hash = hash

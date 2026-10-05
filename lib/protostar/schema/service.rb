@@ -9,12 +9,13 @@ module Protostar
       attr_reader :file
 
       # @api private
-      def initialize(name:, full_name:, file:, index:, options:)
+      def initialize(name:, full_name:, file:, index:)
         @name = name
         @full_name = full_name
         @file = file
         @index = index
-        @options = options
+        @rpcs = Freezer::EMPTY_ARRAY
+        @rpcs_by_name = Freezer::EMPTY_HASH
       end
 
       # @api private
@@ -54,13 +55,12 @@ module Protostar
       attr_reader :input_type_name, :output_type_name
 
       # @api private
-      def initialize(name:, full_name:, service:, index:, options:, input_type_name:, output_type_name:,
+      def initialize(name:, full_name:, service:, index:, input_type_name:, output_type_name:,
         client_streaming:, server_streaming:)
         @name = name
         @full_name = full_name
         @service = service
         @index = index
-        @options = options
         @input_type_name = input_type_name
         @output_type_name = output_type_name
         @client_streaming = client_streaming

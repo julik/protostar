@@ -10,12 +10,11 @@ module Protostar
       attr_reader :fields
 
       # @api private
-      def initialize(name:, full_name:, containing_message:, index:, options:)
+      def initialize(name:, full_name:, containing_message:, index:)
         @name = name
         @full_name = full_name
         @containing_message = containing_message
         @index = index
-        @options = options
         @fields = []
         @synthetic = false
       end

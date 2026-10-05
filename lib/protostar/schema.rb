@@ -8,6 +8,26 @@ module Protostar
     # Raised for malformed descriptor hashes, missing dependencies and pool clashes
     class Error < Protostar::Error; end
 
+    # The JSON name protoc derives from a field name: underscores dropped,
+    # the letter after each one upper-cased
+    # @param name [String]
+    # @return [String]
+    def self.json_name(name)
+      out = +""
+      upper = false
+      name.each_char do |c|
+        if c == "_"
+          upper = true
+        elsif upper
+          out << c.upcase(:ascii)
+          upper = false
+        else
+          out << c
+        end
+      end
+      out
+    end
+
     # Raised when a type name, extendee or method type cannot be resolved
     class ResolveError < Error
       # @return [String, nil] the name as written
@@ -39,4 +59,5 @@ require_relative "schema/service"
 require_relative "schema/resolver"
 require_relative "schema/pool"
 require_relative "schema/default_value"
+require_relative "schema/draft"
 require_relative "schema/builder"
