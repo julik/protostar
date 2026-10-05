@@ -50,9 +50,14 @@ class ViewNoCopyTest < Minitest::Test
   def allocations
     GC.start
     GC.disable
+    # One untraced warm-up run, then the count: the tracer's own bookkeeping and
+    # first-call method caches are not what we are measuring (Ruby 4.0.7 showed
+    # 54 objects for a read that costs 9)
+    yield
     before = GC.stat(:total_allocated_objects)
-    ObjectSpace.trace_object_allocations { yield }
+    yield
     count = GC.stat(:total_allocated_objects) - before
+    ObjectSpace.trace_object_allocations { yield }
     strings = ObjectSpace.each_object(String).select do |s|
       ObjectSpace.allocation_sourcefile(s) && s.bytesize > 8 && !ObjectSpace.allocation_sourcefile(s).end_with?("_test.rb")
     end
