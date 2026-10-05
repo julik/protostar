@@ -86,7 +86,12 @@ module Protostar
         descriptor = klass.descriptor
         oneofs = nil
         seen = {}
+        extensions = nil
         node.each do |key, value|
+          if key.start_with?("[") && key.end_with?("]")
+            extension(msg, key[1..-2], value, extensions ||= {})
+            next
+          end
           field = descriptor.fields_by_json_name[key] || descriptor.fields_by_name[key]
           unless field
             next if @ignore_unknown
@@ -115,6 +120,33 @@ module Protostar
           end
           @path.pop
         end
+        add_extensions(msg, extensions) if extensions
+      end
+
+      # An extension given as "[full.name]": its values are collected, then
+      # kept where the binary codec keeps them, in the unknown fields
+      def extension(msg, name, value, collected)
+        @extensions ||= Text::Extensions.new(@registry, nil)
+        field = @extensions.named(msg.class.descriptor, name)
+        info = field && @extensions.info(field)
+        unless info
+          return if @ignore_unknown
+          fail!("#{msg.class.descriptor.full_name} has no extension #{name.inspect}")
+        end
+        fail!("extension #{name} is given more than once") if collected.key?(info)
+        @path << "[#{name}]"
+        if !value.nil? || (!info.repeated && null_is_value?(info))
+          parsed = field_value(info, value)
+          collected[info] = info.repeated ? parsed : [parsed] unless parsed.equal?(SKIP)
+        end
+        @path.pop
+      end
+
+      def add_extensions(msg, collected)
+        collected.sort_by { |info, _| info.number }.each do |info, values|
+          @extensions.write(info, values).each { |u| msg.__add_unknown(u) }
+        end
+        msg.__seal_unknown
       end
 
       # null is the null of Value and NullValue fields, and absence everywhere else

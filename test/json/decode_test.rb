@@ -148,6 +148,34 @@ class JSONDecodeTest < Minitest::Test
     assert_error(/not valid UTF-8/, "{\"optionalString\": \"\xFF\"}")
   end
 
+  # conformance: Recommended.*.JsonInput.FieldNameExtension.Validator
+  def test_extensions_by_bracketed_name
+    set = CodecFixtures.load("google/protobuf/unittest.proto")
+    klass = set["proto2_unittest.TestAllExtensions"]
+    json = '{"[proto2_unittest.optional_int32_extension]":7,"[proto2_unittest.optional_nested_message_extension]":{"bb":5},' \
+      '"[proto2_unittest.repeated_string_extension]":["a","b"],"[proto2_unittest.optional_nested_enum_extension]":"BAZ"}'
+    m = klass.decode_json(json, registry: set.registry)
+    assert_equal [1, 18, 21, 44, 44], m.unknown_fields.map(&:number)
+    reference = Protostar::Text.parse(klass, <<~TEXT, registry: set.registry)
+      [proto2_unittest.optional_int32_extension]: 7
+      [proto2_unittest.optional_nested_message_extension] { bb: 5 }
+      [proto2_unittest.optional_nested_enum_extension]: BAZ
+      [proto2_unittest.repeated_string_extension]: ["a", "b"]
+    TEXT
+    assert_equal reference.encode, m.encode
+    assert_equal '{"[proto2_unittest.optional_int32_extension]":7,"[proto2_unittest.optional_nested_message_extension]":{"bb":5},' \
+      '"[proto2_unittest.optional_nested_enum_extension]":"BAZ","[proto2_unittest.repeated_string_extension]":["a","b"]}',
+      klass.encode_json(m, registry: set.registry)
+    assert_equal "{}", klass.encode_json(klass.decode("\xF8\x3E\x01".b), registry: set.registry), "other unknown fields are left out"
+    e = assert_raises(Protostar::JSON::ParseError) { klass.decode_json('{"[proto2_unittest.nope]": 1}', registry: set.registry) }
+    assert_match(/has no extension "proto2_unittest.nope"/, e.message)
+    assert_empty klass.decode_json('{"[proto2_unittest.nope]": 1}', registry: set.registry, ignore_unknown_fields: true).unknown_fields
+    e = assert_raises(Protostar::JSON::ParseError) do
+      klass.decode_json('{"[proto2_unittest.optional_int32_extension]": "x"}', registry: set.registry)
+    end
+    assert_equal "[proto2_unittest.optional_int32_extension]", e.path
+  end
+
   def test_round_trip_with_conveniences
     m = @all.new(optional_int32: 1, repeated_string: ["a"], map_string_string: {"k" => "v"}, oneof_bool: false)
     assert_equal m, @all.decode_json(m.to_json)
