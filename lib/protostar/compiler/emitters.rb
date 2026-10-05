@@ -219,3 +219,4 @@ module Protostar
 end
 
 require_relative "emitters/ruby"
+require_relative "emitters/descriptor_set"

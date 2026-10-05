@@ -13,7 +13,7 @@ module EmitterSupport
 
   # One compiled golden: the files of its set with source info, and the same
   # files rebuilt without it
-  Compiled = Struct.new(:rel, :files, :bare)
+  Compiled = Struct.new(:rel, :files, :bare, :compiler)
 
   @compiled = {}
   @answers = {}
@@ -70,9 +70,10 @@ module EmitterSupport
     private
 
     def compile(rel)
-      files = CompilerSupport.compiler.compile([rel], source_info: true)
+      compiler = CompilerSupport.compiler
+      files = compiler.compile([rel], source_info: true)
       pool = Protostar::Schema::Pool.new
-      Compiled.new(rel, files, files.map { |f| bare(f, pool) })
+      Compiled.new(rel, files, files.map { |f| bare(f, pool) }, compiler)
     end
 
     def buckets
