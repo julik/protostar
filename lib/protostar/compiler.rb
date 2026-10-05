@@ -25,13 +25,17 @@ module Protostar
       attr_reader :message
       # @return [Symbol] :error or :warning
       attr_reader :severity
+      # @return [String, nil] the file on disk, spelled as protoc prints it: the include
+      #   path as given (canonicalized) joined with {#file}; nil for in-memory and bundled files
+      attr_reader :path
 
-      def initialize(file, line, column, message, severity = :error)
+      def initialize(file, line, column, message, severity = :error, path: nil)
         @file = file
         @line = line
         @column = column
         @message = message
         @severity = severity
+        @path = path
         freeze
       end
 
@@ -43,9 +47,23 @@ module Protostar
         @severity == :warning
       end
 
-      # @return [String] as protoc prints it
+      # @return [String] as protoc prints it, with the virtual file name
       def to_s
         location = @line ? "#{@file}:#{@line}:#{@column}" : @file
+        warning? ? "#{location}: warning: #{@message}" : "#{location}: #{@message}"
+      end
+
+      # @param error_format [Symbol] :gcc or :msvs, protoc's `--error_format`
+      # @return [String] as protoc's command line prints it: the path on disk when known
+      def format(error_format = :gcc)
+        name = @path || @file
+        location = if @line.nil?
+          name
+        elsif error_format == :msvs
+          "#{name}(#{@line}) : #{@severity} in column=#{@column}"
+        else
+          "#{name}:#{@line}:#{@column}"
+        end
         warning? ? "#{location}: warning: #{@message}" : "#{location}: #{@message}"
       end
 
@@ -85,6 +103,7 @@ module Protostar
     # @param pool [Schema::Pool] receives every compiled file; files already in it are reused
     # @param bundled_includes [Boolean] search the bundled `google/protobuf/*.proto` after `include_paths`
     def initialize(include_paths: [], pool: Schema::Pool.new, bundled_includes: true)
+      @given_paths = include_paths.map { |p| Compiler.canonical_path(p) }.freeze
       @include_paths = include_paths.map { |p| ::File.expand_path(p) }.freeze
       @include_paths += [INCLUDE_DIR] if bundled_includes
       @pool = pool
@@ -130,6 +149,25 @@ module Protostar
         return path if ::File.file?(path)
       end
       nil
+    end
+
+    # @param name [String] a virtual file name
+    # @return [String, nil] where it is on disk, spelled from the include path as it
+    #   was given, as protoc prints it in diagnostics; nil when not under one
+    def disk_path(name)
+      @given_paths.each_with_index do |given, i|
+        next unless ::File.file?(::File.join(@include_paths[i], name))
+        return given.empty? ? name : "#{given}/#{name}"
+      end
+      nil
+    end
+
+    # protoc's CanonicalizePath: "." components, empty components and a
+    # trailing slash dropped
+    # @api private
+    def self.canonical_path(path)
+      parts = path.split("/").reject { |p| p.empty? || p == "." }
+      path.start_with?("/") ? "/#{parts.join("/")}" : parts.join("/")
     end
 
     # The options message protoc compiles into itself, from the bundled

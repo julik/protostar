@@ -1,0 +1,7 @@
+edition = "2023";
+
+package acme.ed;
+
+message Thing {
+  int32 n = 1;
+}

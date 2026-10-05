@@ -57,7 +57,8 @@ module Protostar
       def report(file, position, message, severity = :error)
         line, column = position
         line = nil if line && line < 0
-        @diagnostics << Diagnostic.new(file, line && line + 1, line && column + 1, message, severity)
+        path = @compiler.disk_path(file) if file && !@sources.key?(file) && @protoc_cli
+        @diagnostics << Diagnostic.new(file, line && line + 1, line && column + 1, message, severity, path: path)
       end
 
       private

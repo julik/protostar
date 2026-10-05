@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package acme.types;
+
+option ruby_package = "Acme::Kinds";
+
+message Thing {
+  string name = 1;
+}
+
+service ThingService {
+  rpc Get(Thing) returns (Thing);
+  rpc List(Thing) returns (stream Thing);
+}

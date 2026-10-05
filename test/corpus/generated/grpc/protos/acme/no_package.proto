@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+message Request {
+  optional string q = 1;
+}
+
+/* A block comment
+   on two lines. */
+service Search {
+  rpc Find(Request) returns (Request);
+}
