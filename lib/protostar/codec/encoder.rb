@@ -79,7 +79,9 @@ module Protostar
       # The payload of a packed run; tag and length are already written
       def packed(info, list, w)
         kind = info.kind
-        if (fixed = F::FIXED[kind])
+        if kind == F::FLOAT
+          w.write_raw(Wire.pack_floats(list))
+        elsif (fixed = F::FIXED[kind])
           # one pack for the whole run
           w.write_raw(list.pack("#{fixed[1]}*"))
         elsif kind == F::ENUM

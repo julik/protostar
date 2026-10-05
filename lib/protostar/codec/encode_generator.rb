@@ -189,6 +189,8 @@ module Protostar
         when F::STRING, F::BYTES then "#{write_varint("#{var}.bytesize")}w.write_raw(#{var})\n"
         when F::MESSAGE then "#{write_varint("sizes[#{var}]")}#{var}.__write(w, buf, sizes)\n"
         when F::GROUP then "#{var}.__write(w, buf, sizes)\n#{append(tag_bytes(f, Wire::END_GROUP))}"
+        when F::FLOAT
+          "if #{var} == #{var}\n[#{var}].pack(\"e\", buffer: buf)\nelse\nbuf << Protostar::Wire.float_nan(#{var})\nend\n"
         else "[#{var}].pack(#{F::FIXED.fetch(f.kind).last.inspect}, buffer: buf)\n"
         end
       end

@@ -580,7 +580,13 @@ module Protostar
         f = __float(info, v)
         return if skip_zero && f == 0 && (1.0 / f) > 0
         buf << info.tag
-        [f].pack((info.kind == F::DOUBLE) ? "E" : "e", buffer: buf)
+        if info.kind == F::DOUBLE
+          [f].pack("E", buffer: buf)
+        elsif f.nan?
+          buf << Wire.float_nan(f)
+        else
+          [f].pack("e", buffer: buf)
+        end
       else
         __int(info, v)
         return if skip_zero && v == 0
@@ -626,7 +632,11 @@ module Protostar
       @buf << info.packed_tag
       if (format = PACK[info.kind])
         __varint(F::FIXED.fetch(info.kind)[0] * list.size)
-        list.pack(format, buffer: @buf)
+        if info.kind == F::FLOAT
+          @buf << Wire.pack_floats(list)
+        else
+          list.pack(format, buffer: @buf)
+        end
       elsif info.kind == F::BOOL
         __varint(list.size)
         list.each { |b| @buf << b }

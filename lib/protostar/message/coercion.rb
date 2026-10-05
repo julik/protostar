@@ -97,11 +97,14 @@ module Protostar
 
       # The nearest single-precision value, as C's double-to-float conversion
       # gives it. `pack("e")` alone turns everything above FLT_MAX into
-      # Infinity, even values that round down to FLT_MAX.
+      # Infinity, even values that round down to FLT_MAX, and every NaN into
+      # the same one.
       def float32(f)
         a = f.abs
         if a > FLOAT_MAX && a < FLOAT_ROUNDS_TO_MAX
           (f > 0) ? FLOAT_MAX : -FLOAT_MAX
+        elsif f.nan?
+          Wire.float_nan(f).unpack1("e")
         else
           [f].pack("e").unpack1("e")
         end
