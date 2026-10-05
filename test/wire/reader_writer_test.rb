@@ -64,8 +64,33 @@ class ReaderWriterTest < Minitest::Test
     skip "no IO::Buffer" unless defined?(IO::Buffer)
     buffer = IO::Buffer.for("\x08\x96\x01".b)
     r = W::Reader.new(buffer)
+    assert_instance_of W::IOSource, r.buffer
+    assert_same buffer, r.buffer.buffer, "the buffer is read in place, not copied"
     assert_equal [1, 0], r.read_tag
     assert_equal 150, r.read_varint
+    r = W::Reader.new(IO::Buffer.for([1.5].pack("E") + "\x02hi".b))
+    assert_equal 1.5, r.read_double
+    assert_equal "hi", r.read_bytes
+  end
+
+  def test_reader_accepts_any_source_with_string_byte_methods
+    source = Struct.new(:string) do
+      def getbyte(i) = string.getbyte(i)
+
+      def byteslice(o, n) = string.byteslice(o, n)
+
+      def unpack1(f, offset:) = string.unpack1(f, offset: offset)
+
+      def bytesize = string.bytesize
+    end.new("\x08\x96\x01\x15\x01\x00\x00\x00".b)
+    r = W::Reader.new(source)
+    assert_same source, r.buffer
+    assert_equal [1, 0], r.read_tag
+    assert_equal 150, r.read_varint
+    assert_equal [2, 5], r.read_tag
+    assert_equal 1, r.read_fixed32
+    assert_raises(::TypeError) { W::Reader.new(Object.new) }
+    assert_raises(::TypeError) { W::Reader.new([1, 2]) }
   end
 
   def test_limits

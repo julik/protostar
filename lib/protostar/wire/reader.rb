@@ -4,7 +4,9 @@ module Protostar
   module Wire
     # Reads wire-format values from a String without copying it or allocating
     # per byte. The String is never mutated, and its encoding does not matter:
-    # every read works on bytes.
+    # every read works on bytes. An IO::Buffer is read in place through an
+    # {IOSource}, and so is any source answering `getbyte`, `byteslice`,
+    # `unpack1(format, offset:)` and `bytesize` the way String does.
     #
     # A reader has a position and a limit. Reads never go past the limit, so a
     # nested message is read by narrowing the limit to its end and restoring it
@@ -16,19 +18,24 @@ module Protostar
     #     ...
     #   end
     class Reader
-      # @return [String] the underlying bytes
+      # What a source other than a String must answer
+      SOURCE_METHODS = %i[getbyte byteslice unpack1 bytesize].freeze
+
+      # @return [String, IOSource, Object] the underlying bytes
       attr_reader :buffer
       # @return [Integer] the current byte offset
       attr_accessor :pos
       # @return [Integer] the offset reads must not pass
       attr_reader :limit
 
-      # @param buffer [String, IO::Buffer] an IO::Buffer is copied into a String once
+      # @param buffer [String, IO::Buffer, #getbyte] an IO::Buffer is wrapped in an {IOSource}, not copied
       # @param pos [Integer] where to start
       # @param limit [Integer, nil] where to stop, the end of the buffer by default
       def initialize(buffer, pos = 0, limit = nil)
-        buffer = buffer.get_string if defined?(IO::Buffer) && buffer.is_a?(IO::Buffer)
-        raise ::TypeError, "expected a String or IO::Buffer, got #{buffer.class}" unless buffer.is_a?(String)
+        buffer = IOSource.new(buffer) if defined?(IO::Buffer) && buffer.is_a?(IO::Buffer)
+        unless buffer.is_a?(String) || SOURCE_METHODS.all? { |m| buffer.respond_to?(m) }
+          raise ::TypeError, "expected a String, an IO::Buffer or a source answering #{SOURCE_METHODS.join(", ")}, got #{buffer.class}"
+        end
         @buffer = buffer
         @pos = pos
         @limit = limit || buffer.bytesize
