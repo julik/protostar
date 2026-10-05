@@ -300,7 +300,7 @@ module Protostar
           if range.options[:verification] == :UNVERIFIED
             error(range_node, :extendee, "Cannot mark the extension range as UNVERIFIED when it has extension(s) " \
               "declared.")
-            return
+            break
           end
           validate_declarations(range_node, range, declarations, names)
         end
@@ -324,7 +324,7 @@ module Protostar
           else
             if names[d[:full_name]]
               error(node, :name, "Extension field name \"#{d[:full_name]}\" is declared multiple times.")
-              return
+              break
             end
             names[d[:full_name]] = true
             if (problem = declaration_symbol_problem(d[:full_name]))
@@ -523,17 +523,13 @@ module Protostar
         range = extendee.extension_range_descriptors.find { |r| r.range.cover?(field.number) }
         return if range.nil? || range.options.equal?(Schema::Options::EMPTY)
         declarations = range.options[:declaration] || []
-        declarations.each do |d|
-          next unless d[:number] == field.number
-          if d[:reserved]
-            error(node, :extendee, "Cannot use number #{field.number} for extension field #{field.full_name}, as it " \
-              "is reserved in the extension declarations for message #{extendee.full_name}.")
-            return
-          end
-          check_declaration(node, field, d)
-          return
-        end
-        if !declarations.empty? || range.options[:verification] == :DECLARATION
+        declaration = declarations.find { |d| d[:number] == field.number }
+        if declaration&.[](:reserved)
+          error(node, :extendee, "Cannot use number #{field.number} for extension field #{field.full_name}, as it " \
+            "is reserved in the extension declarations for message #{extendee.full_name}.")
+        elsif declaration
+          check_declaration(node, field, declaration)
+        elsif !declarations.empty? || range.options[:verification] == :DECLARATION
           error(node, :extendee, "Missing extension declaration for field #{field.full_name} with number " \
             "#{field.number} in extendee message #{extendee.full_name}. An extension range must declare for all " \
             "extension fields if its verification state is DECLARATION or there's any declaration in the range " \
@@ -866,7 +862,8 @@ module Protostar
       def symbol_visibility
         strict = @file.features.default_symbol_visibility == :STRICT
         each_element do |node, kind|
-          next unless (kind == :message || kind == :enum) && node.parent
+          next if kind != :message && kind != :enum
+          next if node.parent.nil?
           next unless node.visibility == :VISIBILITY_EXPORT
           descriptor = schema_of(node, kind)
           next unless descriptor.features.default_symbol_visibility == :STRICT || strict

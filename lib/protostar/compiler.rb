@@ -70,7 +70,7 @@ module Protostar
 
       def initialize(diagnostics)
         @diagnostics = diagnostics.freeze
-        super(diagnostics.map(&:to_s).join("\n"))
+        super(diagnostics.join("\n"))
       end
     end
 
@@ -168,7 +168,8 @@ module Protostar
       return "-inf" if value == -Float::INFINITY
       return "nan" if value.nan?
       text = format("%.15g", value)
-      text = format("%.17g", value) unless Float(text) == value
+      # the 15-digit form is kept only when it reads back as the very same double
+      text = format("%.17g", value) unless [Float(text)].pack("G") == [value].pack("G")
       text
     end
 
@@ -202,12 +203,12 @@ module Protostar
     def self.c_escape(bytes)
       out = +""
       bytes.each_byte do |b|
-        if (escaped = C_ESCAPES[b])
-          out << escaped
+        out << if (escaped = C_ESCAPES[b])
+          escaped
         elsif b < 32 || b >= 127
-          out << format("\\%03o", b)
+          format("\\%03o", b)
         else
-          out << b
+          b
         end
       end
       out

@@ -160,8 +160,7 @@ module Protostar
         return false unless field.type == :group
         return false unless field.name == field.message_type.name.downcase
         return false unless field.message_type.file.equal?(field.file)
-        scope = field.extension? ? field.containing_message : field.containing_message
-        field.message_type.containing_message.equal?(scope)
+        field.message_type.containing_message.equal?(field.containing_message)
       end
 
       def find_extension(type, name)
@@ -175,7 +174,7 @@ module Protostar
           foreign = @interpreter.schema_of(symbol)
           return foreign.extensions.find do |ext|
             ext.extendee.full_name == type.full_name && ext.type == :message && ext.label == :optional &&
-              ext.message_type.equal?(foreign)
+                ext.message_type.equal?(foreign)
           end
         end
         nil

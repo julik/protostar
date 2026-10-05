@@ -3598,6 +3598,7 @@
       "kind": "ExpectHasValidationErrors",
       "input": "package foo.bar;",
       "require_syntax": false,
+      "setup": true,
       "expected": "0:0: \"foo\" is already defined (as something other than a package) in file \"bar.proto\".\n",
       "substring": false
     },
@@ -3647,6 +3648,7 @@
       "kind": "ExpectHasValidationErrors",
       "input": "package test;\n\nimport \"bar.proto\";\n  import \"bar.proto\";",
       "require_syntax": false,
+      "setup": true,
       "expected": "3:2: Import \"bar.proto\" was listed twice.\n",
       "substring": false
     },
@@ -3657,6 +3659,7 @@
       "kind": "ExpectHasValidationErrors",
       "input": "\n        edition = \"2024\";\n        package test;\n        import option \"bar.proto\";\n          import option \"bar.proto\";\n      ",
       "require_syntax": false,
+      "setup": true,
       "expected": "4:10: Import \"bar.proto\" was listed twice.\n",
       "substring": false
     },
@@ -3667,6 +3670,7 @@
       "kind": "ExpectHasValidationErrors",
       "input": "\n        edition = \"2024\";\n        package test;\n\n        import \"bar.proto\";\n          import option \"bar.proto\";\n        ",
       "require_syntax": false,
+      "setup": true,
       "expected": "5:10: Import \"bar.proto\" was listed twice.\n",
       "substring": false
     },
@@ -3677,6 +3681,7 @@
       "kind": "ExpectHasValidationErrors",
       "input": "package test;",
       "require_syntax": false,
+      "setup": true,
       "expected": "0:0: A file with this name is already in the pool.\n",
       "substring": false
     },
@@ -4174,6 +4179,7 @@
       "kind": "ExpectHasValidationErrors",
       "input": "package foo.base;\nimport \"base.proto\";\nmessage qux {\n  optional base.bar baz = 1;\n  optional .base.bar quz = 2;\n}\n",
       "require_syntax": false,
+      "setup": true,
       "expected": "3:11: \"base.bar\" is resolved to \"foo.base.bar\", which is not defined. The innermost scope is searched first in name resolution. Consider using a leading '.'(i.e., \".base.bar\") to start from the outermost scope.\n",
       "substring": false
     },
@@ -4184,6 +4190,7 @@
       "kind": "ExpectHasValidationErrors",
       "input": "\n        edition = \"2024\";\n        package qux.baz;\n        import option \"base2.proto\";\n        option (baz.bar).foo = 1;\n      ",
       "require_syntax": false,
+      "setup": true,
       "expected": "4:15: Option \"(baz.bar)\" is resolved to \"(qux.baz.bar)\", which is not defined. The innermost scope is searched first in name resolution. Consider using a leading '.'(i.e., \"(.baz.bar)\") to start from the outermost scope.\n",
       "substring": false
     },

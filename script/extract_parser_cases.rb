@@ -249,11 +249,13 @@ each_test(src) do |fixture, name, from, to|
       skipped << {id: id, kind: kind, reason: "expectation is not a string literal"}
       next
     end
-    require_syntax = assignments.select { |at, _| at < call.begin(0) }.last&.last || false
+    require_syntax = assignments.reverse.find { |at, _| at < call.begin(0) }&.last || false
     # errors accumulate over a test's calls unless the test clears them
     fresh = previous_call.nil? || body[previous_call...call.begin(0)].include?("error_collector_.text_.clear()")
     previous_call = call.begin(0)
     entry = {id: id, test: "#{fixture}.#{name}", fresh: fresh, kind: kind, input: input, require_syntax: require_syntax}
+    # the test builds files into its pool first; the Ruby test must do the same
+    entry[:setup] = true if body[0...call.begin(0)].include?("BuildFile(")
     if kind == "ExpectParsesTo"
       json, error = encode_expected(expected)
       if json.nil?

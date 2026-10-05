@@ -1041,7 +1041,9 @@ module Protostar
                 option.value = id
               end
             when :integer, :float
-              int = (type == :integer) ? try_consume_integer64(negative ? INT64_MAX + 1 : UINT64_MAX) : nil
+              int = if type == :integer
+                try_consume_integer64(negative ? INT64_MAX + 1 : UINT64_MAX)
+              end
               if int
                 if negative
                   value_location.add_path(OPTION_NEGATIVE_INT_VALUE)

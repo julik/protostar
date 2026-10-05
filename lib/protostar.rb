@@ -7,3 +7,4 @@ module Protostar
 end
 
 require_relative "protostar/schema"
+require_relative "protostar/compiler"

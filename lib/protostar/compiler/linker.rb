@@ -478,7 +478,7 @@ module Protostar
         end
         enum.value.each do |value|
           ranges.each do |range|
-            next unless range.start <= value.number && value.number <= range.end
+            next unless value.number.between?(range.start, range.end)
             error(range, :number, "Enum value \"#{value.name}\" uses reserved number #{value.number}.")
           end
           error(value, :name, "Enum value \"#{value.name}\" is reserved.") if reserved_names[value.name]
@@ -568,7 +568,11 @@ module Protostar
             error(field, :type, "\"#{field.type_name}\" is not a type.")
             return
           end
-          kind = field.type ? (%i[TYPE_MESSAGE TYPE_GROUP].include?(field.type) ? :message : :enum) : type.kind
+          kind = if field.type
+            %i[TYPE_MESSAGE TYPE_GROUP].include?(field.type) ? :message : :enum
+          else
+            type.kind
+          end
           if kind == :message
             if type.kind != :message
               error(field, :type, "\"#{field.type_name}\" is not a message type.")
@@ -622,7 +626,7 @@ module Protostar
         message.reserved_range.each { |r| used << [r.start, r.end - 1] }
         proposed = 1
         used.uniq.sort.each do |first, last|
-          break unless first <= proposed && proposed <= last
+          break unless proposed.between?(first, last)
           proposed = last + 1
         end
         (proposed <= MAX_FIELD_NUMBER) ? "Next available field number is #{proposed}" : "There are no available field numbers"

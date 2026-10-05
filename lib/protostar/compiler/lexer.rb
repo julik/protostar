@@ -15,13 +15,13 @@ module Protostar
 
       TAB_WIDTH = 8
 
-      LETTER = Array.new(256) { |b| (b >= 97 && b <= 122) || (b >= 65 && b <= 90) || b == 95 }.freeze
-      DIGIT = Array.new(256) { |b| b >= 48 && b <= 57 }.freeze
+      LETTER = Array.new(256) { |b| b.between?(97, 122) || b.between?(65, 90) || b == 95 }.freeze
+      DIGIT = Array.new(256) { |b| b.between?(48, 57) }.freeze
       ALNUM = Array.new(256) { |b| LETTER[b] || DIGIT[b] }.freeze
-      OCTAL = Array.new(256) { |b| b >= 48 && b <= 55 }.freeze
-      HEX = Array.new(256) { |b| DIGIT[b] || (b >= 97 && b <= 102) || (b >= 65 && b <= 70) }.freeze
+      OCTAL = Array.new(256) { |b| b.between?(48, 55) }.freeze
+      HEX = Array.new(256) { |b| DIGIT[b] || b.between?(97, 102) || b.between?(65, 70) }.freeze
       # \t \n \v \f \r and space
-      WHITESPACE = Array.new(256) { |b| b == 32 || (b >= 9 && b <= 13) }.freeze
+      WHITESPACE = Array.new(256) { |b| b == 32 || b.between?(9, 13) }.freeze
       WHITESPACE_NO_NEWLINE = Array.new(256) { |b| WHITESPACE[b] && b != 10 }.freeze
       UNPRINTABLE = Array.new(256) { |b| b >= 1 && b < 32 }.freeze
       ESCAPE = Array.new(256) { |b| 'abfnrtv\\?\'"'.include?(b.chr) }.freeze
@@ -45,7 +45,7 @@ module Protostar
         @line = 0
         @column = 0
         @read_error = @size == 0
-        @char = @size == 0 ? 0 : @src.getbyte(0)
+        @char = (@size == 0) ? 0 : @src.getbyte(0)
         @record_target = nil
         @record_start = -1
         @report_whitespace = false
@@ -393,6 +393,12 @@ module Protostar
         end
       end
 
+      # Consumes up to `count` hex digits, stopping at the first that is missing
+      def consume_hex(count)
+        count.times { return false unless try_consume_one(HEX) }
+        true
+      end
+
       def consume_string(delimiter)
         loop do
           case @char
@@ -409,15 +415,10 @@ module Protostar
             elsif try_consume(120) || try_consume(88) # x X
               add_error("Expected hex digits for escape sequence.") unless try_consume_one(HEX)
             elsif try_consume(117) # u
-              unless try_consume_one(HEX) && try_consume_one(HEX) && try_consume_one(HEX) && try_consume_one(HEX)
-                add_error("Expected four hex digits for \\u escape sequence.")
-              end
+              add_error("Expected four hex digits for \\u escape sequence.") unless consume_hex(4)
             elsif try_consume(85) # U
-              unless try_consume(48) && try_consume(48) && (try_consume(48) || try_consume(49)) &&
-                  try_consume_one(HEX) && try_consume_one(HEX) && try_consume_one(HEX) &&
-                  try_consume_one(HEX) && try_consume_one(HEX)
-                add_error("Expected eight hex digits up to 10ffff for \\U escape sequence")
-              end
+              valid = 2.times.all? { try_consume(48) } && (try_consume(48) || try_consume(49)) && consume_hex(5)
+              add_error("Expected eight hex digits up to 10ffff for \\U escape sequence") unless valid
             else
               add_error("Invalid escape sequence in string literal.")
             end
