@@ -30,7 +30,7 @@ module Protostar
           # frozen_string_literal: true
           #{packed.join}
           def __decode_fields(r, depth, end_group, frozen)
-            values = @values
+            #{"values = @values" unless fields.empty?}
             buf = r.buffer
             limit = r.limit
             pos = r.pos
@@ -176,7 +176,7 @@ module Protostar
       end
 
       def enum(info)
-        src = "start = pos\n#{varint("v")}"
+        src = info.closed_enum ? "start = pos\n#{varint("v")}" : varint("v")
         src << "v -= 0x1_0000_0000 if (v &= 0xFFFF_FFFF) >= 0x8000_0000\n"
         src << "if (e = self.class.__fields[#{info.index}].enum_names[v])\n"
         src << store(info, "e")

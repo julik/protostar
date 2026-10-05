@@ -41,7 +41,7 @@ module Protostar
         <<~RUBY
           # frozen_string_literal: true
           def __size(sizes)
-            values = @values
+            #{"values = @values" unless fields.empty?}
             total = 0
             #{fields.map { |f| size_field(f) }.join}
             total += Protostar::Codec::Sizer.unknown(@unknown) if @unknown
@@ -49,7 +49,7 @@ module Protostar
           end
 
           def __write(w, buf, sizes)
-            values = @values
+            #{"values = @values" unless fields.empty?}
             #{fields.map { |f| write_field(f) }.join}
             Protostar::Codec::Encoder.unknown(w, @unknown) if @unknown
             w.flush_if_full

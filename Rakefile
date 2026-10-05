@@ -76,6 +76,13 @@ namespace :examples do
   end
 end
 
+namespace :test do
+  desc "Run the tests with RUBYOPT=-w and fail on any warning from lib/ or the code it generates"
+  task :warnings do
+    ruby "script/warnings.rb"
+  end
+end
+
 namespace :rbs do
   desc "Check sig/ (the public API and the well-known types) with rbs validate"
   task :validate do
