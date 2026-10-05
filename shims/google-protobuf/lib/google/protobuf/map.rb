@@ -49,7 +49,9 @@ module Google
       end
 
       # @api private
-      attr_reader :__hash
+      def __hash
+        @hash
+      end
 
       # @api private
       def __types

@@ -8,6 +8,8 @@ GOOGLE_TESTS = %w[basic basic_proto2 type_errors utf8].map { |n| "test/google/#{
 Rake::TestTask.new(:test) do |t|
   t.libs << "lib"
   t.libs << "test"
+  # Google's tests require their generated files by bare name
+  t.libs << "test/google"
   t.test_files = FileList["test/**/*_test.rb"] + GOOGLE_TESTS
   t.warning = false
 end

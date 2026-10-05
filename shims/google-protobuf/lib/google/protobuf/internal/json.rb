@@ -45,7 +45,9 @@ module Google
           extensions&.each { |key, value| set_extension(klass, message, key[1..-2], value, options) }
           message
         rescue Protostar::JSON::Error, Protostar::Error, ::JSON::ParserError => e
-          raise ParseError, "Error occurred during parsing: #{e.message}"
+          # upb's wording, which callers match on
+          reason = e.message.sub(/\A\S+ has no field "(.*)"\z/) { "No such field: #{$1}" }
+          raise ParseError, "Error occurred during parsing: #{reason}"
         end
 
         def set_extension(klass, message, name, value, options)

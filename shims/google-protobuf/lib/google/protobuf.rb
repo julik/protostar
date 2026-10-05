@@ -69,7 +69,7 @@ module Google
         kept = message.unknown_fields.select { |u| descriptor.extension_number?(u.number) }
         message.__greplace_unknown(kept) if kept.size != message.unknown_fields.size
         message.class.__fields.each do |info|
-          next unless info.message? || (info.map && info.value.message?)
+          next unless info.map ? info.value.message? : info.message?
           v = message.__values[info.index]
           case v
           when nil then next

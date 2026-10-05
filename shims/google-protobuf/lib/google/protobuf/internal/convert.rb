@@ -66,7 +66,8 @@ module Google
           end
           if value.encoding != UTF_8
             value = value.encode(UTF_8)
-            raise EncodingError, "String is invalid UTF-8" unless value.valid_encoding?
+          elsif !value.valid_encoding?
+            raise Encoding::InvalidByteSequenceError, "String is invalid UTF-8"
           end
           value.frozen? ? value : value.dup.freeze
         end

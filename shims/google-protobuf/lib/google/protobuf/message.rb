@@ -114,6 +114,8 @@ module Google
       # Class methods of every message class
       # @api private
       module ClassMethods
+        MAX_INPUT = 0x7FFF_FFFF
+
         # @return [Descriptor]
         def descriptor
           @__gdescriptor
@@ -129,6 +131,8 @@ module Google
         def decode(data, options = {})
           raise ArgumentError, "Expected hash arguments." unless options.is_a?(Hash)
           raise ArgumentError, "Expected string for binary protobuf data." unless data.is_a?(String)
+          # upb refuses input of 2 GiB or more, the most the wire format can describe
+          raise ParseError, "Error occurred during parsing" if data.bytesize > MAX_INPUT
           limit = options[:recursion_limit]
           limit = limit.is_a?(Numeric) ? limit.to_i : Protostar::Codec::Decoder::RECURSION_LIMIT
           Protostar::Codec::Decoder.decode(self, data, recursion_limit: limit)
@@ -157,6 +161,7 @@ module Google
         def decode_json(data, options = {})
           options = Internal.options_hash(options)
           raise ArgumentError, "Expected string for JSON data." unless data.is_a?(String)
+          raise "Cannot parse a wrapper directly" if descriptor.send(:wrapper?)
           Internal::Json.decode(self, data, options)
         end
 
@@ -164,9 +169,7 @@ module Google
         # @param options [Hash] `preserve_proto_fieldnames:`, `emit_defaults:`, `format_enums_as_integers:`
         # @return [String] UTF-8, frozen
         def encode_json(message, options = {})
-          options = Internal.options_hash(options)
-          raise ArgumentError, "Message of wrong type." unless message.is_a?(self)
-          Internal::Json.encode(message, options)
+          Internal::Json.encode(message, Internal.options_hash(options))
         end
 
         # @api private
@@ -405,7 +408,7 @@ module Google
           return 1 if limit <= 1
           deepest = 0
           self.class.__fields.each do |info|
-            next unless info.message? || (info.map && info.value.message?)
+            next unless info.map ? info.value.message? : info.message?
             v = @values[info.index]
             next if v.nil?
             each_message = if info.map then v.each_value
