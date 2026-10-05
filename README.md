@@ -19,3 +19,10 @@ gem "google-protobuf", github: "julik/protostar", glob: "shims/google-protobuf/*
 
 Its [README](shims/google-protobuf/README.md) has the other ways to install it and
 what it covers. `bundle exec rake shim:test` runs its suite with its own bundle.
+
+## Licence
+
+MIT (`LICENSE.txt`). The Google `.proto` files bundled under `lib/protostar/compiler/include/`,
+the code generated from them, and the vendored protobuf sources under `test/corpus/` are
+Google's, under the BSD 3-Clause licence; [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists them
+and carries that licence.

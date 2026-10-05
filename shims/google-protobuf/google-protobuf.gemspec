@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
   spec.metadata["source_code_uri"] = "#{spec.homepage}/tree/main/shims/google-protobuf"
   spec.metadata["rubygems_mfa_required"] = "true"
 
-  spec.files = Dir["lib/**/*.rb", "README.md"]
+  spec.files = Dir["lib/**/*.rb", "README.md", "LICENSE.txt", "THIRD_PARTY_NOTICES.md"]
   spec.require_paths = ["lib"]
 
   # the shim leans on protostar internals, so it wants the version it was made with
