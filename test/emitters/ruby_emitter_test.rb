@@ -152,4 +152,36 @@ class RubyEmitterTest < Minitest::Test
     plain = Emitters::Ruby.new(bootstrap_requires: false).file(file)
     assert_includes plain, "require \"google/protobuf/timestamp_pb\"\n"
   end
+
+  def test_options_from_import_option_files_are_written_as_bytes
+    opts = <<~PROTO
+      edition = "2024";
+      package rt.io.opts;
+      import "google/protobuf/descriptor.proto";
+      extend google.protobuf.MessageOptions { int32 level = 50001; }
+    PROTO
+    user = <<~PROTO
+      edition = "2024";
+      package rt.io.app;
+      import option "rt/io/opts.proto";
+      message M { option (rt.io.opts.level) = 7; option deprecated = true; }
+    PROTO
+    sources = {"rt/io/opts.proto" => opts, "rt/io/app.proto" => user}
+    file = Protostar::Compiler.new.compile(["rt/io/app.proto"], sources: sources).last
+    source = Emitters::Ruby.new.definition(file)
+    assert_includes source, "__unknown_fields: [[50001, 0, \"\\a\".b]]"
+    refute_includes source, "opts.level"
+    pool = Protostar::Schema::Pool.new
+    saved = Protostar.generated_pool
+    Protostar.instance_variable_set(:@generated_pool, pool)
+    begin
+      eval(source, TOPLEVEL_BINDING, "(emitted)") # rubocop:disable Security/Eval
+    ensure
+      Protostar.instance_variable_set(:@generated_pool, saved)
+    end
+    loaded = pool.file("rt/io/app.proto")
+    assert_equal "\x88\xb5\x18\x07".b, loaded.messages.first.options.unknown_fields
+    assert loaded.messages.first.options.deprecated?
+    assert_equal file.serialize(source_info: false), loaded.serialize
+  end
 end

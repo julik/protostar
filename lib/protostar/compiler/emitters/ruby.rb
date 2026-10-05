@@ -51,7 +51,7 @@ module Protostar
           emit_constants(file)
           @out
         ensure
-          @file = @source = nil
+          @file = @source = @reachable = nil
         end
 
         # Only the {Protostar::DSL.file} statement, without requires and constants
@@ -64,7 +64,7 @@ module Protostar
           emit_file(file)
           @out
         ensure
-          @file = @source = nil
+          @file = @source = @reachable = nil
         end
 
         # @param name [String] an imported file name
@@ -381,14 +381,35 @@ module Protostar
 
         # An options message (or a message inside one) as the DSL spells it
         # verbatim: fields by name, `__extensions` by full name, and
-        # `__unknown_fields` as `[number, wire_type, bytes]`
+        # `__unknown_fields` as `[number, wire_type, bytes]`. An extension the
+        # file reaches only through `import option` is written as unknown
+        # bytes, as protoc's own generator embeds it: the generated file does
+        # not load that import, so it may not be there to name the option.
         def dsl_hash(value)
           h = value.fields.transform_values { |v| dsl_value(v) }
-          unless value.extensions.empty?
-            h[:__extensions] = value.extensions.to_h { |f, v| [f.full_name, dsl_value(v)] }
-          end
-          h[:__unknown_fields] = unknown_triples(value.unknown_fields) unless value.unknown_fields.empty?
+          named, unnamed = value.extensions.partition { |f, _| reachable?(f) }
+          h[:__extensions] = named.to_h { |f, v| [f.full_name, dsl_value(v)] } unless named.empty?
+          unknown = value.unknown_fields
+          unnamed.each { |f, v| unknown += Schema::MessageValue.new({}, {f => v}).encode(f.extendee) }
+          h[:__unknown_fields] = unknown_triples(unknown) unless unknown.empty?
           h
+        end
+
+        # Whether an extension is defined by the file or one it imports, so
+        # that loading the generated file can find it
+        def reachable?(extension)
+          @reachable ||= begin
+            names = {}
+            queue = [@file]
+            until queue.empty?
+              f = queue.shift
+              next if names[f.name]
+              names[f.name] = true
+              queue.concat(f.dependency_files)
+            end
+            names
+          end
+          @reachable.key?(extension.file.name)
         end
 
         def dsl_value(value)
