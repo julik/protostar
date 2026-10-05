@@ -111,6 +111,38 @@ module Protostar
           end
           @path.pop
         end
+        msg.unknown_fields.empty? ? first : extensions(msg, out, first)
+      end
+
+      # Extensions travel as unknown fields; those known to the message's file
+      # and its imports are written as "[full.name]", the rest left out
+      def extensions(msg, out, first)
+        @extensions ||= Text::Extensions.new(@registry, nil)
+        known = @extensions.of(msg.class.descriptor)
+        return first if known.empty?
+        msg.unknown_fields.group_by(&:number).sort_by(&:first).each do |number, list|
+          field = known[number] or next
+          info = @extensions.info(field) or next
+          values = @extensions.read(info, list)
+          next if values.nil? || values.empty?
+          out << "," unless first
+          first = false
+          name = "[#{field.full_name}]"
+          string(name, out)
+          out << ":"
+          @path << name
+          if info.repeated
+            out << "["
+            values.each_with_index do |e, i|
+              out << "," unless i == 0
+              single(info, e, out)
+            end
+            out << "]"
+          else
+            single(info, values.last, out)
+          end
+          @path.pop
+        end
         first
       end
 
@@ -200,6 +232,7 @@ module Protostar
       def any(msg, out)
         url = get(msg, "type_url") || ""
         value = get(msg, "value") || ""
+        return out << "{}" if url.empty? && value.empty?
         klass = any_class(url)
         inner = begin
           klass.decode(value)

@@ -114,6 +114,20 @@ class TextPrinterTest < Minitest::Test
     assert_equal "1: 7\n21: 3\n31: 1\n31: 2\n", print(m, pool: pool), "only extensions the pool knows are named"
   end
 
+  def test_unknown_fields_can_be_hidden_while_extensions_still_print
+    w = Protostar::Wire::Writer.new
+    w.write_tag(1, 0).write_varint(7)
+    w.write_tag(9999, 0).write_varint(1)
+    w.write_tag(18, 2).write_bytes(Protostar::Wire::Writer.new.write_tag(9999, 0).write_varint(2).string)
+    m = @set["proto2_unittest.TestAllExtensions"].decode(w.string)
+    assert_equal <<~TEXT, print(m, unknown_fields: false)
+      [proto2_unittest.optional_int32_extension]: 7
+      [proto2_unittest.optional_nested_message_extension] {
+      }
+    TEXT
+    assert_includes print(m), "9999: 1"
+  end
+
   def test_extension_bytes_that_do_not_fit_stay_unknown
     w = Protostar::Wire::Writer.new
     w.write_tag(1, 2).write_bytes("oops")

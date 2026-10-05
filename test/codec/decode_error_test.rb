@@ -70,6 +70,17 @@ class DecodeErrorTest < Minitest::Test
     assert_decode_error "\x80\x80\x80\x80\x10\x00", "tag out of range", 0
   end
 
+  # conformance: Required.*.ProtobufInput.BadTag_OverlongVarint
+  def test_tag_longer_than_five_bytes
+    overlong = "\x88\x80\x80\x80\x80\x80\x80\x80\x00"
+    assert_decode_error "#{overlong}\xd2\x09", "tag longer than 5 bytes", 0
+    assert_decode_error "\x08\x01#{overlong}\x01", "tag longer than 5 bytes", 2
+    assert_decode_error "\x88\x80\x80\x80\x80\x00\x01", "tag longer than 5 bytes", 0, klass: @unittest["proto2_unittest.TestEmptyMessage"]
+    assert_decode_error "\x83\x01\x8c\x80\x80\x80\x80\x00", "tag longer than 5 bytes", 2,
+      klass: @unittest["proto2_unittest.TestEmptyMessage"]
+    assert_equal 1, @all.decode("\x88\x80\x80\x80\x00\x01".b).optional_int32, "five bytes are fine"
+  end
+
   def test_recursion_limit
     recursive = @unittest["proto2_unittest.TestRecursiveMessage"]
     deep = ->(n) do

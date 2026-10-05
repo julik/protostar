@@ -77,11 +77,21 @@ module Protostar
         read_varint_slow(pos)
       end
 
+      # @return [Integer] a tag's varint, unchecked
+      # @raise [DecodeError] when truncated or longer than five bytes, which
+      #   protoc refuses even when the value would fit
+      def read_tag_varint
+        at = @pos
+        tag = read_varint
+        raise DecodeError.new("tag longer than 5 bytes", offset: at) if @pos - at > 5
+        tag
+      end
+
       # @return [Array(Integer, Integer)] field number and wire type
       # @raise [DecodeError] for field number 0, an out of range tag or an invalid wire type
       def read_tag
         at = @pos
-        tag = read_varint
+        tag = read_tag_varint
         Reader.check_tag(tag, at)
         [tag >> 3, tag & 7]
       end
@@ -190,7 +200,7 @@ module Protostar
         loop do
           raise DecodeError.new("missing end of group #{number}", offset: @pos) if @pos >= @limit
           at = @pos
-          tag = read_varint
+          tag = read_tag_varint
           Reader.check_tag(tag, at)
           n = tag >> 3
           wt = tag & 7

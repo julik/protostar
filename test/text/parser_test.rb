@@ -65,6 +65,24 @@ class TextParserTest < Minitest::Test
     assert_parse_error(/unterminated string/, %(optional_string: "abc))
   end
 
+  # conformance: Recommended.*.TextFormatInput.StringLiteral*UnicodeEscapeSurrogate*
+  def test_surrogate_escapes_are_refused
+    %w[\\ud800 \\udc00 \\U0000d800 \\ud801\\udc37 \\U0000d801\\udc37].each do |escape|
+      assert_parse_error(/Unicode escape of surrogate U\+D[89A-F]/, %(optional_bytes: "#{escape}"))
+      assert_parse_error(/Unicode escape of surrogate/, %(optional_string: "#{escape}"))
+    end
+    assert_equal "\u{10437}".b, parse(%(optional_bytes: "\\U00010437")).optional_bytes
+  end
+
+  # conformance: Required.*.TextFormatInput.ReservedFieldName.*
+  def test_reserved_field_names_are_skipped
+    reserved = @set["proto2_unittest.TestReservedFields"]
+    m = parse("bar: 1 baz { a: [1, 2] } bar: [1.5, 'x'] bar < x: y >", reserved)
+    assert_equal reserved.new, m
+    assert_empty m.unknown_fields
+    assert_parse_error(/has no field named "foo"/, "foo: 1", reserved)
+  end
+
   def test_enums_by_name_and_number
     m = parse("optional_nested_enum: BAZ repeated_nested_enum: [1, NEG, -1]")
     assert_equal :BAZ, m.optional_nested_enum
@@ -201,6 +219,27 @@ class TextParserTest < Minitest::Test
       Protostar::Text.parse(test_any, "[type.googleapis.com/proto2_unittest.TestAny] {}", registry: @any_set.registry)
     end
     assert_match(/expands an Any, but this is a proto2_unittest.TestAny/, e.message)
+  end
+
+  # conformance: Required.*.TextFormatInput.AnyFieldWith{SpecialCharacters,ValidUrlPercentEscape}InTypeUrlPrefix
+  def test_any_type_url_prefixes_take_url_characters
+    test_any = @any_set["proto2_unittest.TestAny"]
+    parse_any = ->(url) { Protostar::Text.parse(test_any, "any_value { [#{url}] { int32_value: 7 } }", registry: @any_set.registry) }
+    ["a.b/sub-path_0/~!$&()*+,;=/proto2_unittest.TestAny", "a.b/%2F/proto2_unittest.TestAny"].each do |url|
+      assert_equal url, parse_any.call(url).any_value.type_url
+    end
+    assert_equal "a.b/c/proto2_unittest.TestAny", parse_any.call("a.b / c/ # comment\n proto2_unittest . TestAny").any_value.type_url
+    {
+      "a/%2/proto2_unittest.TestAny" => /invalid percent escape "%2\/"/,
+      "a/%zz/proto2_unittest.TestAny" => /invalid percent escape "%zz"/,
+      "/proto2_unittest.TestAny" => /type URL prefix is empty/,
+      "a/proto2_unittest.1Any" => /invalid type name "proto2_unittest.1Any"/,
+      "a/b?c/proto2_unittest.TestAny" => /unexpected "\?" in a bracketed name/
+    }.each do |url, error|
+      e = assert_raises(Protostar::Text::ParseError, url) { parse_any.call(url) }
+      assert_match error, e.message
+    end
+    assert_parse_error(/invalid type name "proto2_unittest..x"/, "[proto2_unittest..x]: 1", @set["proto2_unittest.TestAllExtensions"])
   end
 
   def test_required_fields_with_allow_partial

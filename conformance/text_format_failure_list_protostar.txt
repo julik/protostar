@@ -1,0 +1,1 @@
+# Text-format conformance tests protostar is known to fail: none at v36.2.

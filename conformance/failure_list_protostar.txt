@@ -1,0 +1,2 @@
+# codec: extensions stay unknown fields, so their strings are not UTF-8 checked; there is no extension API
+Recommended.Editions.ProtobufInput.RejectInvalidUtf8.String.Extension

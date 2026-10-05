@@ -19,6 +19,8 @@ module Protostar
       INT64_LIMIT = 2.0**63
       UINT64_LIMIT = 2.0**64
       QUOTED_INTEGER = /\A-?\d+\z/
+      # Integers in decimal or exponent form, read through a double as protoc does ("1e5")
+      QUOTED_INTEGRAL = /\A-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?\z/
       QUOTED_FLOAT = /\A\s*[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?\z/
       NONFINITE = {"NaN" => Float::NAN, "Infinity" => Float::INFINITY, "-Infinity" => -Float::INFINITY}.freeze
       BASE64 = %r{\A[A-Za-z0-9+/\-_]*={0,2}\z}
@@ -45,7 +47,7 @@ module Protostar
         tree = begin
           # the stdlib reads -0 as the Integer 0, losing the sign a double field keeps
           string = string.gsub(NEGATIVE_ZERO) { |m| (m == "-0") ? "-0.0" : m } if string.include?("-0")
-          ::JSON.parse(string, allow_duplicate_key: true, allow_nan: false, create_additions: false)
+          ::JSON.parse(string, allow_duplicate_key: false, allow_nan: false)
         rescue ::JSON::ParserError, EncodingError, ArgumentError => e
           raise ParseError, "invalid JSON: #{e.message}"
         end
@@ -83,7 +85,13 @@ module Protostar
         klass = msg.class
         descriptor = klass.descriptor
         oneofs = nil
+        seen = {}
+        extensions = nil
         node.each do |key, value|
+          if key.start_with?("[") && key.end_with?("]")
+            extension(msg, key[1..-2], value, extensions ||= {})
+            next
+          end
           field = descriptor.fields_by_json_name[key] || descriptor.fields_by_name[key]
           unless field
             next if @ignore_unknown
@@ -91,6 +99,8 @@ module Protostar
           end
           info = klass.__by_number.fetch(field.number)
           @path << info.name
+          fail!("field #{info.name} is given more than once") if seen[info.number]
+          seen[info.number] = true
           if value.nil? && (info.repeated || info.map || !null_is_value?(info))
             @path.pop
             next
@@ -110,6 +120,33 @@ module Protostar
           end
           @path.pop
         end
+        add_extensions(msg, extensions) if extensions
+      end
+
+      # An extension given as "[full.name]": its values are collected, then
+      # kept where the binary codec keeps them, in the unknown fields
+      def extension(msg, name, value, collected)
+        @extensions ||= Text::Extensions.new(@registry, nil)
+        field = @extensions.named(msg.class.descriptor, name)
+        info = field && @extensions.info(field)
+        unless info
+          return if @ignore_unknown
+          fail!("#{msg.class.descriptor.full_name} has no extension #{name.inspect}")
+        end
+        fail!("extension #{name} is given more than once") if collected.key?(info)
+        @path << "[#{name}]"
+        if !value.nil? || (!info.repeated && null_is_value?(info))
+          parsed = field_value(info, value)
+          collected[info] = info.repeated ? parsed : [parsed] unless parsed.equal?(SKIP)
+        end
+        @path.pop
+      end
+
+      def add_extensions(msg, collected)
+        collected.sort_by { |info, _| info.number }.each do |info, values|
+          @extensions.write(info, values).each { |u| msg.__add_unknown(u) }
+        end
+        msg.__seal_unknown
       end
 
       # null is the null of Value and NullValue fields, and absence everywhere else
@@ -187,6 +224,7 @@ module Protostar
       end
 
       def integer(info, value)
+        value = Float(value) if value.is_a?(String) && !QUOTED_INTEGER.match?(value) && QUOTED_INTEGRAL.match?(value)
         n = case value
         when Integer, Float
           f = value.to_f
@@ -366,6 +404,7 @@ module Protostar
 
       def any(klass, node)
         fail!("expected an object for google.protobuf.Any, got #{describe(node)}") unless node.is_a?(Hash)
+        return klass.new if node.empty?
         url = node["@type"]
         fail!("Any has no \"@type\"") if url.nil?
         fail!("\"@type\" of Any must be a string") unless url.is_a?(String)

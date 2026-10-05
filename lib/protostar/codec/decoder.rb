@@ -244,7 +244,7 @@ module Protostar
         unknown_enum = false
         while r.pos < r.limit
           at = r.pos
-          tag = r.read_varint
+          tag = r.read_tag_varint
           Wire::Reader.check_tag(tag, at)
           number = tag >> 3
           wt = tag & 7

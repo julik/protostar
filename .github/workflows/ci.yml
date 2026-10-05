@@ -40,3 +40,27 @@ jobs:
           ruby-version: "3.4"
           bundler-cache: true
       - run: bundle exec rake standard
+  conformance:
+    name: protobuf conformance suite (binary, JSON, text format)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+      - id: flags
+        run: echo "digest=$(ruby script/conformance.rb cmake-flags | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+      - id: runner
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/protostar/conformance-36.2/bin
+          key: conformance-runner-v36.2-${{ runner.os }}-${{ steps.flags.outputs.digest }}
+      - if: steps.runner.outputs.cache-hit != 'true'
+        run: bundle exec rake conformance:build
+      - run: bundle exec rake conformance:check conformance:run
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conformance-failures
+          path: tmp/conformance

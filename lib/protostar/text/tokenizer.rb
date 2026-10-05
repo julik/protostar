@@ -19,6 +19,7 @@ module Protostar
       INTEGER = /\d+/
       STRING = /"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'/
       NUMBER_TAIL = /[A-Za-z0-9_.]/
+      URL_CHARS = %r{[A-Za-z0-9_\-.~!$&()*+,;=%/]+}
 
       def initialize(text)
         @text = text
@@ -36,6 +37,22 @@ module Protostar
         t = peek
         @peeked = nil
         t
+      end
+
+      # What protoc's tokenizer reads in URL mode between `[` and `]`: runs of
+      # URL characters, joined, with whitespace and comments between them
+      # dropped. Call it right after consuming the `[`.
+      # @return [Array(String, Integer)] the text and where it starts
+      def url_chars
+        raise ArgumentError, "a token was peeked past the [" if @peeked
+        @scanner.skip(SKIP)
+        pos = @scanner.pos
+        text = +""
+        while (run = @scanner.scan(URL_CHARS))
+          text << run
+          @scanner.skip(SKIP)
+        end
+        [text, pos]
       end
 
       # @return [Array(Integer, Integer)] 1-based line and column of a byte position

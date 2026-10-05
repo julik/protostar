@@ -162,11 +162,14 @@ class JSONWellKnownTest < Minitest::Test
   end
 
   def test_any_errors
-    assert_encode_error(/bad type URL ""/, @any.new)
+    # conformance: Required.*.JsonInput.AnyWithNoType, which google-protobuf fails
+    assert_equal "{}", @any.new.to_json
+    assert_equal @any.new, decode("{}", @any)
+    assert_encode_error(/bad type URL ""/, @any.new(value: "\x08\x01".b))
     assert_encode_error(/cannot find the type "no.Such"/, @any.new(type_url: "type.googleapis.com/no.Such"))
     assert_encode_error(/cannot decode the protobuf_test_messages.proto3.TestAllTypesProto3 inside Any/,
       @any.new(type_url: "x/protobuf_test_messages.proto3.TestAllTypesProto3", value: "\xFF".b))
-    assert_parse_error(/Any has no "@type"/, "{}", @any)
+    assert_parse_error(/Any has no "@type"/, '{"value": 1}', @any)
     assert_parse_error(/needs a '\/' and a non-empty host/, '{"@type": "noslash"}', @any)
     assert_parse_error(/cannot find the type "no.Such"/, '{"@type": "a/no.Such"}', @any)
     assert_parse_error(/Any holding a google.protobuf.Empty|google.protobuf.Empty has no field "value"/,
