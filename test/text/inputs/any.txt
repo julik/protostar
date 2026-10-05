@@ -1,0 +1,26 @@
+# proto: google/protobuf/any_test.proto
+# message: proto2_unittest.TestAny
+#
+# Any in its expanded form, nested, and in its plain form with a type the
+# pool does not know
+int32_value: 1
+any_value {
+  [type.googleapis.com/proto2_unittest.TestAny] {
+    text: "inner"
+    any_value {
+      [example.com/x/proto2_unittest.TestAny] < int32_value: 7 >
+    }
+  }
+}
+repeated_any_value {
+  type_url: "type.googleapis.com/unknown.Type"
+  value: "\001\002"
+}
+repeated_any_value: {
+  [type.googleapis.com/google.protobuf.Any] {
+    type_url: "type.googleapis.com/proto2_unittest.TestAny"
+    value: "\010\003"
+  }
+}
+repeated_any_value {}
+text: "outer"

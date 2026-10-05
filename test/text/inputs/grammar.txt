@@ -1,0 +1,44 @@
+# proto: google/protobuf/unittest.proto
+# message: proto2_unittest.TestAllTypes
+#
+# Hand-written to exercise the text format grammar; protoc's reading of it is
+# the expected binary, its printing the expected text.
+optional_int32: -0x7fffffff  # hex, negative
+optional_int64: -9223372036854775808
+optional_uint32: 037777777777  # octal
+optional_uint64: 18446744073709551615
+optional_sint32: -2147483648,
+optional_sint64: 0x7FFFFFFFFFFFFFFF;
+optional_fixed32: 0
+optional_fixed64: 0xffffffffffffffff
+optional_sfixed32: -1
+optional_sfixed64: -0
+optional_float: 1.5f
+optional_double: -.25e-3
+optional_bool: t
+optional_string: "tab\there" 'single "quoted"' "\a\b\f\n\r\t\v\\\'\"\?" "\0\12\123\x7\x7fé\U0001F600" "é😀"
+optional_bytes: "\377\000\x80" "\xfF" ''
+OptionalGroup <
+  a: 017
+>
+optional_nested_message: {
+  bb: 1
+}
+optional_foreign_message <c: -1;>
+optional_nested_enum: 2
+optional_foreign_enum: FOREIGN_BAZ
+repeated_int32: [1, -2, 0x3, 04]
+repeated_int32: 5
+repeated_int64: []
+repeated_float: [inf, -inf, nan, -nan, Infinity, -INFINITY, 1, -0, 0.1, 3.4028234663852886e38, 1e-46, 1.0e+10F]
+repeated_double: [1e300, 5e-324, 0.1, 123456789012, 1e21, 1e-7, 1e15, 1e16, 1e17, 0.30000000000000004, 1E+100, -2.5, 9007199254740993]
+repeated_bool: [true, false, True, False, t, f, 1, 0]
+repeated_string: ["", "a" "b", '\x41']
+repeated_bytes: "\303\251"
+repeatedgroup { a: 1 }
+RepeatedGroup { a: 2 }
+repeated_nested_message [{bb: 3}, <bb: 4>, {}]
+repeated_nested_enum: [FOO, 2, BAZ, NEG, -1]
+default_int32: 0
+default_string: ""
+oneof_string: "last oneof"

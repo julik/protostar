@@ -1,0 +1,42 @@
+{
+  "text_format_unittest_data": {
+    "proto": "google/protobuf/unittest.proto",
+    "message": "proto2_unittest.TestAllTypes"
+  },
+  "text_format_unittest_data_oneof_implemented": {
+    "proto": "google/protobuf/unittest.proto",
+    "message": "proto2_unittest.TestAllTypes"
+  },
+  "text_format_unittest_data_pointy": {
+    "proto": "google/protobuf/unittest.proto",
+    "message": "proto2_unittest.TestAllTypes"
+  },
+  "text_format_unittest_data_pointy_oneof": {
+    "proto": "google/protobuf/unittest.proto",
+    "message": "proto2_unittest.TestAllTypes"
+  },
+  "text_format_unittest_extensions_data": {
+    "proto": "google/protobuf/unittest.proto",
+    "message": "proto2_unittest.TestAllExtensions"
+  },
+  "text_format_unittest_extensions_data_pointy": {
+    "proto": "google/protobuf/unittest.proto",
+    "message": "proto2_unittest.TestAllExtensions"
+  },
+  "map_test_data": {
+    "proto": "google/protobuf/map_unittest.proto",
+    "message": "proto2_unittest.TestMap"
+  },
+  "any": {
+    "proto": "google/protobuf/any_test.proto",
+    "message": "proto2_unittest.TestAny"
+  },
+  "grammar": {
+    "proto": "google/protobuf/unittest.proto",
+    "message": "proto2_unittest.TestAllTypes"
+  },
+  "maps": {
+    "proto": "google/protobuf/map_unittest.proto",
+    "message": "proto2_unittest.TestMap"
+  }
+}

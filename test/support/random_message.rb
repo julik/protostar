@@ -39,7 +39,7 @@ module RandomMessage
         next
       end
       value = field_value(info, random, depth, fill, unknown)
-      msg[info.name] = value unless value.nil?
+      msg.__set(info.index, value) unless value.nil?
     end
     inject_unknown(msg, random) if unknown
     msg

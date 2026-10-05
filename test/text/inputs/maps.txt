@@ -1,0 +1,22 @@
+# proto: google/protobuf/map_unittest.proto
+# message: proto2_unittest.TestMap
+#
+# Map entries out of key order, entries missing their key or value, the
+# short list form, and a repeated key (the last one wins)
+map_int32_int32 { key: 5 value: 0 }
+map_int32_int32 { key: -1 value: 3 }
+map_int32_int32 { value: 9 }
+map_int32_int32 [{ key: 7 value: 1 }, { key: 5 value: 2 }]
+map_int64_int64 { key: -9223372036854775808 value: 1 }
+map_uint64_uint64 { key: 18446744073709551615 }
+map_string_string { key: "b" value: "x" }
+map_string_string { key: "a" }
+map_string_string { key: "" value: "\303\251" }
+map_bool_bool { key: true value: true }
+map_bool_bool { key: false }
+map_int32_double { key: 1 value: -0 }
+map_int32_enum { key: 1 value: MAP_ENUM_BAR }
+map_int32_enum { key: 0 }
+map_int32_foreign_message { key: 1 value { c: 1 } }
+map_int32_foreign_message { key: 2 }
+map_string_foreign_message { key: "z" value < c: 2 > }

@@ -1,0 +1,16 @@
+int32_value: 1
+any_value {
+  type_url: "type.googleapis.com/proto2_unittest.TestAny"
+  value: "\022+\n%example.com/x/proto2_unittest.TestAny\022\002\010\007\"\005inner"
+}
+repeated_any_value {
+  type_url: "type.googleapis.com/unknown.Type"
+  value: "\001\002"
+}
+repeated_any_value {
+  type_url: "type.googleapis.com/google.protobuf.Any"
+  value: "\n+type.googleapis.com/proto2_unittest.TestAny\022\002\010\003"
+}
+repeated_any_value {
+}
+text: "outer"

@@ -52,6 +52,24 @@ module Protostar
         message.encode
       end
 
+      # @param json [String]
+      # @param options [Hash] see {JSON.decode}
+      # @return [Message]
+      # @raise [JSON::ParseError]
+      def decode_json(json, **options)
+        JSON.decode(self, json, **options)
+      end
+
+      # @param message [Message] an instance of this class
+      # @param options [Hash] see {JSON.encode}
+      # @return [String]
+      def encode_json(message, **options)
+        unless message.instance_of?(self)
+          raise Protostar::TypeError, "#{descriptor.full_name}.encode_json expects a #{descriptor.full_name}, got #{message.class}"
+        end
+        JSON.encode(message, **options)
+      end
+
       # @return [Message] a new message with `b` merged into a copy of `a`
       def merge(a, b)
         a.dup.merge!(b)
@@ -129,6 +147,18 @@ module Protostar
       io
     end
 
+    # @param options [Hash] see {JSON.encode}
+    # @return [String] the message as proto3 JSON
+    def to_json(_state = nil, **options)
+      JSON.encode(self, **options)
+    end
+
+    # @param options [Hash] see {Text.print}
+    # @return [String] the message in protoc's text format
+    def to_text(**options)
+      Text.print(self, **options)
+    end
+
     # The message prefixed by its varint length
     # @param io [IO, nil] where to write it
     # @return [String, IO] the bytes when no IO is given, otherwise the IO
@@ -139,6 +169,13 @@ module Protostar
     # @return [Hash] Symbol keys, every field that is set or not at its
     #   default; nested messages as Hashes, enums as Symbols
     def to_h
+      __to_h
+    end
+
+    # {#to_h} as Message defines it; well-known types replace to_h (a Struct
+    # gives a plain Hash), but nested messages always convert field by field
+    # @api private
+    def __to_h
       h = {}
       values = @values
       self.class.__fields.each do |info|
@@ -146,12 +183,12 @@ module Protostar
         next if v.nil?
         if info.map
           next if v.empty?
-          h[info.symbol] = info.value.message? ? v.transform_values(&:to_h) : v.dup
+          h[info.symbol] = info.value.message? ? v.transform_values(&:__to_h) : v.dup
         elsif info.repeated
           next if v.empty?
-          h[info.symbol] = info.message? ? v.map(&:to_h) : v.dup
+          h[info.symbol] = info.message? ? v.map(&:__to_h) : v.dup
         elsif info.message?
-          h[info.symbol] = v.to_h
+          h[info.symbol] = v.__to_h
         elsif info.presence || !info.zero?(v)
           h[info.symbol] = v
         end
