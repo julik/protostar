@@ -56,7 +56,7 @@ class TypeCheckTest < Minitest::Test
   def test_bool_is_strict
     @m.optional_bool = true
     @m.optional_bool = false
-    [0, 1, nil.to_s, "true", :true].each do |v|
+    [0, 1, nil.to_s, "true", :yes].each do |v|
       assert_raises(Protostar::TypeError) { @m.optional_bool = v }
     end
   end
@@ -69,10 +69,10 @@ class TypeCheckTest < Minitest::Test
     assert_equal Encoding::UTF_8, @m.optional_string.encoding
     @m.optional_string = "h\xC3\xA9".b
     assert_equal "hé", @m.optional_string
-    @m.optional_string = "caf\xE9".dup.force_encoding(Encoding::ISO_8859_1)
+    @m.optional_string = (+"caf\xE9").force_encoding(Encoding::ISO_8859_1)
     assert_equal "café", @m.optional_string, "other encodings are transcoded"
     assert_raises(Protostar::TypeError) { @m.optional_string = "\xFF".b }
-    assert_raises(Protostar::TypeError) { @m.optional_string = "\xFF".dup.force_encoding(Encoding::UTF_8) }
+    assert_raises(Protostar::TypeError) { @m.optional_string = (+"\xFF").force_encoding(Encoding::UTF_8) }
     assert_raises(Protostar::TypeError) { @m.optional_string = :sym }
     assert_raises(Protostar::TypeError) { @m.optional_string = 1 }
   end

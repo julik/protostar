@@ -46,16 +46,9 @@ message = klass.new(fields)
 bytes = message.encode
 raise "round trip failed" unless klass.decode(bytes) == message
 
-oracle = nil
-if Oracle.available?
-  pool = Google::Protobuf::DescriptorPool.new
-  Google::Protobuf::FileDescriptorSet.decode(File.binread(Corpus.golden("google/protobuf/unittest.proto", :binpb))).file.each do |f|
-    pool.add_serialized_file(Google::Protobuf::FileDescriptorProto.encode(f))
-  end
-  oracle = pool.lookup("proto2_unittest.TestAllTypes").msgclass
-end
+oracle = Oracle.pool("google/protobuf/unittest.proto").lookup("proto2_unittest.TestAllTypes").msgclass if Oracle.available?
 
-puts "#{RUBY_DESCRIPTION}"
+puts RUBY_DESCRIPTION
 puts "TestAllTypes: #{bytes.bytesize} bytes"
 Benchmark.ips do |x|
   x.config(time: 3, warmup: 1)

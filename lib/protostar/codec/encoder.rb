@@ -32,7 +32,7 @@ module Protostar
       def encode_delimited(msg, io)
         sizes = {}.compare_by_identity
         size = Sizer.message(msg, sizes)
-        w = io ? Wire::Writer.new(io) : Wire::Writer.new(String.new(capacity: size + 10, encoding: BINARY))
+        w = Wire::Writer.new(io || String.new(capacity: size + 10, encoding: BINARY))
         w.write_varint(size)
         message(msg, w, sizes)
         return w.string unless io
