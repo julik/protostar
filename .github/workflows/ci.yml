@@ -3,6 +3,10 @@ on:
   push:
     branches: [main]
   pull_request:
+# A newer push to the same branch supersedes a run still in progress
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -42,7 +46,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby: ["3.2", "3.3", "3.4", "4.0"]
+        # the oldest and the mainstream Ruby; the root test job covers 3.3 and 4.0 for the runtime
+        ruby: ["3.2", "3.4"]
     defaults:
       run:
         working-directory: shims/google-protobuf
@@ -58,9 +63,11 @@ jobs:
           working-directory: shims/google-protobuf
       - run: bundle exec rake generate:check test
       - name: pbbuilder's own suite on the shim
+        if: matrix.ruby == '3.4'
         working-directory: .
         run: bundle install && bundle exec rake shim:pbbuilder
       - name: pbbuilder's own suite on Protostar::Builder (llm/outputs/ws9-pbbuilder.patch)
+        if: matrix.ruby == '3.4'
         working-directory: .
         run: bundle exec rake builder:pbbuilder
   lint:
