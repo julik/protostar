@@ -25,7 +25,11 @@ module WellKnownRandom
       v = msg.__values[info.index]
       next if v.nil?
       if null_value?(info) || (info.map && null_value?(info.value))
-        msg.__set(info.index, info.map ? v.transform_values { :NULL_VALUE } : (info.repeated ? v.map { :NULL_VALUE } : :NULL_VALUE))
+        value = if info.map then v.transform_values { :NULL_VALUE }
+        elsif info.repeated then v.map { :NULL_VALUE }
+        else :NULL_VALUE
+        end
+        msg.__set(info.index, value)
       elsif info.map
         next unless info.value.message?
         v.each_value { |m| sanitize(m, random: random, registry: registry, depth: depth) }

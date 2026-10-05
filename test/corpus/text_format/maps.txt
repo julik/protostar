@@ -11,7 +11,7 @@ map_int32_int32 {
   value: 0
 }
 map_int32_int32 {
-  key: 5
+  key: 6
   value: 2
 }
 map_int32_int32 {

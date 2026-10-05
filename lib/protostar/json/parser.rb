@@ -200,7 +200,8 @@ module Protostar
         else
           fail!("expected an integer, got #{describe(value)}")
         end
-        fail!("#{n} is out of range for #{info.descriptor.type}") unless RANGES.fetch(info.kind == F::ENUM ? F::INT32 : info.kind).cover?(n)
+        range = RANGES.fetch((info.kind == F::ENUM) ? F::INT32 : info.kind)
+        fail!("#{n} is out of range for #{info.descriptor.type}") unless range.cover?(n)
         n
       end
 
@@ -373,7 +374,7 @@ module Protostar
         name = url[(slash + 1)..]
         inner_class = Types.find(name, registry: @registry)
         fail!("cannot find the type #{name.inspect} of an Any") unless inner_class.is_a?(Class)
-        rest = node.reject { |k, _| k == "@type" }
+        rest = node.except("@type")
         inner = if SPECIAL.key?(inner_class.descriptor.full_name)
           rest.each_key do |k|
             next if k == "value" || @ignore_unknown

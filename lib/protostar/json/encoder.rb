@@ -169,7 +169,8 @@ module Protostar
       def double(v, out)
         return out << nonfinite(v) unless v.finite?
         s = format("%.15g", v)
-        s = format("%.17g", v) unless Float(s) == v
+        back = Float(s)
+        s = format("%.17g", v) unless back == v
         out << s
       end
 

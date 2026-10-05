@@ -32,7 +32,6 @@ repeated_int32: 5
 repeated_float: inf
 repeated_float: -inf
 repeated_float: nan
-repeated_float: nan
 repeated_float: inf
 repeated_float: -inf
 repeated_float: 1
@@ -41,6 +40,7 @@ repeated_float: 0.1
 repeated_float: 3.40282347e+38
 repeated_float: 0
 repeated_float: 1e+10
+repeated_double: nan
 repeated_double: 1e+300
 repeated_double: 4.94065645841247e-324
 repeated_double: 0.1
