@@ -35,4 +35,23 @@ module Oracle
     else value
     end
   end
+
+  @pools = {}
+  @pools_mutex = Mutex.new
+
+  # A google-protobuf DescriptorPool holding every file of a golden's set,
+  # built once per process
+  # @param relative [String] e.g. "google/protobuf/unittest.proto"
+  def self.pool(relative)
+    @pools_mutex.synchronize do
+      @pools[relative] ||= begin
+        pool = Google::Protobuf::DescriptorPool.new
+        Google::Protobuf::FileDescriptorSet.decode(File.binread(Corpus.golden(relative, :binpb))).file.each do |file|
+          file.clear_source_code_info
+          pool.add_serialized_file(Google::Protobuf::FileDescriptorProto.encode(file))
+        end
+        pool
+      end
+    end
+  end
 end
