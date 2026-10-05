@@ -6,13 +6,33 @@ require "google/protobuf/field_mask_pb"
 require "google/protobuf/struct_pb"
 require "google/protobuf/timestamp_pb"
 
-# Any (pack, unpack, is, type_name), Timestamp (from_time, to_time, to_i,
-# to_f) and Duration (to_f) have their helpers from Protostar::WellKnown,
-# which protostar mixes into those classes however they are defined. Struct,
-# Value and ListValue are defined here: their [], []= and to_h replace the
-# message methods of the same names, and they raise the gem's errors.
+# Timestamp (from_time, to_time, to_i, to_f) and Duration (to_f) have their
+# helpers from Protostar::WellKnown, which protostar mixes into those classes
+# however they are defined. Any, Struct, Value and ListValue are defined here:
+# Any#pack returns what the gem's does, the others' [], []= and to_h replace
+# the message methods of the same names, and they raise the gem's errors.
 module Google
   module Protobuf
+    Any.class_eval do
+      # @return [Any] a new Any holding the message
+      def self.pack(msg, type_url_prefix = "type.googleapis.com/")
+        any = new
+        any.pack(msg, type_url_prefix)
+        any
+      end
+
+      # Stores the message and a type URL of the prefix and its full name
+      # @return [String] the message's bytes
+      def pack(msg, type_url_prefix = "type.googleapis.com/")
+        self.type_url = if type_url_prefix.empty? || !type_url_prefix.end_with?("/")
+          "#{type_url_prefix}/#{msg.class.descriptor.name}"
+        else
+          "#{type_url_prefix}#{msg.class.descriptor.name}"
+        end
+        self.value = msg.to_proto
+      end
+    end
+
     Value.class_eval do
       # @param recursive [Boolean] convert a Struct or ListValue to a Hash or Array as well
       # @return [Object]

@@ -21,7 +21,8 @@ module Google
         raise ArgumentError, "Map constructor expects 2, 3 or 4 arguments." if args.size < 2 || args.size > 4
         key_type, value_type, *rest = args
         raise ArgumentError, "Expected symbol for field type." unless key_type.is_a?(Symbol)
-        sub, initial = Internal.type_class(value_type, rest)
+        raise ArgumentError, "Unknown field type." unless Internal::CONTAINER_TYPES.key?(key_type)
+        sub, initial = Internal.type_class(value_type, rest, 1)
         raise ArgumentError, "Invalid key type for map." unless KEY_TYPES.key?(key_type)
         instance = allocate
         instance.__setup(key_type, value_type, sub, {}, "")
@@ -35,7 +36,7 @@ module Google
         key = entry.lookup("key")
         value = entry.lookup("value")
         instance = allocate
-        instance.__setup(key.type, value.type, value.subtype, hash, fd.name)
+        instance.__setup(key.type, value.type, value.subtype, hash, "")
         instance
       end
 
@@ -52,6 +53,7 @@ module Google
       def __hash
         @hash
       end
+      alias_method :__storage, :__hash
 
       # @api private
       def __types
@@ -134,14 +136,10 @@ module Google
       def ==(other)
         return true if equal?(other)
         if other.is_a?(Hash)
-          other = begin
-            Map.allocate.tap do |m|
-              m.__setup(@key_type, @value_type, @sub, {}, @name)
-              m.__merge_into_self(other)
-            end
-          rescue ::TypeError, RangeError, ArgumentError
-            return false
-          end
+          hash = other
+          other = Map.allocate
+          other.__setup(@key_type, @value_type, @sub, {}, @name)
+          other.__merge_into_self(hash)
         end
         return false unless other.is_a?(Map)
         __types == other.__types && @hash == other.__hash
@@ -213,7 +211,7 @@ module Google
       end
 
       def check_frozen
-        raise FrozenError.new("can't modify frozen #{self.class}", receiver: self) if frozen?
+        raise FrozenError.new("can't modify frozen #{self.class}: #{inspect}", receiver: self) if frozen?
       end
     end
   end

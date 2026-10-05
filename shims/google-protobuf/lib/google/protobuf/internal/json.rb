@@ -23,7 +23,7 @@ module Google
             registry: message.class.__gpool.__registry
           )
           json = with_extensions(message, json, options) unless message.unknown_fields.empty?
-          json.force_encoding(Encoding::UTF_8).freeze
+          json.force_encoding(Encoding::UTF_8)
         rescue Protostar::JSON::Error, Protostar::Error => e
           raise ParseError, "Error occurred during encoding: #{e.message}"
         end

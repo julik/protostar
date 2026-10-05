@@ -48,7 +48,7 @@ module Google
       case object
       when RepeatedField, Map then object.__deep_copy
       when MessageExts then object.__gdeep_copy
-      else raise NotImplementedError
+      else raise ::TypeError, "wrong argument type #{object.class} (expected Google::Protobuf::Message)"
       end
     end
 

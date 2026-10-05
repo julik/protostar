@@ -45,7 +45,8 @@ module Protostar
         tree = begin
           # the stdlib reads -0 as the Integer 0, losing the sign a double field keeps
           string = string.gsub(NEGATIVE_ZERO) { |m| (m == "-0") ? "-0.0" : m } if string.include?("-0")
-          ::JSON.parse(string, allow_duplicate_key: true, allow_nan: false, create_additions: false)
+          # create_additions is off by default and json 3.0 refuses the keyword
+          ::JSON.parse(string, allow_duplicate_key: true, allow_nan: false)
         rescue ::JSON::ParserError, EncodingError, ArgumentError => e
           raise ParseError, "invalid JSON: #{e.message}"
         end

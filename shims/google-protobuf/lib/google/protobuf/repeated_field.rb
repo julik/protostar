@@ -18,10 +18,8 @@ module Google
       def self.new(*args)
         raise ArgumentError, "Expected at least 1 argument." if args.empty?
         type, *rest = args
-        sub, initial = Internal.type_class(type, rest)
-        unless initial.nil? || initial.is_a?(Array)
-          raise ArgumentError, "Expected array as initializer value for repeated field 'RepeatedField' (given #{initial.class})."
-        end
+        sub, initial = Internal.type_class(type, rest, 0)
+        raise ArgumentError, "Expected array as initialize argument" unless initial.nil? || initial.is_a?(Array)
         instance = allocate
         instance.__setup(type, sub, [], "")
         initial&.each { |v| instance.push(v) }
@@ -31,7 +29,7 @@ module Google
       # @api private
       def self.__for_field(fd, array)
         instance = allocate
-        instance.__setup(fd.type, fd.subtype, array, fd.name)
+        instance.__setup(fd.type, fd.subtype, array, "")
         instance
       end
 
@@ -47,6 +45,7 @@ module Google
       def __array
         @array
       end
+      alias_method :__storage, :__array
 
       # @api private
       def __type
@@ -117,11 +116,14 @@ module Google
       end
 
       # @return [self]
+      # @param list [Array]
+      # @return [Array] the list given
       def replace(list)
         check_frozen
-        converted = list.to_a.map { |v| convert(v) }
+        raise ::TypeError, "wrong argument type #{list.class} (expected Array)" unless list.is_a?(Array)
+        converted = list.map { |v| convert(v) }
         @array.replace(converted)
-        self
+        list
       end
 
       # @return [self]
@@ -219,8 +221,8 @@ module Google
       # Appends every element of the Array
       # @return [self]
       def concat(other)
-        raise ArgumentError, "Expected Enumerable, but got #{other.class}" unless other.is_a?(Enumerable)
-        push(*other.to_a)
+        raise ::TypeError, "wrong argument type #{other.class} (expected Array)" unless other.is_a?(Array)
+        push(*other)
       end
 
       def frozen?
@@ -323,7 +325,7 @@ module Google
       end
 
       def check_frozen
-        raise FrozenError.new("can't modify frozen #{self.class}", receiver: self) if frozen?
+        raise FrozenError.new("can't modify frozen #{self.class}: #{inspect}", receiver: self) if frozen?
       end
 
       def super_frozen?
@@ -332,16 +334,24 @@ module Google
     end
 
     module Internal
+      # The type names RepeatedField.new and Map.new take: C types, not field types
+      CONTAINER_TYPES = %i[int32 int64 uint32 uint64 bool float double string bytes message enum]
+        .to_h { |t| [t, true] }.freeze
+
       # The element type of a RepeatedField or the value type of a Map from
       # the arguments after the type: the class or module for :message and
       # :enum, then the initial values
       # @api private
       # @return [Array(Descriptor, EnumDescriptor, nil), Object]
-      def self.type_class(type, rest)
+      # @param before [Integer] how many arguments came before the type
+      def self.type_class(type, rest, before)
         raise ArgumentError, "Expected symbol for field type." unless type.is_a?(Symbol)
-        raise ArgumentError, "Unknown field type." unless FieldDescriptor::CTYPES.key?(type)
-        return [nil, rest[0]] unless type == :message || type == :enum || type == :group
-        raise ArgumentError, "Expected at least 2 arguments for message/enum." if rest.empty?
+        raise ArgumentError, "Unknown field type." unless CONTAINER_TYPES.key?(type)
+        typed = type == :message || type == :enum
+        limit = typed ? 2 : 1
+        raise ArgumentError, "Expected a maximum of #{before + 1 + limit} arguments." if rest.size > limit
+        return [nil, rest[0]] unless typed
+        raise ArgumentError, "Expected at least #{before + 2} arguments for message/enum." if rest.empty?
         klass = rest[0]
         descriptor = klass.respond_to?(:descriptor) ? klass.descriptor : nil
         expected = (type == :enum) ? EnumDescriptor : Descriptor

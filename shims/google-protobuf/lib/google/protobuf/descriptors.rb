@@ -3,6 +3,13 @@
 module Google
   module Protobuf
     module Internal
+      # A descriptor hash without the json_names a .proto would not have
+      # spelled out, as upb's to_proto gives them
+      # @api private
+      def self.without_json_names(hash)
+        Protostar::Compiler::Emitters::GoogleRuby.without_json_names(hash)
+      end
+
       # What every descriptor wrapper shares: a {Protostar::Schema} descriptor
       # and the DescriptorPool it belongs to. Methods the gem does not have are
       # passed to the schema descriptor, because protostar's runtime reads
@@ -147,7 +154,7 @@ module Google
 
       # @return [Google::Protobuf::DescriptorProto]
       def to_proto
-        @to_proto ||= proto_message(:DescriptorProto, @__schema.to_h)
+        @to_proto ||= proto_message(:DescriptorProto, Internal.without_json_names(@__schema.to_h))
       end
 
       # @api private
@@ -295,7 +302,7 @@ module Google
 
       # @return [Google::Protobuf::FieldDescriptorProto]
       def to_proto
-        @to_proto ||= proto_message(:FieldDescriptorProto, @__schema.to_h)
+        @to_proto ||= proto_message(:FieldDescriptorProto, Internal.without_json_names({field: [@__schema.to_h]})[:field][0])
       end
 
       # @api private
@@ -556,7 +563,7 @@ module Google
         @to_proto ||= begin
           require "google/protobuf/descriptor_pb"
           Google::Protobuf::FileDescriptorProto.decode(
-            @__schema.serialize(pool: @descriptor_pool.__schema_pool, source_info: false)
+            Protostar::Compiler::Emitters::GoogleRuby.serialized(@__schema, @descriptor_pool.__schema_pool)
           )
         end
       end

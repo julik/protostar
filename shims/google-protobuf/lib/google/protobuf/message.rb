@@ -149,7 +149,7 @@ module Google
           limit = options[:recursion_limit]
           limit = limit.is_a?(Numeric) ? limit.to_i : Protostar::Codec::Decoder::RECURSION_LIMIT
           raise "Exceeded maximum depth (possibly cycle)" if message.__gdepth(limit + 1) > limit
-          Protostar::Codec::Encoder.encode(message).freeze
+          Protostar::Codec::Encoder.encode(message)
         rescue Protostar::EncodeError => e
           raise TypeError, e.message
         end
@@ -189,13 +189,18 @@ module Google
       # Instance methods of every message class
       # @api private
       module MessageMethods
+        NOTHING = Object.new.freeze
+        private_constant :NOTHING
+
         # @param initial_value [Hash, nil] field names (Strings or Symbols) to values;
         #   Hashes become messages, Arrays repeated fields, Hashes map fields
         # @raise [ArgumentError] for a name that is not a field
-        def initialize(initial_value = nil)
+        def initialize(initial_value = NOTHING)
           super()
-          return if initial_value.nil?
-          raise ArgumentError, "Expected hash arguments." unless initial_value.is_a?(Hash)
+          return if NOTHING.equal?(initial_value)
+          unless initial_value.is_a?(Hash)
+            raise ArgumentError, "Expected hash arguments or message, not #{initial_value.class}"
+          end
           names = self.class.__gnames
           initial_value.each do |key, value|
             unless key.is_a?(String) || key.is_a?(Symbol)
@@ -210,7 +215,7 @@ module Google
         # @param name [String]
         # @return [Object, nil] the field's value; nil when there is no such field
         def [](name)
-          raise TypeError, "Expected String for name but got #{name.class}" unless name.is_a?(String)
+          raise ::TypeError, "wrong argument type #{name.class} (expected String)" unless name.is_a?(String)
           fd = self.class.__gnames[name]
           fd && __gget(fd)
         end
@@ -218,7 +223,7 @@ module Google
         # @param name [String]
         # @raise [ArgumentError] when there is no such field
         def []=(name, value)
-          raise TypeError, "Expected String for name but got #{name.class}" unless name.is_a?(String)
+          raise ::TypeError, "wrong argument type #{name.class} (expected String)" unless name.is_a?(String)
           fd = self.class.__gnames[name]
           raise ArgumentError, "Unknown field: #{name}" unless fd
           __gset(fd, value)
@@ -247,7 +252,7 @@ module Google
               parts << "#{fd.name}: #{v.inspect}"
             end
           end
-          "<#{self.class.name || self.class.descriptor.name}: #{parts.join(", ")}>"
+          "<#{self.class.name || Module.instance_method(:to_s).bind_call(self.class)}: #{parts.join(", ")}>"
         end
 
         def to_s
@@ -273,10 +278,13 @@ module Google
           super
         end
 
-        # A shallow copy: nested messages are shared, containers are not
+        # A shallow copy, as the gem's: nested messages, repeated fields and
+        # maps are shared with the original, and a copy of a frozen message
+        # is frozen
         def dup
           copy = self.class.allocate
           copy.__gcopy_from(self)
+          copy.freeze if frozen?
           copy
         end
 
@@ -284,9 +292,16 @@ module Google
           dup
         end
 
+        # Freezes the message and everything in it
+        # @return [self]
+        def freeze
+          @__gwrappers ||= {} unless frozen?
+          super
+        end
+
         # @api private
         def __gcopy_from(source)
-          @values = source.__values.map { |v| (v.is_a?(Array) || v.is_a?(Hash)) ? v.dup : v }
+          @values = source.__values.dup
           @unknown = source.unknown_fields.empty? ? nil : source.unknown_fields.dup.freeze
           @__gwrappers = nil
         end
@@ -365,39 +380,34 @@ module Google
         # @api private
         # @return [RepeatedField] the field's, the same object while the field holds the same Array
         def __grepeated(fd)
-          i = fd.__info.index
-          array = @values[i]
-          wrapper = @__gwrappers&.[](i)
-          return wrapper if wrapper && array && wrapper.__array.equal?(array)
-          if array.nil?
-            return RepeatedField.__for_field(fd, [].freeze).freeze if frozen?
-            array = @values[i] = []
-          end
-          wrapper = RepeatedField.__for_field(fd, array)
-          if frozen?
-            wrapper.freeze
-          else
-            (@__gwrappers ||= {})[i] = wrapper
-          end
-          wrapper
+          __gcontainer(fd, RepeatedField, [])
         end
 
         # @api private
         # @return [Map] the field's, the same object while the field holds the same Hash
         def __gmap(fd)
+          __gcontainer(fd, Map, {})
+        end
+
+        # The wrapper of a repeated or map field's storage, kept per slot so
+        # that reading the field twice gives the same object; a frozen
+        # message's wrappers are frozen
+        def __gcontainer(fd, kind, empty)
           i = fd.__info.index
-          hash = @values[i]
-          wrapper = @__gwrappers&.[](i)
-          return wrapper if wrapper && hash && wrapper.__hash.equal?(hash)
-          if hash.nil?
-            return Map.__for_field(fd, {}.freeze).freeze if frozen?
-            hash = @values[i] = {}
+          storage = @values[i]
+          cache = @__gwrappers
+          wrapper = cache&.[](i)
+          frozen = frozen?
+          return wrapper if wrapper && (storage.nil? ? frozen : wrapper.__storage.equal?(storage))
+          if storage.nil?
+            storage = frozen ? empty.freeze : (@values[i] = empty)
           end
-          wrapper = Map.__for_field(fd, hash)
-          if frozen?
-            wrapper.freeze
-          else
-            (@__gwrappers ||= {})[i] = wrapper
+          wrapper = kind.__for_field(fd, storage)
+          wrapper.freeze if frozen
+          if cache
+            cache[i] = wrapper
+          elsif !frozen
+            @__gwrappers = {i => wrapper}
           end
           wrapper
         end
@@ -440,7 +450,7 @@ module Google
         end
 
         def __check_gfrozen
-          raise FrozenError.new("can't modify frozen #{self.class}", receiver: self) if frozen?
+          raise FrozenError.new("can't modify frozen #{self.class}: #{inspect}", receiver: self) if frozen?
         end
 
         def __ginit(fd, value)
@@ -455,7 +465,7 @@ module Google
             value_fd = entry.lookup("value")
             hash = {}
             value.each do |k, v|
-              hash[Convert.to_store(k, key_fd.type, nil, fd.name)] = Convert.initial(v, value_fd.type, value_fd.subtype, fd.name)
+              hash[Convert.to_store(k, key_fd.type, nil, "")] = Convert.initial(v, value_fd.type, value_fd.subtype, "")
             end
             @values[i] = hash
           elsif info.repeated

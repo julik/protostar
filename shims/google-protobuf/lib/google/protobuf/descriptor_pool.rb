@@ -21,14 +21,13 @@ module Google
         @schema_pool = Protostar::Schema::Pool.new
         @registry = Protostar::Types::Registry.new(open_enums: true)
         @wrappers = {}.compare_by_identity
-        @serialized = {}
         @classes = {}.compare_by_identity
         @monitor = Monitor.new
       end
 
       # Builds a serialized FileDescriptorProto and defines its message
-      # classes. Its dependencies must have been added first. Adding a file
-      # of the same name again returns it when the bytes are the same.
+      # classes. Its dependencies must have been added first; a file of the
+      # same name must not have been.
       # @param serialized [String] a serialized google.protobuf.FileDescriptorProto
       # @return [FileDescriptor]
       # @raise [ArgumentError] when the bytes do not parse
@@ -37,23 +36,15 @@ module Google
         raise ::TypeError, "wrong argument type #{serialized.class} (expected String)" unless serialized.is_a?(String)
         @monitor.synchronize do
           name = file_name(serialized)
-          if (existing = @schema_pool.file(name))
-            raise TypeError, "Unable to build file to DescriptorPool: duplicate file name #{name}" unless @serialized[name] == serialized.b
-            return __wrap(existing)
-          end
+          raise TypeError, "Unable to build file to DescriptorPool: duplicate file name #{name}" if @schema_pool.include?(name)
           file = begin
-            Protostar::Schema::Proto.build(serialized, @schema_pool)
+            file = Protostar::Schema::Proto.build(serialized, @schema_pool)
+            @schema_pool.add(file)
           rescue Protostar::DecodeError
             raise ArgumentError, "Unable to parse FileDescriptorProto"
           rescue Protostar::Error => e
-            raise TypeError, "Unable to build file to DescriptorPool: #{e.message}"
+            raise TypeError, "Unable to build file to DescriptorPool: #{build_error(e.message)}"
           end
-          begin
-            @schema_pool.add(file)
-          rescue Protostar::Error => e
-            raise TypeError, "Unable to build file to DescriptorPool: #{e.message}"
-          end
-          @serialized[name] = serialized.b.freeze
           define(file)
           __wrap(file)
         end
@@ -102,7 +93,7 @@ module Google
       # @api private
       # @return [Class, nil]
       def __msgclass(schema)
-        @classes[schema]
+        @classes[schema] || (schema.map_entry? ? entry_class(schema) : nil)
       end
 
       private
@@ -120,6 +111,11 @@ module Google
         end
       end
 
+      # upb's wording for the error callers are most likely to meet
+      def build_error(message)
+        message.sub(/\A\S+: dependency "(.*)" is not in the pool\z/) { "Depends on file '#{$1}', but it has not been loaded" }
+      end
+
       def file_name(serialized)
         r = Protostar::Wire::Reader.new(serialized)
         until r.eof?
@@ -130,6 +126,20 @@ module Google
         ""
       rescue Protostar::DecodeError
         raise ArgumentError, "Unable to parse FileDescriptorProto"
+      end
+
+      # protostar's registry makes no classes for map entries (maps decode
+      # their entries directly); the gem has them, so one is made on request
+      def entry_class(schema)
+        @monitor.synchronize do
+          @classes[schema] ||= begin
+            known = Hash.new { |_, full_name| @registry.find(full_name) }
+            klass = Class.new(Protostar::Message)
+            Protostar::Types::Definer.new(schema.file, known, open_enums: true).send(:setup, klass, schema)
+            Internal::MessageClass.setup(klass, __wrap(schema))
+            klass
+          end
+        end
       end
 
       def define(file)

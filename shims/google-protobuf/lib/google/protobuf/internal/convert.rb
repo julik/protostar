@@ -17,11 +17,8 @@ module Google
           uint64: [64, true], fixed64: [64, true]
         }.freeze
 
-        # Each integer type as google-protobuf names it in errors
-        INTEGER_NAMES = {
-          int32: "int32", sint32: "int32", sfixed32: "int32", int64: "int64", sint64: "int64", sfixed64: "int64",
-          uint32: "uint32", fixed32: "uint32", uint64: "uint64", fixed64: "uint64"
-        }.freeze
+        FIXNUM = -(2**62)...(2**62)
+        LONG = -(2**63)...(2**63)
 
         UTF_8 = Encoding::UTF_8
         BINARY = Encoding::BINARY
@@ -79,22 +76,47 @@ module Google
         end
 
         def integer(value, type, name)
+          given = value
           if value.is_a?(Float)
-            if value.nan? || value.infinite? || value.floor != value
+            if value.nan? || (value.finite? && value.floor != value)
               raise RangeError, "Non-integral floating point value assigned to integer field '#{name}' (given Float)."
             end
+            raise RangeError, out_of_range(given, type) if value.infinite?
             value = value.to_i
           elsif !value.is_a?(Integer)
             raise TypeError, "Expected number type for integral field '#{name}' (given #{value.class})."
           end
           bits, unsigned = INTEGER_TYPES.fetch(type)
           if unsigned
-            raise RangeError, "Assigning negative value to unsigned integer field '#{name}' (given Integer)." if value < 0
+            raise RangeError, "Assigning negative value to unsigned integer field '#{name}' (given #{given.class})." if value < 0
             return value if value.bit_length <= bits
           elsif value.bit_length < bits
             return value
           end
-          raise RangeError, "Value assigned to #{INTEGER_NAMES.fetch(type)} field '#{name}' (given Integer) with more than #{bits}-bits."
+          raise RangeError, out_of_range(given, type)
+        end
+
+        # The message Ruby's NUM2INT and friends give, which the gem lets through
+        def out_of_range(given, type)
+          bits, unsigned = INTEGER_TYPES.fetch(type)
+          if given.is_a?(Float)
+            if bits == 64 || !LONG.cover?(given)
+              target = if bits == 32 then "integer"
+              else
+                unsigned ? "unsigned long long" : "long long"
+              end
+              text = given.infinite? ? ((given > 0) ? "Inf" : "-Inf") : format("%-.10g", given)
+              return "float #{text} out of range of #{target}"
+            end
+            given = given.to_i
+          end
+          if bits == 32 && FIXNUM.cover?(given)
+            "integer #{given} too #{(given < 0) ? "small" : "big"} to convert to '#{unsigned ? "unsigned int" : "int"}'"
+          elsif bits == 32
+            "bignum too big to convert into '#{unsigned ? "unsigned long" : "long"}'"
+          else
+            "bignum too big to convert into '#{unsigned ? "unsigned long long" : "long long"}'"
+          end
         end
 
         def enum(value, sub, name)
