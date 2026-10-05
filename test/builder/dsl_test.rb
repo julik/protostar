@@ -135,6 +135,18 @@ class BuilderDslTest < Minitest::Test
     assert_equal Person.new(address: address).encode, build { |pb| pb.address address }
   end
 
+  def test_encoded_messages
+    ann = Person.new(name: "Ann").encode
+    bytes = build do |pb|
+      pb.encoded!(:address, Address.new(street: "x").encode)
+      pb.encoded!(:friends, [ann, ""])
+    end
+    assert_equal Person.new(friends: [{name: "Ann"}, {}], address: {street: "x"}).encode, bytes
+    error = assert_raises(Protostar::Builder::Error) { build { |pb| pb.encoded!(:friends, [ann, 1]) } }
+    assert_equal "friends[1]: expects encoded bytes in a String, got 1", error.message
+    assert_raises(Protostar::Builder::Error) { build { |pb| pb.encoded!(:name, ann) } }
+  end
+
   def test_extract_from_objects_and_hashes
     user = Friend.new("Jane", 7)
     from_object = build { |pb| pb.extract!(user, :name, :id) }

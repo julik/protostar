@@ -27,6 +27,11 @@ class BuilderProto2Test < Minitest::Test
     assert_equal expected, build(@all) { |pb| pb.optionalgroup(group).repeatedgroup([{a: 4}, @set["proto2_unittest.TestAllTypes.RepeatedGroup"].new(a: 5)]) }
   end
 
+  def test_encoded_groups
+    group = @set["proto2_unittest.TestAllTypes.RepeatedGroup"].new(a: 5).encode
+    assert_equal @all.new(repeatedgroup: [{a: 5}]).encode, build(@all) { |pb| pb.encoded!(:repeatedgroup, [group]) }
+  end
+
   def test_cache_inside_groups
     store = Store.new
     2.times do

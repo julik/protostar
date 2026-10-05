@@ -212,6 +212,26 @@ module Protostar
       self
     end
 
+    # Writes messages that are already encoded as the value of a message
+    # field: one String for a singular field, a list of them for a repeated
+    # one (each String is one element). The bytes are written as they are,
+    # unchecked; a group's bytes are its fields, without the group's tags.
+    #
+    #   pb.encoded!(:friends, rendered_partials)
+    #
+    # @return [self]
+    def encoded!(name, bytes)
+      info = __field(name)
+      raise __error(info, "is not a message field, it cannot take encoded messages") unless info.message? && !info.map
+      if info.repeated
+        __list(bytes).each_with_index { |b, i| __encoded(info, b, i) }
+      else
+        __mark(info)
+        __encoded(info, bytes, nil)
+      end
+      self
+    end
+
     # Writes the bytes the block writes, keeping them in the cache store under
     # `key`; when the store has them, appends them without running the block.
     # Without a cache store, runs the block.
@@ -366,12 +386,7 @@ module Protostar
     def __message(info, v, index)
       klass = info.message_class
       if v.instance_of?(klass)
-        bytes = v.encode
-        @buf << info.tag
-        group = info.kind == F::GROUP
-        __varint(bytes.bytesize) unless group
-        @w.write_raw(bytes)
-        @buf << info.end_tag if group
+        __encoded(info, v.encode, index)
       elsif v.is_a?(Hash)
         __nested(info, index) { __hash(v) }
       elsif v.is_a?(Message)
@@ -383,6 +398,15 @@ module Protostar
       else
         raise __error(info, "expects a #{klass.descriptor.full_name}, a Hash or something with #to_h, got #{__show(v)}", index)
       end
+    end
+
+    def __encoded(info, bytes, index)
+      raise __error(info, "expects encoded bytes in a String, got #{__show(bytes)}", index) unless bytes.is_a?(String)
+      @buf << info.tag
+      group = info.kind == F::GROUP
+      __varint(bytes.bytesize) unless group
+      @w.write_raw(bytes)
+      @buf << info.end_tag if group
     end
 
     # @return [Boolean] whether `v` was a Ruby form of the well-known type and got written
