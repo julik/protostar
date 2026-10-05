@@ -778,7 +778,7 @@ module Protostar
 
       def build_schema
         hash = descriptor_hash(@option_hashes)
-        @hash = hash
+        @descriptor = hash
         if @source_info
           hash = hash.merge(source_code_info: {location: @locations.map(&:to_h)})
         end
@@ -791,7 +791,7 @@ module Protostar
       public
 
       # @return [Hash, nil] the descriptor hash of the built file, without source info
-      attr_reader :hash
+      attr_reader :descriptor
 
       # The structural hash (no options interpreted) used to resolve option
       # types against this file's own declarations

@@ -17,7 +17,7 @@ module Protostar
       class Node
         # @return [Hash{Symbol => Array(Integer, Integer)}]
         attr_reader :positions
-        # Set by the linker: the element's full name and its source path
+        # Linker state: full name and source path here, resolutions on subclasses
         attr_accessor :full_name, :path
 
         def initialize
@@ -153,7 +153,6 @@ module Protostar
       # A message, including synthesized map entries and group bodies
       class Message < Node
         attr_accessor :name, :options, :visibility
-        # Set by the linker
         attr_accessor :parent, :index
         attr_reader :field, :nested_type, :enum_type, :extension_range, :extension, :oneof_decl,
           :reserved_range, :reserved_name
@@ -215,7 +214,6 @@ module Protostar
       # A `oneof` declaration
       class Oneof < Node
         attr_accessor :name, :options
-        # Set by the linker
         attr_accessor :parent, :index
 
         def to_h
@@ -230,7 +228,6 @@ module Protostar
       # (end exclusive for messages, inclusive for enums)
       class Range < Node
         attr_accessor :start, :end, :options
-        # Set by the linker
         attr_accessor :parent, :index
 
         def to_h
@@ -245,7 +242,6 @@ module Protostar
       # An enum
       class Enum < Node
         attr_accessor :name, :options, :visibility
-        # Set by the linker
         attr_accessor :parent, :index
         attr_reader :value, :reserved_range, :reserved_name
 
@@ -271,7 +267,6 @@ module Protostar
       # An enum value
       class EnumValue < Node
         attr_accessor :name, :number, :options
-        # Set by the linker
         attr_accessor :parent, :index
 
         def to_h
@@ -286,7 +281,6 @@ module Protostar
       # A service
       class Service < Node
         attr_accessor :name, :options
-        # Set by the linker
         attr_accessor :index
         attr_reader :rpcs
 
@@ -307,7 +301,6 @@ module Protostar
       # An rpc
       class Method < Node
         attr_accessor :name, :input_type, :output_type, :options, :client_streaming, :server_streaming
-        # Set by the linker
         attr_accessor :parent, :index, :resolved_input, :resolved_output
 
         def to_h
