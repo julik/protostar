@@ -52,6 +52,12 @@ jobs:
           bundler-cache: true
           working-directory: shims/google-protobuf
       - run: bundle exec rake generate:check test
+      - name: pbbuilder's own suite on the shim
+        working-directory: .
+        run: bundle install && bundle exec rake shim:pbbuilder
+      - name: pbbuilder's own suite on Protostar::Builder (llm/outputs/ws9-pbbuilder.patch)
+        working-directory: .
+        run: bundle exec rake builder:pbbuilder
   lint:
     runs-on: ubuntu-latest
     steps:
