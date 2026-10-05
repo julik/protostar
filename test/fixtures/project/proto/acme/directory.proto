@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package acme;
+
+import "acme/person.proto";
+
+message Lookup {
+  string name = 1;
+}
+
+// Finds people.
+service Directory {
+  rpc Find(Lookup) returns (Person);
+  rpc Watch(stream Lookup) returns (stream Person);
+}

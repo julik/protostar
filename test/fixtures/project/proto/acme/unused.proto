@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package acme.unused;
+
+import "acme/person.proto";
+
+message Nothing {}
