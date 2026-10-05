@@ -66,6 +66,14 @@ module Google
         end
       end
 
+      # `_pb.rb` files from protoc before 3.21 called this with a block of
+      # message definitions; that DSL is not supported
+      # @raise [NotImplementedError]
+      def build(*)
+        raise NotImplementedError, "DescriptorPool#build (the DSL in _pb.rb files from protoc before 3.21) is not " \
+          "supported; regenerate the file with a newer protoc or with `protostar compile --google_out`"
+      end
+
       def inspect
         "#<#{self.class.name} #{@schema_pool.files.size} files>"
       end

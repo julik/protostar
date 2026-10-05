@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../../lib/protostar/version"
+
 Gem::Specification.new do |spec|
   spec.name = "google-protobuf"
   # 4.36.2 is the upstream API this mirrors; the fourth part is ours
@@ -18,8 +20,9 @@ Gem::Specification.new do |spec|
   spec.metadata["source_code_uri"] = "#{spec.homepage}/tree/main/shims/google-protobuf"
   spec.metadata["rubygems_mfa_required"] = "true"
 
-  spec.files = Dir["lib/**/*.rb", "README.md", "known_differences.md"]
+  spec.files = Dir["lib/**/*.rb", "README.md"]
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "protostar"
+  # the shim leans on protostar internals, so it wants the version it was made with
+  spec.add_dependency "protostar", Protostar::VERSION
 end

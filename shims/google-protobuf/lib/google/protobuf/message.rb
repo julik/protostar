@@ -22,6 +22,7 @@ module Google
           klass.instance_variable_set(:@__gplan, plan.freeze)
           klass.instance_variable_set(:@__gnames, plan.to_h { |fd| [fd.name, fd] }.freeze)
           klass.instance_variable_set(:@__goneof_setters, oneofs.to_h { |o| [:"#{o.name}=", true] }.freeze)
+          klass.instance_variable_set(:@__gnested, klass.__fields.select { |i| i.map ? i.value.message? : i.message? }.freeze)
           klass.include(MessageExts)
           klass.include(MessageMethods)
           klass.extend(MessageExts::ClassMethods)
@@ -122,7 +123,7 @@ module Google
         end
 
         # @api private
-        attr_reader :__gplan, :__gnames, :__goneof_setters
+        attr_reader :__gplan, :__gnames, :__goneof_setters, :__gnested
 
         # @param data [String] protobuf wire format
         # @param options [Hash] `recursion_limit:` how deep messages may nest (default 100)
@@ -418,18 +419,21 @@ module Google
         # @api private
         # @return [Integer] how deeply messages nest under this one, counting it; stops at `limit`
         def __gdepth(limit)
-          return 1 if limit <= 1
+          nested = self.class.__gnested
+          return 1 if nested.empty?
+          return limit if limit <= 1
           deepest = 0
-          self.class.__fields.each do |info|
-            next unless info.map ? info.value.message? : info.message?
+          nested.each do |info|
             v = @values[info.index]
             next if v.nil?
-            each_message = if info.map then v.each_value
-            elsif info.repeated then v.each
-            else [v].each
-            end
-            each_message.each do |m|
-              d = m.__gdepth(limit - 1)
+            if info.map || info.repeated
+              (info.map ? v.each_value : v).each do |m|
+                d = m.__gdepth(limit - 1)
+                deepest = d if d > deepest
+                return limit if deepest + 1 >= limit
+              end
+            else
+              d = v.__gdepth(limit - 1)
               deepest = d if d > deepest
               return limit if deepest + 1 >= limit
             end

@@ -37,6 +37,20 @@ class BundlerTest < Test::Unit::TestCase
     assert_shim_locked(lock, "GIT")
   end
 
+  # The README's `github:` form, with the repository given as a local git URL
+  def test_git_sources_per_gem
+    omit "the repository is not a git checkout" unless File.exist?(File.join(ROOT, ".git"))
+    revision = git("rev-parse", "HEAD")
+    url = "file://#{ROOT}"
+    lock = resolve(<<~GEMFILE)
+      source "https://rubygems.org"
+      gem "grpc"
+      gem "protostar", git: #{url.inspect}, ref: #{revision.inspect}
+      gem "google-protobuf", git: #{url.inspect}, ref: #{revision.inspect}, glob: "shims/google-protobuf/*.gemspec"
+    GEMFILE
+    assert_shim_locked(lock, "GIT")
+  end
+
   private
 
   def assert_shim_locked(lock, section)
