@@ -367,11 +367,6 @@ module Protostar
           register(method)
         end
 
-        # @api private
-        def new_options(descriptor, options)
-          @options[descriptor] = options
-        end
-
         private
 
         def kind_name(descriptor)
@@ -518,7 +513,7 @@ module Protostar
           @ranges = []
           @reserved_ranges = []
           @reserved_names = []
-          file_draft.new_options(descriptor, options)
+          file_draft.set_options(descriptor, options)
         end
 
         # @return [String]
@@ -598,7 +593,7 @@ module Protostar
           first, last = Draft.bounds(range)
           descriptor = Schema::ExtensionRange.new(containing_message: @descriptor, index: @ranges.size,
             range: first..last)
-          @file_draft.new_options(descriptor, options)
+          @file_draft.set_options(descriptor, options)
           @ranges << descriptor
           descriptor
         end
@@ -667,7 +662,7 @@ module Protostar
             containing_message: @descriptor, index: @oneofs.size)
           @oneofs << oneof
           @oneof_names[name] = oneof
-          @file_draft.new_options(oneof, nil)
+          @file_draft.set_options(oneof, nil)
           @file_draft.register(oneof)
           oneof
         end
@@ -725,7 +720,7 @@ module Protostar
           @values = []
           @reserved_ranges = []
           @reserved_names = []
-          file_draft.new_options(descriptor, options)
+          file_draft.set_options(descriptor, options)
         end
 
         # A value. Its full name is a sibling of the enum's, as in C++.
@@ -735,7 +730,7 @@ module Protostar
           raise Error, "#{@descriptor.full_name}: value #{name} needs an integer number" unless number.is_a?(Integer)
           value = EnumValue.new(name: -name, full_name: -(@scope.empty? ? name : "#{@scope}.#{name}"),
             number: number, enum: @descriptor, index: @values.size)
-          @file_draft.new_options(value, options)
+          @file_draft.set_options(value, options)
           @file_draft.register(value)
           @values << value
           value

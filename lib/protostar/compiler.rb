@@ -2,7 +2,7 @@
 
 module Protostar
   # A pure-Ruby protoc front end: turns `.proto` source into
-  # {Protostar::Schema::File}s whose `to_h` matches what protoc 36.2 puts in a
+  # {Protostar::Schema::File}s whose `to_proto` is what protoc 36.2 puts in a
   # `FileDescriptorProto`, and rejects what protoc rejects with protoc's
   # `file:line:col: message` diagnostics.
   #
@@ -135,7 +135,7 @@ module Protostar
       retain_options ? files : files.map { |f| output_file(f) }
     end
 
-    # Same as {#compile}, as descriptor hashes
+    # Same as {#compile}, each file as `to_proto.to_h`, for reading
     # @return [Array<Hash>]
     def compile_to_hashes(names, source_info: false, retain_options: false, sources: {})
       compile(names, source_info: source_info, retain_options: retain_options, sources: sources).map(&:to_h)

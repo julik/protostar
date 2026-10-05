@@ -2,7 +2,7 @@
 
 module Protostar
   module Schema
-    # What every descriptor has. Built only by {Builder}, frozen and shareable afterwards.
+    # What every descriptor has. Made by a {Draft}, frozen and shareable once it is finished.
     class Descriptor
       # @return [String] the simple name
       attr_reader :name
@@ -18,8 +18,8 @@ module Protostar
         @options || Options::UNRESOLVED.fetch(self.class)
       end
 
-      # Sets attributes that only become known while linking. The Builder is the
-      # only caller; everything is frozen once it is done.
+      # Sets attributes that only become known while linking. Drafts are the
+      # callers; everything is frozen once the draft is finished.
       # @api private
       def __link(**attrs)
         attrs.each { |key, value| instance_variable_set(:"@#{key}", value) }

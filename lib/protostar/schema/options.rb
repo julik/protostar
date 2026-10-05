@@ -30,11 +30,6 @@ module Protostar
         end
       end
 
-      private def frozen(hash)
-        return Freezer::EMPTY_HASH if hash.empty?
-        hash.frozen? ? hash : hash.dup.freeze
-      end
-
       # @param name [Symbol, String] a field of the message
       # @return [Object, nil] its value, nil when not set
       def [](name)
@@ -66,14 +61,24 @@ module Protostar
       # @param extension [#call] full name to extension {Field}
       # @return [MessageValue]
       def rekey(extension)
-        nested = ->(v) { v.is_a?(MessageValue) ? v.rekey(extension) : v }
-        fields = @fields.transform_values { |v| v.is_a?(Array) ? v.map(&nested).freeze : nested.call(v) }
-        extensions = @extensions.to_h do |field, v|
-          [extension.call(field.full_name) || field, v.is_a?(Array) ? v.map(&nested).freeze : nested.call(v)]
+        changed = false
+        again = lambda do |v|
+          case v
+          when MessageValue
+            found = v.rekey(extension)
+            changed ||= !found.equal?(v)
+            found
+          when Array then v.map(&again)
+          else v
+          end
         end
-        return self if fields == @fields && extensions.keys.zip(@extensions.keys).all? { |a, b| a.equal?(b) } &&
-          extensions.values.zip(@extensions.values).all? { |a, b| a.equal?(b) }
-        self.class.new(fields.freeze, extensions.freeze, @unknown_fields)
+        fields = @fields.transform_values(&again)
+        extensions = @extensions.to_h do |field, v|
+          key = extension.call(field.full_name) || field
+          changed ||= !key.equal?(field)
+          [key, again.call(v)]
+        end
+        changed ? self.class.new(fields, extensions, @unknown_fields) : self
       end
 
       # @return [Boolean] nothing set, not even unknown fields
@@ -142,8 +147,17 @@ module Protostar
         parts = @fields.map { |k, v| "#{k}: #{v.inspect}" }
         @extensions.each { |f, v| parts << "(#{f.full_name}): #{v.inspect}" }
         parts << "unknown_fields: #{@unknown_fields.bytesize} bytes" unless @unknown_fields.empty?
-        "#<#{self.class.name} #{parts.join(", ")}>"
+        parts.empty? ? "#<#{self.class.name}>" : "#<#{self.class.name} #{parts.join(", ")}>"
       end
+
+      private
+
+      def frozen(hash)
+        return Freezer::EMPTY_HASH if hash.empty?
+        hash.frozen? ? hash : hash.dup.freeze
+      end
+
+      public
 
       EMPTY_BYTES = "".b.freeze
       EMPTY = new.freeze
@@ -245,7 +259,7 @@ module Protostar
       end
 
       def inspect
-        super.sub(self.class.name, "#{self.class.name}#{" (none)" unless @declared}")
+        @declared ? super : "#<#{self.class.name} (none declared)>"
       end
 
       # Returned by descriptors before they are resolved

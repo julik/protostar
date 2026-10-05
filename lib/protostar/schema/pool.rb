@@ -27,7 +27,7 @@ module Protostar
       #   an extension number twice
       def add(file, warn: true)
         raise Error, "expected a #{File.name}, got #{file.class}" unless file.is_a?(File)
-        raise Error, "#{file.name} is not frozen; build it with Builder" unless file.frozen?
+        raise Error, "#{file.name} is not frozen; finish its draft with freeze!" unless file.frozen?
         taken = @mutex.synchronize do
           check_clashes(file)
           @files[file.name] = file

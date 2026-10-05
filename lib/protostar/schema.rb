@@ -6,7 +6,7 @@ module Protostar
   # {File#to_proto} and {File.from_proto} translate to and from protoc's
   # `FileDescriptorProto`.
   module Schema
-    # Raised for malformed descriptor hashes, missing dependencies and pool clashes
+    # Raised for malformed descriptors, missing dependencies and pool clashes
     class Error < Protostar::Error; end
 
     # The JSON name protoc derives from a field name: underscores dropped,

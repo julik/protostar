@@ -141,17 +141,17 @@ module Protostar
 
         def service(service)
           attrs = {name: service.name}
-          list(attrs, :method, service.rpcs) { |m| method(m) }
+          list(attrs, :method, service.rpcs) { |m| rpc(m) }
           options(attrs, service)
           Proto.types::ServiceDescriptorProto.new(**attrs)
         end
 
-        def method(method)
-          attrs = {name: method.name, input_type: ".#{method.input_type.full_name}",
-                   output_type: ".#{method.output_type.full_name}"}
-          options(attrs, method)
-          attrs[:client_streaming] = true if method.client_streaming?
-          attrs[:server_streaming] = true if method.server_streaming?
+        def rpc(rpc)
+          attrs = {name: rpc.name, input_type: ".#{rpc.input_type.full_name}",
+                   output_type: ".#{rpc.output_type.full_name}"}
+          options(attrs, rpc)
+          attrs[:client_streaming] = true if rpc.client_streaming?
+          attrs[:server_streaming] = true if rpc.server_streaming?
           Proto.types::MethodDescriptorProto.new(**attrs)
         end
 
@@ -699,7 +699,7 @@ module Protostar
     class Method
       # @return [Protostar::Google::Protobuf::MethodDescriptorProto]
       def to_proto
-        Proto::Writer.method(self)
+        Proto::Writer.rpc(self)
       end
     end
 
