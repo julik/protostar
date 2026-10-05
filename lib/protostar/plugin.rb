@@ -59,7 +59,8 @@ module Protostar
         raise Protostar::Error, "ruby and google both write *_pb.rb; ask for one of them"
       end
       pool = Schema::Pool.new
-      request.proto_file.each { |proto| pool.add(Schema::Builder.from_proto(proto, pool: pool)) }
+      # protoc has already warned about extension numbers used twice
+      request.proto_file.each { |proto| pool.add(Schema::Builder.from_proto(proto, pool: pool), warn: false) }
       files = request.file_to_generate.map do |name|
         pool.file(name) || raise(Protostar::Error, "#{name} is not among the request's proto files")
       end

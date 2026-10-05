@@ -195,7 +195,7 @@ module Protostar
         found if found.is_a?(Schema::Field) && found.extension?
       end
       hash = Retention.strip(file.to_h, type, extension)
-      @output.add(Schema::Builder.build(hash, pool: @output))
+      @output.add(Schema::Builder.build(hash, pool: @output), warn: false)
     end
     private :output_file
 

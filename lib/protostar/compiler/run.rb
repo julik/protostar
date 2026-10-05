@@ -63,11 +63,10 @@ module Protostar
 
       private
 
-      # Schema::Pool refuses an extension number another file already uses,
-      # where protoc only warns (the linker reports that warning); the refusal
-      # becomes an error here
+      # An extension number another file already uses is a warning the linker
+      # reports as a diagnostic, so the pool is asked not to print it too
       def add_to_pool(name, file)
-        @pool.add(file)
+        @pool.add(file, warn: false)
       rescue Schema::Error => e
         report(name, nil, e.message)
         nil

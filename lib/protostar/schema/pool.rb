@@ -13,21 +13,37 @@ module Protostar
         @extensions = {}
       end
 
-      # Registers a built file and everything it defines
+      # Registers a built file and everything it defines.
+      #
+      # An extension whose extendee and number another file already uses is
+      # accepted with a warning, as protoc does; {#find_extension} keeps
+      # returning the first one.
       # @param file [File]
+      # @param warn [Boolean] write that warning with `Kernel#warn`; the
+      #   compiler passes false and reports it as a diagnostic instead
       # @return [File]
-      # @raise [Error] when the file name is taken, or a symbol, package or
-      #   extension number it defines clashes with one already in the pool
-      def add(file)
+      # @raise [Error] when the file name is taken, a symbol or package it
+      #   defines clashes with one already in the pool, or the file itself uses
+      #   an extension number twice
+      def add(file, warn: true)
         raise Error, "expected a #{File.name}, got #{file.class}" unless file.is_a?(File)
         raise Error, "#{file.name} is not frozen; build it with Builder" unless file.frozen?
-        @mutex.synchronize do
+        taken = @mutex.synchronize do
           check_clashes(file)
           @files[file.name] = file
           file.symbols.each { |name, symbol| @symbols[name] = symbol }
           package_prefixes(file.package).each { |pkg| @packages[pkg] ||= file }
-          file.all_extensions.each do |ext|
-            (@extensions[ext.extendee.full_name] ||= {})[ext.number] = ext
+          file.all_extensions.filter_map do |ext|
+            by_number = (@extensions[ext.extendee.full_name] ||= {})
+            existing = by_number[ext.number]
+            by_number[ext.number] = ext unless existing
+            [ext, existing] if existing
+          end
+        end
+        if warn
+          taken.each do |ext, existing|
+            Kernel.warn("#{file.name}: Extension number #{ext.number} has already been used in " \
+              "\"#{ext.extendee.full_name}\" by extension \"#{existing.full_name}\" defined in #{existing.file.name}.")
           end
         end
         file
@@ -109,11 +125,14 @@ module Protostar
           next unless other
           raise Error, "\"#{pkg}\" is already defined (as something other than a package) in file \"#{other.file.name}\""
         end
+        seen = {}
         file.all_extensions.each do |ext|
-          existing = @extensions[ext.extendee.full_name]&.[](ext.number)
-          next unless existing
-          raise Error, "extension number #{ext.number} of \"#{ext.extendee.full_name}\" is already used by " \
-            "\"#{existing.full_name}\" (redefined by \"#{ext.full_name}\")"
+          key = [ext.extendee.full_name, ext.number]
+          if (existing = seen[key])
+            raise Error, "extension number #{ext.number} of \"#{ext.extendee.full_name}\" is already used by " \
+              "\"#{existing.full_name}\" (redefined by \"#{ext.full_name}\")"
+          end
+          seen[key] = ext
         end
       end
 

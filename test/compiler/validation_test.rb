@@ -8,15 +8,10 @@ require_relative "validation_cases"
 # it (recorded in validation_cases.rb by script/record_validation_cases.rb).
 class CompilerValidationTest < Minitest::Test
   # Where we knowingly differ from protoc, and what we report instead
-  DEVIATIONS = {
-    # Schema::Pool#add rejects a second extension with the same extendee and
-    # number from another file; protoc accepts it with a warning
-    "extension number used in another file" => [
-      "b.proto:4:22: warning: Extension number 10 has already been used in \"Foo\" by extension \"x\" defined in a.proto.",
-      "b.proto: extension number 10 of \"Foo\" is already used by \"x\" (redefined by \"y\")",
-      "c.proto:3:1: Import \"b.proto\" was not found or had errors."
-    ]
-  }.freeze
+  # Cases where our diagnostics knowingly differ from protoc's, with ours.
+  # Empty since Schema::Pool accepts an extension number used in another
+  # file with a warning, as protoc does.
+  DEVIATIONS = {}.freeze
 
   ValidationCases::CASES.each do |name, c|
     if (ours = DEVIATIONS[name])
