@@ -74,6 +74,7 @@ module Protostar
     def self.view: (::String | ::IO::Buffer bytes, ?offset: ::Integer, ?length: ::Integer?, ?recursion_limit: ::Integer) -> View
     def self.view_class: () -> singleton(View)
     def self.build: (?::Hash[::Symbol | ::String, untyped]? fields, **untyped) ?{ (Builder pb) -> void } -> instance
+    def self.reflection: () -> Reflection
 
     def initialize: (?::Hash[::Symbol | ::String, untyped]? hash, **untyped fields) -> void
     def []: (::String | ::Symbol name) -> untyped
@@ -95,6 +96,27 @@ module Protostar
     def initialized?: () -> bool
     def inspect: () -> ::String
     def pretty_print: (untyped q) -> void
+
+    # A message class's fields by descriptor, name or number (Klass.reflection)
+    class Reflection
+      type field_key = ::String | ::Symbol | ::Integer | untyped
+
+      def klass: () -> untyped
+      def descriptor: () -> untyped
+      def fields: () -> ::Array[untyped]
+      def oneofs: () -> ::Array[untyped]
+      def field: (field_key key) -> untyped
+      def get: (Message message, field_key key) -> untyped
+      def set: (Message message, field_key key, untyped value) -> Message
+      def set?: (Message message, field_key key) -> bool
+      def clear: (Message message, field_key key) -> Message
+      def which: (Message message, untyped oneof) -> untyped
+      def message_class: (field_key key) -> untyped
+      def enum_module: (field_key key) -> untyped
+      def each: (Message message) { (untyped field, untyped value) -> void } -> nil
+              | (Message message) -> ::Enumerator[[untyped, untyped], nil]
+      def inspect: () -> ::String
+    end
   end
 
   # A read-only message over encoded bytes; fields are decoded when read

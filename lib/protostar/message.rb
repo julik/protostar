@@ -22,6 +22,9 @@ module Protostar
       # @return [Schema::Message]
       attr_reader :descriptor
 
+      # @return [Reflection] the class's fields by descriptor, name or number
+      attr_reader :reflection
+
       # @api private
       attr_reader :__fields, :__by_number, :__by_name, :__template, :__oneofs, :__required
 
@@ -104,6 +107,7 @@ module Protostar
         [@__fields, @__by_number, @__by_name, @__template, @__oneofs, @__required].each do |o|
           Ractor.make_shareable(o)
         end
+        @reflection = Ractor.make_shareable(Reflection.new(self, descriptor))
         self
       end
 
@@ -522,5 +526,6 @@ module Protostar
 end
 
 require_relative "message/field_info"
+require_relative "message/reflection"
 require_relative "message/coercion"
 require_relative "message/accessors"
