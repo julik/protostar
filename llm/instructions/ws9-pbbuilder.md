@@ -52,6 +52,9 @@ msg = Protostar::Builder.message(Acme::Person) { |pb| ... }   # decoded when an 
 Protostar::Builder.write(io, Acme::Person) { |pb| ... }       # streams
 ```
 
+Read `llm/outputs/notes-field-overwrites.md` before designing the writer: protobuf's
+overwrite-by-repetition can make a strictly write-only output cheaper.
+
 Rules: a nested block opens a child `Wire::Writer`, and the parent writes its tag,
 length and bytes when the block closes; packed scalars are buffered per field and
 flushed at the end of the enclosing message, nothing else is buffered; the cache is a

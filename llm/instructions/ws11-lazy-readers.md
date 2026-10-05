@@ -1,5 +1,8 @@
 # WS11: lazy readers over a bag of bytes
 
+**Status: suspended on 2026-10-05 until the customer answers the questions at the end.**
+Do not launch this workstream before Julik lifts the hold.
+
 "Here is a bag of bytes, here is the schema, give me message objects with lazy reader
 methods that unmarshal on demand without extra allocations." A separate class family
 built for that one job, for a specific customer. Read the WS3 and WS8 reports first:
@@ -41,9 +44,17 @@ reader.wrap(bytes, flyweight: true)                              # opt-in: neste
 Rules:
 
 - Merge semantics are protobuf's (last occurrence wins for scalars and oneofs, repeated
-  concatenates, sub-messages merge), so a scalar reader scans to the end of the message
-  unless `index: true` was given. Document that cost honestly; the customer's messages
-  decide which mode fits.
+  concatenates, sub-messages merge), so by default a scalar reader scans to the end of
+  the message unless `index: true` was given. Document that cost honestly; the
+  customer's messages decide which mode fits.
+- `reader.wrap(bytes, overwrites: false)` is an explicit promise from the caller that no
+  field occurs more than once in the message, so a reader may seek field by field and
+  return at the first occurrence, repeated fields may stop at the end of their run, and
+  no index is needed. Hardly any writer uses protobuf's overwrite-by-repetition, so this
+  is the mode most callers will want, but it is never the default: a message that
+  breaks the promise returns the first value instead of the last, silently, and the
+  docs must say so. `overwrites: true` is the default and keeps the full merge rules.
+  See `llm/outputs/notes-field-overwrites.md` for the write side of the same feature.
 - Allocation budget, enforced by tests on Ruby 3.4 with `GC.stat` deltas: `wrap` is one
   object; a scalar read allocates nothing beyond the value (Strings and bytes are one
   `byteslice`; Floats and large Integers are what Ruby makes them); a nested read is one
