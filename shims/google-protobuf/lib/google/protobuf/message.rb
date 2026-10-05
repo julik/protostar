@@ -265,11 +265,12 @@ module Google
           q.text(inspect)
         end
 
-        # Same class and the same field values, extensions included
+        # Same class and the same field values, extensions included. The gem
+        # compares encodings, so -0.0 differs from 0.0
         def ==(other)
           return true if equal?(other)
           return false unless other.instance_of?(self.class)
-          super && __gextensions == other.__gextensions
+          super && __gextensions == other.__gextensions && __gsame_zeros?(other)
         end
 
         def eql?(other)
@@ -445,6 +446,28 @@ module Google
         end
 
         private
+
+        FLOATS = [Protostar::Message::FieldInfo::DOUBLE, Protostar::Message::FieldInfo::FLOAT].freeze
+        private_constant :FLOATS
+
+        # Whether every float field holding a zero holds the same zero as other's
+        def __gsame_zeros?(other)
+          theirs = other.__values
+          self.class.__fields.each do |info|
+            kind = info.map ? info.value.kind : info.kind
+            next unless FLOATS.include?(kind)
+            a = @values[info.index]
+            b = theirs[info.index]
+            pairs = if info.map then (a || {}).map { |k, v| [v, b[k]] }
+            elsif info.repeated then (a || []).zip(b || [])
+            else [[a, b]]
+            end
+            pairs.each do |x, y|
+              return false if x.is_a?(Float) && y.is_a?(Float) && x.zero? && (1.0 / x).negative? != (1.0 / y).negative?
+            end
+          end
+          true
+        end
 
         def initialize_copy(source)
           super

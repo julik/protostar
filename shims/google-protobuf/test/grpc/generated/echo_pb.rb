@@ -9,16 +9,14 @@ require 'google/protobuf/empty_pb'
 require 'google/protobuf/timestamp_pb'
 
 
-descriptor_data = "\n\necho.proto\x12\x13protostar.shim.echo\x1a\x19google/protobuf/any.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe9\x01\n\x0b\x45\x63hoRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\r\n\x05times\x18\x02 \x01(\x05\x12+\n\x07sent_at\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x38\n\x04tags\x18\x04 \x03(\x0b\x32*.protostar.shim.echo.EchoRequest.TagsEntry\x12)\n\x0b\x61ttachments\x18\x05 \x03(\x0b\x32\x14.google.protobuf.Any\x1a+\n\tTagsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x03:\x02\x38\x01\"\xe5\x01\n\tEchoReply\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\r\n\x05index\x18\x02 \x01(\x05\x12+\n\x07sent_at\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x36\n\x04tags\x18\x04 \x03(\x0b\x32(.protostar.shim.echo.EchoReply.TagsEntry\x12)\n\x0b\x61ttachments\x18\x05 \x03(\x0b\x32\x14.google.protobuf.Any\x1a+\n\tTagsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x03:\x02\x38\x01\x32\xf2\x02\n\x04\x45\x63ho\x12G\n\x03Say\x12 .protostar.shim.echo.EchoRequest\x1a\x1e.protostar.shim.echo.EchoReply\x12M\n\x07\x43ollect\x12 .protostar.shim.echo.EchoRequest\x1a\x1e.protostar.shim.echo.EchoReply(\x01\x12L\n\x06Repeat\x12 .protostar.shim.echo.EchoRequest\x1a\x1e.protostar.shim.echo.EchoReply0\x01\x12L\n\x04\x43hat\x12 .protostar.shim.echo.EchoRequest\x1a\x1e.protostar.shim.echo.EchoReply(\x01\x30\x01\x12\x36\n\x04Ping\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Emptyb\x06proto3"
+descriptor_data = "\n\necho.proto\x12\rshimtest.echo\x1a\x19google/protobuf/any.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe3\x01\n\x0b\x45\x63hoRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\r\n\x05times\x18\x02 \x01(\x05\x12+\n\x07sent_at\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x32\n\x04tags\x18\x04 \x03(\x0b\x32$.shimtest.echo.EchoRequest.TagsEntry\x12)\n\x0b\x61ttachments\x18\x05 \x03(\x0b\x32\x14.google.protobuf.Any\x1a+\n\tTagsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x03:\x02\x38\x01\"\xdf\x01\n\tEchoReply\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\r\n\x05index\x18\x02 \x01(\x05\x12+\n\x07sent_at\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x30\n\x04tags\x18\x04 \x03(\x0b\x32\".shimtest.echo.EchoReply.TagsEntry\x12)\n\x0b\x61ttachments\x18\x05 \x03(\x0b\x32\x14.google.protobuf.Any\x1a+\n\tTagsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x03:\x02\x38\x01\x32\xc2\x02\n\x04\x45\x63ho\x12;\n\x03Say\x12\x1a.shimtest.echo.EchoRequest\x1a\x18.shimtest.echo.EchoReply\x12\x41\n\x07\x43ollect\x12\x1a.shimtest.echo.EchoRequest\x1a\x18.shimtest.echo.EchoReply(\x01\x12@\n\x06Repeat\x12\x1a.shimtest.echo.EchoRequest\x1a\x18.shimtest.echo.EchoReply0\x01\x12@\n\x04\x43hat\x12\x1a.shimtest.echo.EchoRequest\x1a\x18.shimtest.echo.EchoReply(\x01\x30\x01\x12\x36\n\x04Ping\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Emptyb\x06proto3"
 
 pool = ::Google::Protobuf::DescriptorPool.generated_pool
 pool.add_serialized_file(descriptor_data)
 
-module Protostar
-  module Shim
-    module Echo
-      EchoRequest = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("protostar.shim.echo.EchoRequest").msgclass
-      EchoReply = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("protostar.shim.echo.EchoReply").msgclass
-    end
+module Shimtest
+  module Echo
+    EchoRequest = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("shimtest.echo.EchoRequest").msgclass
+    EchoReply = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("shimtest.echo.EchoReply").msgclass
   end
 end

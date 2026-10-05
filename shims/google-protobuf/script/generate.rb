@@ -5,6 +5,7 @@
 #   lib/google/protobuf/*_pb.rb          the well-known types, Google format
 #   test/google/*_pb.rb                  Google's ruby/tests protos, Google format
 #   test/grpc/generated/*_pb.rb          the gRPC test service, Google format and stubs
+#   test/pbbuilder/generated/*_pb.rb     the messages the pbbuilder API test builds
 #
 #   ruby script/generate.rb          # write them
 #   ruby script/generate.rb check    # fail when a committed file differs
@@ -31,7 +32,8 @@ GOOGLE_TESTS = %w[
 JOBS = [
   {out: "lib", args: ["--google_out=%s", *WELL_KNOWN]},
   {out: "test/google", args: ["-I", CORPUS, "--google_out=%s", *GOOGLE_TESTS]},
-  {out: "test/grpc/generated", args: ["-I", File.join(ROOT, "test/grpc"), "--google_out=%s", "--grpc_out=%s", "echo.proto"]}
+  {out: "test/grpc/generated", args: ["-I", File.join(ROOT, "test/grpc"), "--google_out=%s", "--grpc_out=%s", "echo.proto"]},
+  {out: "test/pbbuilder/generated", args: ["-I", File.join(ROOT, "test/pbbuilder"), "--google_out=%s", "person.proto"]}
 ].freeze
 
 def generate(dir)
