@@ -2,7 +2,8 @@
 
 # Decode and encode of a fully populated proto2_unittest.TestAllTypes, the
 # shape of protobuf's TestUtil::SetAllFields: every singular field set and
-# two elements in every repeated field.
+# two elements in every repeated field. Then a small message: six scalars
+# and a nested message set, and twenty packed int32s.
 #
 #   bundle exec ruby bench/codec_bench.rb
 #   BUNDLE_WITH=oracle PROTOSTAR_ORACLE=1 bundle exec ruby bench/codec_bench.rb  # adds google-protobuf
@@ -46,18 +47,48 @@ message = klass.new(fields)
 bytes = message.encode
 raise "round trip failed" unless klass.decode(bytes) == message
 
+small_proto = <<~PROTO
+  syntax = "proto3";
+  package bench;
+  message Small {
+    enum Kind { KIND_UNSPECIFIED = 0; KIND_A = 1; KIND_B = 2; }
+    message Inner { int32 a = 1; }
+    int32 id = 1;
+    int64 count = 2;
+    string name = 3;
+    bool active = 4;
+    double score = 5;
+    Inner inner = 6;
+    Kind kind = 7;
+    repeated int32 values = 8;
+  }
+PROTO
+small_files = Protostar::Compiler.new.compile(["bench.proto"], sources: {"bench.proto" => small_proto})
+small_class = Protostar::Types::Registry.new.define(small_files.last).fetch("bench.Small")
+small = small_class.new(id: 1, count: 2, name: "hello", active: true, score: 1.5, inner: {a: 1}, kind: :KIND_B,
+  values: (1..20).to_a)
+small_bytes = small.encode
+
 oracle = Oracle.pool("google/protobuf/unittest.proto").lookup("proto2_unittest.TestAllTypes").msgclass if Oracle.available?
 
 puts RUBY_DESCRIPTION
-puts "TestAllTypes: #{bytes.bytesize} bytes"
+puts "TestAllTypes: #{bytes.bytesize} bytes, Small: #{small_bytes.bytesize} bytes"
 Benchmark.ips do |x|
   x.config(time: 3, warmup: 1)
   x.report("protostar decode") { klass.decode(bytes) }
   x.report("protostar decode frozen") { klass.decode(bytes, frozen: true) }
   x.report("protostar encode") { message.encode }
+  x.report("protostar small decode") { small_class.decode(small_bytes) }
+  x.report("protostar small encode") { small.encode }
   if oracle
     oracle_message = oracle.decode(bytes)
     x.report("google-protobuf decode") { oracle.decode(bytes) }
     x.report("google-protobuf encode") { oracle.encode(oracle_message) }
+    pool = Google::Protobuf::DescriptorPool.new
+    pool.add_serialized_file(small_files.last.to_proto.encode)
+    oracle_small = pool.lookup("bench.Small").msgclass
+    oracle_small_message = oracle_small.decode(small_bytes)
+    x.report("google-protobuf small decode") { oracle_small.decode(small_bytes) }
+    x.report("google-protobuf small encode") { oracle_small.encode(oracle_small_message) }
   end
 end
