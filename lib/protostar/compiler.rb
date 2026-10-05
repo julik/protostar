@@ -136,8 +136,11 @@ module Protostar
     end
 
     # Same as {#compile}, each file as `to_proto.to_h`, for reading
+    # @deprecated Goes away in 0.2.0. Use {#compile} and read the {Schema::File}s, or
+    #   `compile(names).map { |f| f.to_proto.to_h }` for the same Hashes.
     # @return [Array<Hash>]
     def compile_to_hashes(names, source_info: false, retain_options: false, sources: {})
+      Protostar.deprecated("Compiler#compile_to_hashes", "compile(names).map { |f| f.to_proto.to_h }")
       compile(names, source_info: source_info, retain_options: retain_options, sources: sources).map(&:to_h)
     end
 

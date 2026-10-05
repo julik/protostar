@@ -65,7 +65,7 @@ files.last.to_proto                                              # its FileDescr
 compiler.diagnostics                                             # warnings of the last compile
 ```
 
-(`compile_to_hashes` gives each file's `to_proto.to_h`, for reading.)
+(`compile_to_hashes` gave each file's `to_proto.to_h`; it is deprecated and goes away in 0.2.0.)
 
 `compile` also takes `sources: {"name.proto" => text}` for in-memory files (used throughout
 this document and the tests), `retain_options: true` (see section 18) and a private
