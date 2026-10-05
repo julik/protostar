@@ -30,4 +30,16 @@ namespace :protoc do
   end
 end
 
+namespace :bootstrap do
+  desc "Fail when lib/protostar/google/protobuf/*_pb.rb differ from what the compiler generates"
+  task :check do
+    ruby "script/bootstrap.rb", "check"
+  end
+
+  desc "Regenerate lib/protostar/google/protobuf/*_pb.rb with the compiler"
+  task :regenerate do
+    ruby "script/bootstrap.rb", "regenerate"
+  end
+end
+
 task default: %i[test standard]
