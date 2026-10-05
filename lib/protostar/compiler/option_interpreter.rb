@@ -158,8 +158,9 @@ module Protostar
         entries << entry
 
         if field.repeated?
-          index = @repeated_counts[dest_path]
-          @repeated_counts[dest_path] += 1
+          key = dest_path.dup.freeze
+          index = @repeated_counts[key]
+          @repeated_counts[key] += 1
           dest_path << index
         end
         @interpreted_paths[src_path] = dest_path
