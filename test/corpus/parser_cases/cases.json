@@ -4714,6 +4714,3916 @@
       }
     }
   ],
+  "source_info": [
+    {
+      "id": "SourceInfoTest.BasicFileDecls",
+      "input": "$a$edition = \"2023\";$i$\n$b$package foo.bar;$c$\n$d$import \"baz.proto\";$e$\n$f$import\"qux.proto\";$h$\n$j$import $k$public$l$ \"bar.proto\";$m$\n$n$import $o$weak$p$ \"bar.proto\";$q$\n\n// comment ignored\n",
+      "spans": [
+        {
+          "path": [],
+          "start": "a",
+          "end": "q"
+        },
+        {
+          "path": [
+            2
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            3,
+            0
+          ],
+          "start": "d",
+          "end": "e"
+        },
+        {
+          "path": [
+            3,
+            1
+          ],
+          "start": "f",
+          "end": "h"
+        },
+        {
+          "path": [
+            3,
+            2
+          ],
+          "start": "j",
+          "end": "m"
+        },
+        {
+          "path": [
+            10,
+            0
+          ],
+          "start": "k",
+          "end": "l"
+        },
+        {
+          "path": [
+            3,
+            3
+          ],
+          "start": "n",
+          "end": "q"
+        },
+        {
+          "path": [
+            11,
+            0
+          ],
+          "start": "o",
+          "end": "p"
+        },
+        {
+          "path": [
+            12
+          ],
+          "start": "a",
+          "end": "i"
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.BasicFileDecls_Edition2024",
+      "input": "$a$edition = \"2024\";$i$\n$b$package foo.bar;$c$\n$d$import \"baz.proto\";$e$\n$f$import\"qux.proto\";$h$\n$j$import $k$public$l$ \"bar.proto\";$m$\n$n$import option \"bar.proto\";$o$\n\n// comment ignored\n",
+      "spans": [
+        {
+          "path": [],
+          "start": "a",
+          "end": "o"
+        },
+        {
+          "path": [
+            2
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            3,
+            0
+          ],
+          "start": "d",
+          "end": "e"
+        },
+        {
+          "path": [
+            3,
+            1
+          ],
+          "start": "f",
+          "end": "h"
+        },
+        {
+          "path": [
+            3,
+            2
+          ],
+          "start": "j",
+          "end": "m"
+        },
+        {
+          "path": [
+            10,
+            0
+          ],
+          "start": "k",
+          "end": "l"
+        },
+        {
+          "path": [
+            15,
+            0
+          ],
+          "start": "n",
+          "end": "o"
+        },
+        {
+          "path": [
+            12
+          ],
+          "start": "a",
+          "end": "i"
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.Messages",
+      "input": "$a$message $b$Foo$c$ {}$d$\n$e$message $f$Bar$g$ {}$h$\n",
+      "spans": [
+        {
+          "path": [
+            4,
+            0
+          ],
+          "start": "a",
+          "end": "d"
+        },
+        {
+          "path": [
+            4,
+            0,
+            1
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            4,
+            1
+          ],
+          "start": "e",
+          "end": "h"
+        },
+        {
+          "path": [
+            4,
+            1,
+            1
+          ],
+          "start": "f",
+          "end": "g"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.Fields",
+      "input": "message Foo {\n  $a$optional$b$ $c$int32$d$ $e$bar$f$ = $g$1$h$;$i$\n  $j$repeated$k$ $l$X.Y$m$ $n$baz$o$ = $p$2$q$;$r$\n}\n",
+      "spans": [
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0
+          ],
+          "start": "a",
+          "end": "i"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            4
+          ],
+          "start": "a",
+          "end": "b"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            5
+          ],
+          "start": "c",
+          "end": "d"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": "e",
+          "end": "f"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            3
+          ],
+          "start": "g",
+          "end": "h"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            1
+          ],
+          "start": "j",
+          "end": "r"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            1,
+            4
+          ],
+          "start": "j",
+          "end": "k"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            1,
+            6
+          ],
+          "start": "l",
+          "end": "m"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            1,
+            1
+          ],
+          "start": "n",
+          "end": "o"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            1,
+            3
+          ],
+          "start": "p",
+          "end": "q"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.Proto3Fields",
+      "input": "syntax = \"proto3\";\nmessage Foo {\n  $a$int32$b$ $c$bar$d$ = $e$1$f$;$g$\n  $h$repeated$i$ $j$X.Y$k$ $l$baz$m$ = $n$2$o$;$p$\n}\n",
+      "spans": [
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0
+          ],
+          "start": "a",
+          "end": "g"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            5
+          ],
+          "start": "a",
+          "end": "b"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": "c",
+          "end": "d"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            3
+          ],
+          "start": "e",
+          "end": "f"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            1
+          ],
+          "start": "h",
+          "end": "p"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            1,
+            4
+          ],
+          "start": "h",
+          "end": "i"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            1,
+            6
+          ],
+          "start": "j",
+          "end": "k"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            1,
+            1
+          ],
+          "start": "l",
+          "end": "m"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            1,
+            3
+          ],
+          "start": "n",
+          "end": "o"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            12
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.Extensions",
+      "input": "$a$extend $b$Foo$c$ {\n  $d$optional$e$ int32 bar = 1;$f$\n  $g$repeated$h$ X.Y baz = 2;$i$\n}$j$\n$k$extend $l$Bar$m$ {\n  $n$optional int32 qux = 1;$o$\n}$p$\n",
+      "spans": [
+        {
+          "path": [
+            7
+          ],
+          "start": "a",
+          "end": "j"
+        },
+        {
+          "path": [
+            7
+          ],
+          "start": "k",
+          "end": "p"
+        },
+        {
+          "path": [
+            7,
+            0
+          ],
+          "start": "d",
+          "end": "f"
+        },
+        {
+          "path": [
+            7,
+            0,
+            4
+          ],
+          "start": "d",
+          "end": "e"
+        },
+        {
+          "path": [
+            7,
+            0,
+            2
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            7,
+            1
+          ],
+          "start": "g",
+          "end": "i"
+        },
+        {
+          "path": [
+            7,
+            1,
+            4
+          ],
+          "start": "g",
+          "end": "h"
+        },
+        {
+          "path": [
+            7,
+            1,
+            2
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            7,
+            2
+          ],
+          "start": "n",
+          "end": "o"
+        },
+        {
+          "path": [
+            7,
+            2,
+            2
+          ],
+          "start": "l",
+          "end": "m"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            7,
+            0,
+            5
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            7,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            7,
+            0,
+            3
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            7,
+            1,
+            6
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            7,
+            1,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            7,
+            1,
+            3
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            7,
+            2,
+            4
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            7,
+            2,
+            5
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            7,
+            2,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            7,
+            2,
+            3
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.NestedExtensions",
+      "input": "message Message {\n  $a$extend $b$Foo$c$ {\n    $d$optional$e$ int32 bar = 1;$f$\n    $g$repeated$h$ X.Y baz = 2;$i$\n  }$j$\n  $k$extend $l$Bar$m$ {\n    $n$optional int32 qux = 1;$o$\n  }$p$\n}\n",
+      "spans": [
+        {
+          "path": [
+            4,
+            0,
+            6
+          ],
+          "start": "a",
+          "end": "j"
+        },
+        {
+          "path": [
+            4,
+            0,
+            6
+          ],
+          "start": "k",
+          "end": "p"
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            0
+          ],
+          "start": "d",
+          "end": "f"
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            0,
+            4
+          ],
+          "start": "d",
+          "end": "e"
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            0,
+            2
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            1
+          ],
+          "start": "g",
+          "end": "i"
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            1,
+            4
+          ],
+          "start": "g",
+          "end": "h"
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            1,
+            2
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            2
+          ],
+          "start": "n",
+          "end": "o"
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            2,
+            2
+          ],
+          "start": "l",
+          "end": "m"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            0,
+            5
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            0,
+            3
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            1,
+            6
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            1,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            1,
+            3
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            2,
+            4
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            2,
+            5
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            2,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            6,
+            2,
+            3
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.ExtensionRanges",
+      "input": "message Message {\n  $a$extensions $b$1$c$ to $d$4$e$, $f$6$g$;$h$\n  $i$extensions $j$8$k$ to $l$max$m$;$n$\n}\n",
+      "spans": [
+        {
+          "path": [
+            4,
+            0,
+            5
+          ],
+          "start": "a",
+          "end": "h"
+        },
+        {
+          "path": [
+            4,
+            0,
+            5
+          ],
+          "start": "i",
+          "end": "n"
+        },
+        {
+          "path": [
+            4,
+            0,
+            5,
+            0
+          ],
+          "start": "b",
+          "end": "e"
+        },
+        {
+          "path": [
+            4,
+            0,
+            5,
+            0,
+            1
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            4,
+            0,
+            5,
+            0,
+            2
+          ],
+          "start": "d",
+          "end": "e"
+        },
+        {
+          "path": [
+            4,
+            0,
+            5,
+            1
+          ],
+          "start": "f",
+          "end": "g"
+        },
+        {
+          "path": [
+            4,
+            0,
+            5,
+            1,
+            1
+          ],
+          "start": "f",
+          "end": "g"
+        },
+        {
+          "path": [
+            4,
+            0,
+            5,
+            1,
+            2
+          ],
+          "start": "f",
+          "end": "g"
+        },
+        {
+          "path": [
+            4,
+            0,
+            5,
+            2
+          ],
+          "start": "j",
+          "end": "m"
+        },
+        {
+          "path": [
+            4,
+            0,
+            5,
+            2,
+            1
+          ],
+          "start": "j",
+          "end": "k"
+        },
+        {
+          "path": [
+            4,
+            0,
+            5,
+            2,
+            2
+          ],
+          "start": "l",
+          "end": "m"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.ReservedRanges",
+      "input": "message Message {\n  $a$reserved $b$1$c$ to $d$4$e$, $f$6$g$;$h$\n}\n",
+      "spans": [
+        {
+          "path": [
+            4,
+            0,
+            9
+          ],
+          "start": "a",
+          "end": "h"
+        },
+        {
+          "path": [
+            4,
+            0,
+            9,
+            0
+          ],
+          "start": "b",
+          "end": "e"
+        },
+        {
+          "path": [
+            4,
+            0,
+            9,
+            0,
+            1
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            4,
+            0,
+            9,
+            0,
+            2
+          ],
+          "start": "d",
+          "end": "e"
+        },
+        {
+          "path": [
+            4,
+            0,
+            9,
+            1
+          ],
+          "start": "f",
+          "end": "g"
+        },
+        {
+          "path": [
+            4,
+            0,
+            9,
+            1,
+            1
+          ],
+          "start": "f",
+          "end": "g"
+        },
+        {
+          "path": [
+            4,
+            0,
+            9,
+            1,
+            2
+          ],
+          "start": "f",
+          "end": "g"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.Oneofs",
+      "input": "message Foo {\n  $a$oneof $c$foo$d$ {\n    $e$int32$f$ $g$a$h$ = $i$1$j$;$k$\n  }$r$\n}\n",
+      "spans": [
+        {
+          "path": [
+            4,
+            0,
+            8,
+            0
+          ],
+          "start": "a",
+          "end": "r"
+        },
+        {
+          "path": [
+            4,
+            0,
+            8,
+            0,
+            1
+          ],
+          "start": "c",
+          "end": "d"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0
+          ],
+          "start": "e",
+          "end": "k"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            5
+          ],
+          "start": "e",
+          "end": "f"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": "g",
+          "end": "h"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            3
+          ],
+          "start": "i",
+          "end": "j"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.NestedMessages",
+      "input": "message Foo {\n  $a$message $b$Bar$c$ {\n    $d$message $e$Baz$f$ {}$g$\n  }$h$\n  $i$message $j$Qux$k$ {}$l$\n}\n",
+      "spans": [
+        {
+          "path": [
+            4,
+            0,
+            3,
+            0
+          ],
+          "start": "a",
+          "end": "h"
+        },
+        {
+          "path": [
+            4,
+            0,
+            3,
+            0,
+            1
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            4,
+            0,
+            3,
+            0,
+            3,
+            0
+          ],
+          "start": "d",
+          "end": "g"
+        },
+        {
+          "path": [
+            4,
+            0,
+            3,
+            0,
+            3,
+            0,
+            1
+          ],
+          "start": "e",
+          "end": "f"
+        },
+        {
+          "path": [
+            4,
+            0,
+            3,
+            1
+          ],
+          "start": "i",
+          "end": "l"
+        },
+        {
+          "path": [
+            4,
+            0,
+            3,
+            1,
+            1
+          ],
+          "start": "j",
+          "end": "k"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.Groups",
+      "input": "message Foo {\n  message Bar {}\n  $a$optional$b$ $c$group$d$ $e$Baz$f$ = $g$1$h$ {\n    $i$message Qux {}$j$\n  }$k$\n}\n",
+      "spans": [
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0
+          ],
+          "start": "a",
+          "end": "k"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            4
+          ],
+          "start": "a",
+          "end": "b"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            5
+          ],
+          "start": "c",
+          "end": "d"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": "e",
+          "end": "f"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            6
+          ],
+          "start": "e",
+          "end": "f"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            3
+          ],
+          "start": "g",
+          "end": "h"
+        },
+        {
+          "path": [
+            4,
+            0,
+            3,
+            1
+          ],
+          "start": "a",
+          "end": "k"
+        },
+        {
+          "path": [
+            4,
+            0,
+            3,
+            1,
+            1
+          ],
+          "start": "e",
+          "end": "f"
+        },
+        {
+          "path": [
+            4,
+            0,
+            3,
+            1,
+            3,
+            0
+          ],
+          "start": "i",
+          "end": "j"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            3,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            3,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            3,
+            1,
+            3,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.Enums",
+      "input": "$a$enum $b$Foo$c$ {}$d$\n$e$enum $f$Bar$g$ {}$h$\n",
+      "spans": [
+        {
+          "path": [
+            5,
+            0
+          ],
+          "start": "a",
+          "end": "d"
+        },
+        {
+          "path": [
+            5,
+            0,
+            1
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            5,
+            1
+          ],
+          "start": "e",
+          "end": "h"
+        },
+        {
+          "path": [
+            5,
+            1,
+            1
+          ],
+          "start": "f",
+          "end": "g"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.EnumValues",
+      "input": "enum Foo {\n  $a$BAR$b$ = $c$1$d$;$e$\n  $f$BAZ$g$ = $h$2$i$;$j$\n}",
+      "spans": [
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0
+          ],
+          "start": "a",
+          "end": "e"
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": "a",
+          "end": "b"
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0,
+            2
+          ],
+          "start": "c",
+          "end": "d"
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            1
+          ],
+          "start": "f",
+          "end": "j"
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            1,
+            1
+          ],
+          "start": "f",
+          "end": "g"
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            1,
+            2
+          ],
+          "start": "h",
+          "end": "i"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.EnumReservedRange",
+      "input": "enum TestEnum {\n  $a$reserved $b$1$c$ to $d$10$e$;$f$\n}",
+      "spans": [
+        {
+          "path": [
+            5,
+            0,
+            4
+          ],
+          "start": "a",
+          "end": "f"
+        },
+        {
+          "path": [
+            5,
+            0,
+            4,
+            0
+          ],
+          "start": "b",
+          "end": "e"
+        },
+        {
+          "path": [
+            5,
+            0,
+            4,
+            0,
+            1
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            5,
+            0,
+            4,
+            0,
+            2
+          ],
+          "start": "d",
+          "end": "e"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.EnumReservedName",
+      "input": "enum TestEnum {\n  $a$reserved $b$'foo'$c$;$d$\n}",
+      "spans": [
+        {
+          "path": [
+            5,
+            0,
+            5
+          ],
+          "start": "a",
+          "end": "d"
+        },
+        {
+          "path": [
+            5,
+            0,
+            5,
+            0
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.NestedEnums",
+      "input": "message Foo {\n  $a$enum $b$Bar$c$ {}$d$\n  $e$enum $f$Baz$g$ {}$h$\n}\n",
+      "spans": [
+        {
+          "path": [
+            4,
+            0,
+            4,
+            0
+          ],
+          "start": "a",
+          "end": "d"
+        },
+        {
+          "path": [
+            4,
+            0,
+            4,
+            0,
+            1
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            4,
+            0,
+            4,
+            1
+          ],
+          "start": "e",
+          "end": "h"
+        },
+        {
+          "path": [
+            4,
+            0,
+            4,
+            1,
+            1
+          ],
+          "start": "f",
+          "end": "g"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.Services",
+      "input": "$a$service $b$Foo$c$ {}$d$\n$e$service $f$Bar$g$ {}$h$\n",
+      "spans": [
+        {
+          "path": [
+            6,
+            0
+          ],
+          "start": "a",
+          "end": "d"
+        },
+        {
+          "path": [
+            6,
+            0,
+            1
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            6,
+            1
+          ],
+          "start": "e",
+          "end": "h"
+        },
+        {
+          "path": [
+            6,
+            1,
+            1
+          ],
+          "start": "f",
+          "end": "g"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.MethodsAndStreams",
+      "input": "service Foo {\n  $a$rpc $b$Bar$c$($d$X$e$) returns($f$Y$g$);$h$  $i$rpc $j$Baz$k$($l$Z$m$) returns($n$W$o$);$p$}",
+      "spans": [
+        {
+          "path": [
+            6,
+            0,
+            2,
+            0
+          ],
+          "start": "a",
+          "end": "h"
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            0,
+            2
+          ],
+          "start": "d",
+          "end": "e"
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            0,
+            3
+          ],
+          "start": "f",
+          "end": "g"
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            1
+          ],
+          "start": "i",
+          "end": "p"
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            1,
+            1
+          ],
+          "start": "j",
+          "end": "k"
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            1,
+            2
+          ],
+          "start": "l",
+          "end": "m"
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            1,
+            3
+          ],
+          "start": "n",
+          "end": "o"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.Options",
+      "input": "$a$option $b$foo$c$.$d$($e$bar.baz$f$)$g$ = $h$123$i$;$j$\n$k$option qux = $l$-123$m$;$n$\n$o$option corge = $p$abc$q$;$r$\n$s$option grault = $t$'blah'$u$;$v$\n$w$option garply = $x${ yadda yadda }$y$;$z$\n$0$option waldo = $1$123.0$2$;$3$\n",
+      "spans": [
+        {
+          "path": [
+            8
+          ],
+          "start": "a",
+          "end": "j"
+        },
+        {
+          "path": [
+            8,
+            999,
+            0
+          ],
+          "start": "a",
+          "end": "j"
+        },
+        {
+          "path": [
+            8,
+            999,
+            0,
+            2
+          ],
+          "start": "b",
+          "end": "g"
+        },
+        {
+          "path": [
+            8,
+            999,
+            0,
+            2,
+            0
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            8,
+            999,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            8,
+            999,
+            0,
+            2,
+            1
+          ],
+          "start": "d",
+          "end": "g"
+        },
+        {
+          "path": [
+            8,
+            999,
+            0,
+            2,
+            1,
+            1
+          ],
+          "start": "e",
+          "end": "f"
+        },
+        {
+          "path": [
+            8,
+            999,
+            0,
+            4
+          ],
+          "start": "h",
+          "end": "i"
+        },
+        {
+          "path": [
+            8
+          ],
+          "start": "k",
+          "end": "n"
+        },
+        {
+          "path": [
+            8,
+            999,
+            1,
+            5
+          ],
+          "start": "l",
+          "end": "m"
+        },
+        {
+          "path": [
+            8
+          ],
+          "start": "o",
+          "end": "r"
+        },
+        {
+          "path": [
+            8,
+            999,
+            2,
+            3
+          ],
+          "start": "p",
+          "end": "q"
+        },
+        {
+          "path": [
+            8
+          ],
+          "start": "s",
+          "end": "v"
+        },
+        {
+          "path": [
+            8,
+            999,
+            3,
+            7
+          ],
+          "start": "t",
+          "end": "u"
+        },
+        {
+          "path": [
+            8
+          ],
+          "start": "w",
+          "end": "z"
+        },
+        {
+          "path": [
+            8,
+            999,
+            4,
+            8
+          ],
+          "start": "x",
+          "end": "y"
+        },
+        {
+          "path": [
+            8
+          ],
+          "start": "0",
+          "end": "3"
+        },
+        {
+          "path": [
+            8,
+            999,
+            5,
+            6
+          ],
+          "start": "1",
+          "end": "2"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            3
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            4
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            5
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            1,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            2,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            3,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            4,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            5,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            1,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            2,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            3,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            4,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            5,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            1,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            2,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            3,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            4,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            5,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.ScopedOptions",
+      "input": "message Foo {\n  $a$option mopt = 1;$b$\n}\nenum Bar {\n  $c$option eopt = 1;$d$\n}\nservice Baz {\n  $e$option sopt = 1;$f$\n  rpc M(X) returns(Y) {\n    $g$option mopt = 1;$h$\n  }\n  rpc MS4($1$stream$2$ X) returns($3$stream$4$ Y) {\n    $k$option mopt = 1;$l$\n  }\n}\n",
+      "spans": [
+        {
+          "path": [
+            4,
+            0,
+            7
+          ],
+          "start": "a",
+          "end": "b"
+        },
+        {
+          "path": [
+            5,
+            0,
+            3
+          ],
+          "start": "c",
+          "end": "d"
+        },
+        {
+          "path": [
+            6,
+            0,
+            3
+          ],
+          "start": "e",
+          "end": "f"
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            0,
+            4
+          ],
+          "start": "g",
+          "end": "h"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            7,
+            999,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            7,
+            999,
+            0,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            7,
+            999,
+            0,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            7,
+            999,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            7,
+            999,
+            0,
+            4
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            3,
+            999,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            3,
+            999,
+            0,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            3,
+            999,
+            0,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            3,
+            999,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            3,
+            999,
+            0,
+            4
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            3,
+            999,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            3,
+            999,
+            0,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            3,
+            999,
+            0,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            3,
+            999,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            3,
+            999,
+            0,
+            4
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            0,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            0,
+            3
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            0,
+            4,
+            999,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            0,
+            4,
+            999,
+            0,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            0,
+            4,
+            999,
+            0,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            0,
+            4,
+            999,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            0,
+            4,
+            999,
+            0,
+            4
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            1,
+            4
+          ],
+          "start": "k",
+          "end": "l"
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            1,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            1,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            1,
+            3
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            1,
+            4,
+            999,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            1,
+            4,
+            999,
+            0,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            1,
+            4,
+            999,
+            0,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            1,
+            4,
+            999,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            1,
+            4,
+            999,
+            0,
+            4
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            1,
+            5
+          ],
+          "start": "1",
+          "end": "2"
+        },
+        {
+          "path": [
+            6,
+            0,
+            2,
+            1,
+            6
+          ],
+          "start": "3",
+          "end": "4"
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.FieldOptions",
+      "input": "message Foo {  optional int32 bar = 1 $a$[default=$b$123$c$,$d$opt1=123$e$,$f$opt2='hi'$g$]$h$;}\n",
+      "spans": [
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8
+          ],
+          "start": "a",
+          "end": "h"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            7
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8,
+            999,
+            0
+          ],
+          "start": "d",
+          "end": "e"
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8,
+            999,
+            1
+          ],
+          "start": "f",
+          "end": "g"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            4
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            5
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            3
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8,
+            999,
+            0,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8,
+            999,
+            1,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8,
+            999,
+            0,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8,
+            999,
+            1,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8,
+            999,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8,
+            999,
+            1,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8,
+            999,
+            0,
+            4
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8,
+            999,
+            1,
+            7
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.EnumValueOptions",
+      "input": "enum Foo {  BAR = 1 $a$[$b$opt1=123$c$,$d$opt2='hi'$e$]$f$;}\n",
+      "spans": [
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0,
+            3
+          ],
+          "start": "a",
+          "end": "f"
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0,
+            3,
+            999,
+            0
+          ],
+          "start": "b",
+          "end": "c"
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0,
+            3,
+            999,
+            1
+          ],
+          "start": "d",
+          "end": "e"
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0,
+            3,
+            999,
+            0,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0,
+            3,
+            999,
+            1,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0,
+            3,
+            999,
+            0,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0,
+            3,
+            999,
+            1,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0,
+            3,
+            999,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0,
+            3,
+            999,
+            1,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0,
+            3,
+            999,
+            0,
+            4
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            5,
+            0,
+            2,
+            0,
+            3,
+            999,
+            1,
+            7
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.DocComments",
+      "input": "// Foo leading\n// line 2\n$a$message Foo {\n  // Foo trailing\n  // line 2\n\n  // detached\n\n  // bar leading\n  $b$optional int32 bar = 1;$c$\n  // bar trailing\n}$d$\n// ignored\n",
+      "spans": [
+        {
+          "path": [
+            4,
+            0
+          ],
+          "start": "a",
+          "end": "d",
+          "comments": [
+            " Foo leading\n line 2\n",
+            " Foo trailing\n line 2\n",
+            null
+          ]
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0
+          ],
+          "start": "b",
+          "end": "c",
+          "comments": [
+            " bar leading\n",
+            " bar trailing\n",
+            " detached\n"
+          ]
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            4
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            5
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            3
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.DocComments2",
+      "input": "// detached before message.\n\n// Foo leading\n// line 2\n$a$message Foo {\n  /* Foo trailing\n   * line 2 */\n  // detached\n  /* bar leading\n   */  $b$optional int32 bar = 1;$c$  // bar trailing\n  // ignored detached\n}$d$\n// ignored\n\n// detached before option\n\n// option leading\n$e$option baz = 123;$f$\n// option trailing\n",
+      "spans": [
+        {
+          "path": [
+            4,
+            0
+          ],
+          "start": "a",
+          "end": "d",
+          "comments": [
+            " Foo leading\n line 2\n",
+            " Foo trailing\n line 2 ",
+            " detached before message.\n"
+          ]
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0
+          ],
+          "start": "b",
+          "end": "c",
+          "comments": [
+            " bar leading\n",
+            " bar trailing\n",
+            " detached\n"
+          ]
+        },
+        {
+          "path": [
+            8,
+            999,
+            0
+          ],
+          "start": "e",
+          "end": "f",
+          "comments": [
+            " option leading\n",
+            " option trailing\n",
+            " detached before option\n"
+          ]
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            4
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            5
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            3
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            0,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            0,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            8,
+            999,
+            0,
+            4
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.DocComments3",
+      "input": "$a$message Foo {\n  // bar leading\n  $b$optional int32 bar = 1 [(baz.qux) = {}];$c$\n  // bar trailing\n}$d$\n// ignored\n",
+      "spans": [
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0
+          ],
+          "start": "b",
+          "end": "c",
+          "comments": [
+            " bar leading\n",
+            " bar trailing\n",
+            null
+          ]
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            4
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            5
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            3
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8,
+            999,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8,
+            999,
+            0,
+            2
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8,
+            999,
+            0,
+            2,
+            0
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8,
+            999,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            8,
+            999,
+            0,
+            8
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.DocCommentsTopLevel",
+      "input": "// detached before syntax paragraph 1\n\n// detached before syntax paragraph 2\n\n// syntax leading\n$a$syntax = \"proto2\";$b$\n// syntax trailing\n\n// syntax-package detached comments\n\n;\n\n// detached after empty before package\n\n// package leading\n$c$package foo;$d$\n// package trailing\n\n// ignored detach\n\n",
+      "spans": [
+        {
+          "path": [
+            12
+          ],
+          "start": "a",
+          "end": "b",
+          "comments": [
+            " syntax leading\n",
+            " syntax trailing\n",
+            " detached before syntax paragraph 1\n\n detached before syntax paragraph 2\n"
+          ]
+        },
+        {
+          "path": [
+            2
+          ],
+          "start": "c",
+          "end": "d",
+          "comments": [
+            " package leading\n",
+            " package trailing\n",
+            " syntax-package detached comments\n\n detached after empty before package\n"
+          ]
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        }
+      ]
+    },
+    {
+      "id": "SourceInfoTest.DocCommentsOneof",
+      "input": "// Foo leading\n$a$message Foo {\n  /* Foo trailing\n   */\n  // detached before oneof\n  /* bar leading\n   * line 2 */\n  $b$oneof bar {\n  /* bar trailing\n   * line 2 */\n  // detached before bar_int\n  /* bar_int leading\n   */\n  $c$int32 bar_int = 1;$d$  // bar_int trailing\n  // detach comment ignored\n  }$e$\n}$f$\n",
+      "spans": [
+        {
+          "path": [
+            4,
+            0
+          ],
+          "start": "a",
+          "end": "f",
+          "comments": [
+            " Foo leading\n",
+            " Foo trailing\n",
+            null
+          ]
+        },
+        {
+          "path": [
+            4,
+            0,
+            8,
+            0
+          ],
+          "start": "b",
+          "end": "e",
+          "comments": [
+            " bar leading\n line 2 ",
+            " bar trailing\n line 2 ",
+            " detached before oneof\n"
+          ]
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0
+          ],
+          "start": "c",
+          "end": "d",
+          "comments": [
+            " bar_int leading\n",
+            " bar_int trailing\n",
+            " detached before bar_int\n"
+          ]
+        },
+        {
+          "path": [],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            8,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            5
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            1
+          ],
+          "start": null,
+          "end": null
+        },
+        {
+          "path": [
+            4,
+            0,
+            2,
+            0,
+            3
+          ],
+          "start": null,
+          "end": null
+        }
+      ]
+    }
+  ],
   "skipped": [
     {
       "id": "ParserTest.RegressionNestedOpenBraceDoNotStackOverflow",

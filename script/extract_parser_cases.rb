@@ -271,11 +271,124 @@ each_test(src) do |fixture, name, from, to|
   end
 end
 
+# SourceInfoTest: the marked-up input and, per HasSpan call, the descriptor
+# path the C++ accessor chain denotes, the markers bounding the span and the
+# expected comments. Paths are computed from descriptor.proto's field numbers.
+
+DESCRIPTOR_FIELDS = begin
+  golden = JSON.parse(File.read(File.join(ROOT, "test/corpus/goldens/google/protobuf/descriptor.proto.json")))
+  file = golden["file"].find { |f| f["name"] == "google/protobuf/descriptor.proto" }
+  types = {}
+  walk = lambda do |message, scope|
+    full = "#{scope}.#{message["name"]}"
+    types[full] = message.fetch("field", []).to_h { |f| [f["name"], [f["number"], f["typeName"]&.delete_prefix(".")]] }
+    message.fetch("nestedType", []).each { |n| walk.call(n, full) }
+  end
+  file["messageType"].each { |m| walk.call(m, file["package"]) }
+  types
+end
+
+# Splits a call's argument list at top-level commas
+def call_arguments(text, open)
+  depth = 0
+  pos = open
+  start = open + 1
+  args = []
+  while pos < text.size
+    c = text[pos]
+    if c == "\""
+      r = CppReader.new(text, pos)
+      r.normal_literal
+      pos = r.pos
+      next
+    elsif c == "'"
+      pos += (text[pos + 1] == "\\") ? 4 : 3
+      next
+    elsif c == "("
+      depth += 1
+    elsif c == ")"
+      depth -= 1
+      if depth == 0
+        args << text[start...pos].strip
+        return [args, pos + 1]
+      end
+    elsif c == "," && depth == 1
+      args << text[start...pos].strip
+      start = pos + 1
+    end
+    pos += 1
+  end
+  raise "unbalanced call"
+end
+
+# A C++ accessor chain such as `file_.message_type(0).field(1)` as [path, type]
+def accessor_path(expr, bindings)
+  m = expr.match(/\A(\w+)((?:\.\w+\(\d*\))*)\z/) or raise "unsupported expression #{expr}"
+  path, type = (m[1] == "file_") ? [[], "google.protobuf.FileDescriptorProto"] : bindings.fetch(m[1])
+  m[2].scan(/\.(\w+)\((\d*)\)/) do |name, index|
+    number, next_type = DESCRIPTOR_FIELDS.fetch(type).fetch(name)
+    path += [number]
+    path += [Integer(index)] unless index.empty?
+    type = next_type
+  end
+  [path, type]
+end
+
+def string_or_nil(arg)
+  return nil if arg == "nullptr"
+  kind, value = CppReader.new(arg + ")").argument({})
+  raise "unsupported comment argument #{arg}" unless kind == :string
+  value
+end
+
+source_info = []
+src.scan(/^TEST_F\(SourceInfoTest,\s*(\w+)\)\s*\{/) do
+  name = Regexp.last_match[1]
+  from = Regexp.last_match.end(0)
+  to = src.index(/^\}/, from)
+  body = src[from...to]
+  begin
+    parse_at = body.index("Parse(") or raise "no Parse call"
+    kind, input = CppReader.new(body, parse_at + "Parse(".size).argument({})
+    raise "Parse input is not a literal" unless kind == :string
+    bindings = {}
+    body.scan(/const\s+[\w:]+&\s+(\w+)\s*=\s*([^;]+);/m) do |var, expr|
+      bindings[var] = accessor_path(expr.gsub(/\s+/, ""), bindings)
+    end
+    spans = []
+    body.to_enum(:scan, /\b(HasSpan|HasSpanWithComment)\(/).map { Regexp.last_match }.each do |call|
+      args, = call_arguments(body, call.end(0) - 1)
+      markers = args.first.start_with?("'") ? args.shift(2).map { |a| a[1...-1].delete("\\") } : [nil, nil]
+      path, type = accessor_path(args.shift.gsub(/\s+/, ""), bindings)
+      comments = nil
+      if call[1] == "HasSpanWithComment"
+        comments = args.shift(3).map { |a| string_or_nil(a) }
+      else
+        if (field = args.shift)
+          kind, field_name = CppReader.new(field + ")").argument({})
+          raise "unsupported field argument #{field}" unless kind == :string
+          path += [DESCRIPTOR_FIELDS.fetch(type).fetch(field_name).first]
+        end
+        index = args.shift
+        path += [Integer(index)] if index && index != "-1"
+        comments = args.shift(3).map { |a| string_or_nil(a) } unless args.empty?
+      end
+      span = {path: path, start: markers[0], end: markers[1]}
+      span[:comments] = comments if comments
+      spans << span
+    end
+    source_info << {id: "SourceInfoTest.#{name}", input: input, spans: spans}
+  rescue => e
+    skipped << {id: "SourceInfoTest.#{name}", kind: "SourceInfoTest", reason: e.message}
+  end
+end
+
 File.write(OUTPUT, JSON.pretty_generate({
   source: "test/corpus/protobuf/src/google/protobuf/compiler/parser_unittest.cc",
   generated_by: "script/extract_parser_cases.rb",
   cases: cases,
+  source_info: source_info,
   skipped: skipped
 }) + "\n")
-puts "#{cases.size} cases, #{skipped.size} skipped"
+puts "#{cases.size} cases, #{source_info.size} source info cases, #{skipped.size} skipped"
 skipped.each { |s| puts "  skipped #{s[:id]} (#{s[:kind]}): #{s[:reason]}" }

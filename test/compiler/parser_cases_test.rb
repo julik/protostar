@@ -56,6 +56,38 @@ class CompilerParserCasesTest < Minitest::Test
     end
   end
 
+  # SourceInfoTest: `$x$` markers in the input bound the expected spans;
+  # every location the parser records must be claimed by one expectation
+  DATA["source_info"].each do |c|
+    define_method(:"test_#{c["id"].tr(".", "_")}") do
+      text, markers = extract_markers(c["input"])
+      parser = Protostar::Compiler::Parser.new(text)
+      ast = parser.parse
+      assert_empty parser.errors
+      remaining = ast.locations.group_by(&:path)
+      c["spans"].each do |span|
+        path = span["path"]
+        if span["start"].nil?
+          refute_empty remaining.delete(path).to_a, "no location for #{path}"
+          next
+        end
+        start = markers.fetch(span["start"])
+        finish = markers.fetch(span["end"])
+        expected = start + ((finish[0] == start[0]) ? [] : [finish[0]]) + [finish[1]]
+        candidates = remaining[path].to_a
+        found = candidates.find { |loc| loc.span == expected }
+        assert found, "no location #{path} with span #{expected}, have #{candidates.map(&:span)}"
+        candidates.delete_at(candidates.index(found))
+        leading, trailing, detached = span["comments"]
+        assert_equal leading, found.leading_comments, "leading comments of #{path}"
+        assert_equal trailing, found.trailing_comments, "trailing comments of #{path}"
+        assert_equal detached.to_s, found.leading_detached_comments.join("\n"), "detached comments of #{path}"
+      end
+      leftover = remaining.values.flatten.map { |l| [l.path, l.span] }
+      assert_empty leftover, "locations no expectation claimed"
+    end
+  end
+
   def test_extraction_covers_the_file
     assert_operator DATA["cases"].size, :>=, 239
     skipped = DATA["skipped"].map { |s| s["id"] }
@@ -100,6 +132,38 @@ class CompilerParserCasesTest < Minitest::Test
   end
 
   private
+
+  # SourceInfoTest::ExtractMarkers: `$x$` records the position of marker x,
+  # `$$` is a literal dollar
+  def extract_markers(input)
+    markers = {}
+    out = +""
+    line = 0
+    column = 0
+    i = 0
+    while i < input.size
+      c = input[i]
+      if c == "$"
+        if input[i + 1] == "$"
+          out << "$"
+          column += 1
+          i += 2
+        else
+          markers[input[i + 1]] = [line, column]
+          i += 3
+        end
+        next
+      elsif c == "\n"
+        line += 1
+        column = 0
+      else
+        column += 1
+      end
+      out << c
+      i += 1
+    end
+    [out, markers]
+  end
 
   def run_case(c)
     case c["kind"]
