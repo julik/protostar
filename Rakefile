@@ -86,6 +86,18 @@ namespace :shim do
       end
     end
   end
+
+  desc "Run cheddar-me/pbbuilder's own test suite with google-protobuf replaced by the shim (clones into tmp/)"
+  task :pbbuilder do
+    ruby "script/pbbuilder_suite.rb", "shim"
+  end
+end
+
+namespace :builder do
+  desc "Run pbbuilder's own test suite on Protostar::Builder, with llm/outputs/ws9-pbbuilder.patch applied"
+  task :pbbuilder do
+    ruby "script/pbbuilder_suite.rb", "builder", "--fresh"
+  end
 end
 
 task default: %i[test standard]
