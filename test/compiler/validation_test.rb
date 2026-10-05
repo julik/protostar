@@ -7,7 +7,27 @@ require_relative "validation_cases"
 # compiles a file, compared line for line with what protoc 36.2 printed for
 # it (recorded in validation_cases.rb by script/record_validation_cases.rb).
 class CompilerValidationTest < Minitest::Test
+  # Where we knowingly differ from protoc, and what we report instead
+  DEVIATIONS = {
+    # Schema::Pool#add rejects a second extension with the same extendee and
+    # number from another file; protoc accepts it with a warning
+    "extension number used in another file" => [
+      "b.proto:4:22: warning: Extension number 10 has already been used in \"Foo\" by extension \"x\" defined in a.proto.",
+      "b.proto: extension number 10 of \"Foo\" is already used by \"x\" (redefined by \"y\")",
+      "c.proto:3:1: Import \"b.proto\" was not found or had errors."
+    ]
+  }.freeze
+
   ValidationCases::CASES.each do |name, c|
+    if (ours = DEVIATIONS[name])
+      define_method(:"test_#{name.gsub(/\W+/, "_")}") do
+        error = assert_raises(Protostar::Compiler::Error) do
+          Protostar::Compiler.new.compile([c[:files].keys.first], sources: c[:files])
+        end
+        assert_equal ours, error.diagnostics.map(&:to_s)
+      end
+      next
+    end
     define_method(:"test_#{name.gsub(/\W+/, "_")}") do
       compiler = Protostar::Compiler.new
       main = c[:files].keys.first

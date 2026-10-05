@@ -62,6 +62,16 @@ module Protostar
 
       private
 
+      # Schema::Pool refuses an extension number another file already uses,
+      # where protoc only warns (the linker reports that warning); the refusal
+      # becomes an error here
+      def add_to_pool(name, file)
+        @pool.add(file)
+      rescue Schema::Error => e
+        report(name, nil, e.message)
+        nil
+      end
+
       def list(file)
         return if @listed[file.name]
         file.dependency_files.each { |dep| list(dep) }
@@ -133,8 +143,8 @@ module Protostar
           report(name, position, problem.message, problem.severity)
         end
         file = linker.errors? ? nil : linker.file
+        file = add_to_pool(name, file) if file
         if file
-          @pool.add(file)
           @linkers[name] = linker
           list(file)
         end

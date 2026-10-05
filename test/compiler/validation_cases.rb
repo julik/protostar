@@ -970,6 +970,115 @@ module ValidationCases
         "a.proto:4:1: End-of-file inside block comment.",
         "a.proto:3:1:   Comment started here."
       ]
+    },
+    "deprecated feature warns" => {
+      files: {
+        "a.proto" => "edition = \"2023\";\nimport \"google/protobuf/java_features.proto\";\noption features.(pb.java).legacy_closed_enum = true;\nmessage M {}\n"
+      },
+      success: true,
+      protoc: [
+        "a.proto: warning: pb.JavaFeatures.legacy_closed_enum has been deprecated in edition 2023: The legacy closed enum behavior in Java is deprecated and is scheduled to be removed in edition 2025.  See http://protobuf.dev/programming-guides/enum/#java for more information."
+      ]
+    },
+    "feature from a later edition" => {
+      files: {
+        "a.proto" => "edition = \"2023\";\noption features.enforce_naming_style = STYLE2024;\nmessage M {}\n"
+      },
+      success: false,
+      protoc: [
+        "a.proto: google.protobuf.FeatureSet.enforce_naming_style wasn't introduced until edition 2024 and can't be used in edition 2023"
+      ]
+    },
+    "feature value from a later edition" => {
+      files: {
+        "a.proto" => "edition = \"2024\";\noption features.default_symbol_visibility = STRICT;\nmessage M {}\n"
+      },
+      success: true,
+      protoc: []
+    },
+    "removed option" => {
+      files: {
+        "a.proto" => "edition = \"2024\";\nmessage M {\n  string s = 1 [ctype = CORD];\n}\n"
+      },
+      success: false,
+      protoc: [
+        "a.proto:3:3: ctype option is not allowed under edition 2024 and beyond. Use the feature string_type = VIEW|CORD|STRING|... instead."
+      ]
+    },
+    "extension declaration mismatch" => {
+      files: {
+        "a.proto" => "syntax = \"proto2\";\npackage p;\nmessage M {\n  extensions 10 to 20 [declaration = {number: 10, full_name: \".p.ext\", type: \"int32\"}];\n}\nextend M {\n  optional string other = 10;\n}\n"
+      },
+      success: false,
+      protoc: [
+        "a.proto:6:8: \"p.M\" extension field 10 is expected to be type \"int32\", not \"string\".",
+        "a.proto:6:8: \"p.M\" extension field 10 is expected to have field name \".p.ext\", not \".p.other\"."
+      ]
+    },
+    "extension missing a declaration" => {
+      files: {
+        "a.proto" => "syntax = \"proto2\";\npackage p;\nmessage M {\n  extensions 10 to 20 [declaration = {number: 10, full_name: \".p.ext\", type: \"int32\"}];\n}\nextend M {\n  optional int32 ext = 10;\n  optional int32 other = 11;\n}\n"
+      },
+      success: false,
+      protoc: [
+        "a.proto: Missing extension declaration for field p.other with number 11 in extendee message p.M. An extension range must declare for all extension fields if its verification state is DECLARATION or there's any declaration in the range already. Otherwise, consider splitting up the range."
+      ]
+    },
+    "unverified range with declarations" => {
+      files: {
+        "a.proto" => "syntax = \"proto2\";\nmessage M {\n  extensions 10 to 20 [verification = UNVERIFIED, declaration = {number: 10, full_name: \".ext\", type: \"int32\"}];\n}\n"
+      },
+      success: false,
+      protoc: [
+        "a.proto: Cannot mark the extension range as UNVERIFIED when it has extension(s) declared."
+      ]
+    },
+    "feature used in the file that defines it" => {
+      files: {
+        "a.proto" => "edition = \"2023\";\npackage p;\nimport \"google/protobuf/descriptor.proto\";\nextend google.protobuf.FeatureSet {\n  MyFeatures my = 9995;\n}\nmessage MyFeatures {\n  bool flag = 1;\n}\noption features.(my).flag = true;\n"
+      },
+      success: false,
+      protoc: [
+        "a.proto:10:8: Feature \"features.(my)\" can't be used in the same file it's defined in."
+      ]
+    },
+    "aggregate option with nested messages and extensions" => {
+      files: {
+        "a.proto" => "syntax = \"proto2\";\npackage p;\nimport \"google/protobuf/descriptor.proto\";\nmessage Opt {\n  optional int32 a = 1;\n  repeated Opt kids = 2;\n  extensions 100 to 200;\n}\nextend Opt { optional string tag = 100; }\nextend google.protobuf.MessageOptions { optional Opt opt = 50000; }\nmessage M {\n  option (opt) = { a: 1 kids [{a: 2}, {a: 3 [p.tag]: \"x\"}] [p.tag]: \"y\" };\n}\n"
+      },
+      success: true,
+      protoc: []
+    },
+    "aggregate option errors" => {
+      files: {
+        "a.proto" => "syntax = \"proto2\";\npackage p;\nimport \"google/protobuf/descriptor.proto\";\nmessage Opt {\n  optional int32 a = 1;\n}\nextend google.protobuf.MessageOptions { optional Opt opt = 50000; }\nmessage M {\n  option (opt) = { a: 1 a: 2 };\n}\nmessage N {\n  option (opt) = { a: \"x\" };\n}\n"
+      },
+      success: false,
+      protoc: [
+        "a.proto:9:18: Error while parsing option value for \"opt\": Non-repeated field \"a\" is specified multiple times.",
+        "a.proto:12:18: Error while parsing option value for \"opt\": Expected integer, got: \"x\""
+      ]
+    },
+    "extension number used in another file" => {
+      files: {
+        "c.proto" => "syntax = \"proto2\";\nimport \"a.proto\";\nimport \"b.proto\";\n",
+        "a.proto" => "syntax = \"proto2\";\nmessage Foo {\n  extensions 10 to 20;\n}\nextend Foo {\n  optional int32 x = 10;\n}\n",
+        "b.proto" => "syntax = \"proto2\";\nimport \"a.proto\";\nextend Foo {\n  optional int32 y = 10;\n}\n"
+      },
+      success: true,
+      protoc: [
+        "b.proto:4:22: warning: Extension number 10 has already been used in \"Foo\" by extension \"x\" defined in a.proto.",
+        "c.proto:2:1: warning: Import a.proto is unused.",
+        "c.proto:3:1: warning: Import b.proto is unused."
+      ]
+    },
+    "option import" => {
+      files: {
+        "a.proto" => "edition = \"2024\";\nimport option \"b.proto\";\noption (flag) = true;\nmessage M {}\n",
+        "b.proto" => "edition = \"2024\";\nimport \"google/protobuf/descriptor.proto\";\nextend google.protobuf.FileOptions {\n  bool flag = 50000;\n}\n"
+      },
+      success: true,
+      protoc: []
     }
   }.freeze
 end

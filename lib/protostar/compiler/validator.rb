@@ -906,7 +906,9 @@ module Protostar
           if features && (feature_type = type.fields_by_name["features"]&.message_type)
             lifetimes(features, feature_type, edition, node)
           end
-          lifetimes(hash, type, edition, node)
+          # protoc moves features out of the options before this check
+          rest = hash.except(:features)
+          lifetimes(rest, type, edition, node) unless rest.empty?
         end
       end
 
