@@ -26,7 +26,10 @@ class JSONDecodeTest < Minitest::Test
     assert_equal [1, 2, 3, 4], [m.optional_int32, m.optional_int64, m._field_name3, m.field__name4_]
     assert_error(/has no field "nope"/, '{"nope": 1}')
     assert_equal 5, decode('{"nope": {"x": [1]}, "optionalInt32": 5}', ignore_unknown_fields: true).optional_int32
-    assert_equal 2, decode('{"optionalInt32": 1, "optional_int32": 2}').optional_int32, "the last of a repeated name wins"
+    # conformance: Recommended.*.JsonInput.FieldNameDuplicate*, which google-protobuf fails
+    assert_error(/optional_int32 is given more than once/, '{"optionalInt32": 1, "optional_int32": 2}')
+    assert_error(/optional_int32 is given more than once/, '{"optional_int32": null, "optionalInt32": 2}')
+    assert_error(/duplicate key/i, '{"optionalInt32": 1, "optionalInt32": 2}')
   end
 
   def test_integers
@@ -35,7 +38,12 @@ class JSONDecodeTest < Minitest::Test
     assert_equal [12, 100, 1, 2**64 - 1, 100, 0, 2**32 - 1],
       [m.optional_int32, m.optional_int64, m.optional_uint32, m.optional_uint64, m.optional_sint32, m.optional_sfixed64, m.optional_fixed32]
     assert_error(/1.5 is not an integer/, '{"optionalInt32": 1.5}', path: "optional_int32")
-    assert_error(/"1e2" is not an integer/, '{"optionalInt32": "1e2"}')
+    # conformance: Required.*.JsonInput.Int32FieldQuotedExponentialValue, which google-protobuf fails
+    m = decode('{"optionalInt32": "1e5", "optionalInt64": "-2.5E1", "optionalUint64": "1.0", "optionalUint32": ".1e1"}')
+    assert_equal [100_000, -25, 1, 1], [m.optional_int32, m.optional_int64, m.optional_uint64, m.optional_uint32]
+    assert_error(/1.5 is not an integer/, '{"optionalInt32": "1.5"}')
+    assert_error(/out of range/, '{"optionalInt32": "1e10"}')
+    assert_error(/"1e" is not an integer/, '{"optionalInt32": "1e"}')
     assert_error(/" 1" is not an integer/, '{"optionalInt32": " 1"}')
     assert_error(/"0x10" is not an integer/, '{"optionalInt64": "0x10"}')
     assert_error(/2147483648 is out of range for int32/, '{"optionalInt32": 2147483648}')

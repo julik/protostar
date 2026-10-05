@@ -19,6 +19,8 @@ module Protostar
       INT64_LIMIT = 2.0**63
       UINT64_LIMIT = 2.0**64
       QUOTED_INTEGER = /\A-?\d+\z/
+      # Integers in decimal or exponent form, read through a double as protoc does ("1e5")
+      QUOTED_INTEGRAL = /\A-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?\z/
       QUOTED_FLOAT = /\A\s*[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?\z/
       NONFINITE = {"NaN" => Float::NAN, "Infinity" => Float::INFINITY, "-Infinity" => -Float::INFINITY}.freeze
       BASE64 = %r{\A[A-Za-z0-9+/\-_]*={0,2}\z}
@@ -45,7 +47,7 @@ module Protostar
         tree = begin
           # the stdlib reads -0 as the Integer 0, losing the sign a double field keeps
           string = string.gsub(NEGATIVE_ZERO) { |m| (m == "-0") ? "-0.0" : m } if string.include?("-0")
-          ::JSON.parse(string, allow_duplicate_key: true, allow_nan: false)
+          ::JSON.parse(string, allow_duplicate_key: false, allow_nan: false)
         rescue ::JSON::ParserError, EncodingError, ArgumentError => e
           raise ParseError, "invalid JSON: #{e.message}"
         end
@@ -83,6 +85,7 @@ module Protostar
         klass = msg.class
         descriptor = klass.descriptor
         oneofs = nil
+        seen = {}
         node.each do |key, value|
           field = descriptor.fields_by_json_name[key] || descriptor.fields_by_name[key]
           unless field
@@ -91,6 +94,8 @@ module Protostar
           end
           info = klass.__by_number.fetch(field.number)
           @path << info.name
+          fail!("field #{info.name} is given more than once") if seen[info.number]
+          seen[info.number] = true
           if value.nil? && (info.repeated || info.map || !null_is_value?(info))
             @path.pop
             next
@@ -187,6 +192,7 @@ module Protostar
       end
 
       def integer(info, value)
+        value = Float(value) if value.is_a?(String) && !QUOTED_INTEGER.match?(value) && QUOTED_INTEGRAL.match?(value)
         n = case value
         when Integer, Float
           f = value.to_f
@@ -366,6 +372,7 @@ module Protostar
 
       def any(klass, node)
         fail!("expected an object for google.protobuf.Any, got #{describe(node)}") unless node.is_a?(Hash)
+        return klass.new if node.empty?
         url = node["@type"]
         fail!("Any has no \"@type\"") if url.nil?
         fail!("\"@type\" of Any must be a string") unless url.is_a?(String)

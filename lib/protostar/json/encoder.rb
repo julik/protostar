@@ -200,6 +200,7 @@ module Protostar
       def any(msg, out)
         url = get(msg, "type_url") || ""
         value = get(msg, "value") || ""
+        return out << "{}" if url.empty? && value.empty?
         klass = any_class(url)
         inner = begin
           klass.decode(value)
