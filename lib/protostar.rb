@@ -4,6 +4,22 @@ require_relative "protostar/version"
 
 module Protostar
   class Error < StandardError; end
+
+  # Short names for the well-known types: `Protostar::Timestamp` is
+  # `Protostar::Google::Protobuf::Timestamp`. Each loads its bootstrap file
+  # on first use, so `require "protostar"` does not.
+  {
+    "any" => %i[Any],
+    "duration" => %i[Duration],
+    "empty" => %i[Empty],
+    "field_mask" => %i[FieldMask],
+    "struct" => %i[Struct Value ListValue],
+    "timestamp" => %i[Timestamp],
+    "wrappers" => %i[DoubleValue FloatValue Int64Value UInt64Value Int32Value UInt32Value BoolValue StringValue BytesValue]
+  }.each do |file, names|
+    path = File.expand_path("protostar/short_names/#{file}", __dir__)
+    names.each { |name| autoload(name, path) }
+  end
 end
 
 require_relative "protostar/errors"

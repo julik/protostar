@@ -14,7 +14,7 @@ module Protostar
       # One error or warning. `node` is the AST node whose recorded position
       # protoc reports (nil for none), `location` the kind of position, or for
       # :import the imported file name
-      Problem = Struct.new(:severity, :node, :location, :message, :import)
+      Problem = ::Struct.new(:severity, :node, :location, :message, :import)
 
       MAX_FIELD_NUMBER = 536_870_911
       INT32_MAX = 2**31 - 1
@@ -31,7 +31,7 @@ module Protostar
       }.freeze
 
       # The options of one element awaiting interpretation
-      Pending = Struct.new(:node, :kind, :name_scope, :element_name, :path, :options, :result)
+      Pending = ::Struct.new(:node, :kind, :name_scope, :element_name, :path, :options, :result)
 
       # @return [Array<Problem>]
       attr_reader :problems

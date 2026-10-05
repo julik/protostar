@@ -11,7 +11,7 @@ module Protostar
     class Lexer
       # A token. `line`, `column` and `end_column` are 0-based; `text` is the
       # source text of the token, quotes and escapes included for strings
-      Token = Struct.new(:type, :text, :line, :column, :end_column)
+      Token = ::Struct.new(:type, :text, :line, :column, :end_column)
 
       TAB_WIDTH = 8
 
