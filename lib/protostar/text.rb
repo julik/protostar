@@ -32,7 +32,8 @@ module Protostar
       # @param message [Message]
       # @param single_line [Boolean] everything on one line, fields separated by spaces
       # @param expand_any [Boolean] print an Any whose type is known as
-      #   `[type_url] { ... }` (protoc --decode does not; its DebugString does)
+      #   `[type_url] { ... }`; off by default, as in `protoc --decode`
+      #   (protoc's DebugString expands)
       # @param as_utf8 [Boolean] keep valid UTF-8 in strings readable instead of
       #   escaping every byte above 0x7e in octal as protoc does
       # @param unknown_fields [Boolean] false leaves unknown fields out, as

@@ -40,7 +40,7 @@ class TextFixturesTest < Minitest::Test
     define_method(:"test_print_#{name}") do
       set = CodecFixtures.load(meta["proto"])
       message = set[meta["message"]].decode(File.binread(File.join(DIR, "#{name}.binpb")))
-      assert_equal File.read(File.join(DIR, "#{name}.txt")), Protostar::Text.print(message, expand_any: false, registry: set.registry)
+      assert_equal File.read(File.join(DIR, "#{name}.txt")), Protostar::Text.print(message, registry: set.registry)
     end
 
     define_method(:"test_print_unknown_#{name}") do
