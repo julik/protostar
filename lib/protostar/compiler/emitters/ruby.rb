@@ -56,6 +56,19 @@ module Protostar
           @file = @source = nil
         end
 
+        # Only the {Protostar::DSL.file} statement, without requires and constants
+        # @param file [Schema::File]
+        # @return [String]
+        def definition(file)
+          @file = file
+          @source = file.source_info
+          @out = +""
+          emit_file(file)
+          @out
+        ensure
+          @file = @source = nil
+        end
+
         # @param name [String] an imported file name
         # @return [String] what a generated file requires for it
         def require_path(name)
