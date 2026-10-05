@@ -147,7 +147,7 @@ class FeaturesTest < Minitest::Test
 
     svc = file.services.first
     assert_equal :LEGACY_BEST_EFFORT, svc.features.json_format
-    assert_equal :LEGACY_BEST_EFFORT, svc.method(:Call).features.json_format
+    assert_equal :LEGACY_BEST_EFFORT, svc.rpc(:Call).features.json_format
   end
 
   def test_custom_features_merge_as_messages

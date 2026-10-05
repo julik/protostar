@@ -2,8 +2,8 @@
 
 module Protostar
   module Schema
-    # An RPC service. Note that {#methods} and {#method} are the service's RPCs,
-    # shadowing Object#methods and Object#method.
+    # An RPC service. Its methods are exposed as {#rpcs} and {#rpc} so that
+    # Object#methods and Object#method keep working on a descriptor.
     class Service < Descriptor
       # @return [File]
       attr_reader :file
@@ -18,27 +18,27 @@ module Protostar
       end
 
       # @api private
-      def __methods(methods)
-        @methods = methods
-        @methods_by_name = methods.to_h { |m| [m.name, m] }.freeze
+      def __rpcs(rpcs)
+        @rpcs = rpcs
+        @rpcs_by_name = rpcs.to_h { |m| [m.name, m] }.freeze
         self
       end
 
       # @return [Array<Method>] declaration order
-      def methods(*)
-        @methods
+      def rpcs
+        @rpcs
       end
 
       # @param name [String, Symbol]
       # @return [Method, nil]
-      def method(name)
-        @methods_by_name[name.to_s]
+      def rpc(name)
+        @rpcs_by_name[name.to_s]
       end
 
       # @return [Hash] the ServiceDescriptorProto hash
       def to_h
         h = {name: @name}
-        h[:method] = @methods.map(&:to_h) unless @methods.empty?
+        h[:method] = @rpcs.map(&:to_h) unless @rpcs.empty?
         options_to_h(h)
       end
     end

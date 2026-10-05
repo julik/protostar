@@ -73,9 +73,9 @@ class Proto2Test < Minitest::Test
     pool, file = SchemaFixtures.cached("google/protobuf/unittest_custom_options.proto")
     service = pool.find_service("proto2_unittest.TestServiceWithCustomOptions")
     assert_same service, file.services.first
-    assert_equal ["Foo"], service.methods.map(&:name)
-    foo = service.method(:Foo)
-    assert_same foo, service.method(foo.name)
+    assert_equal ["Foo"], service.rpcs.map(&:name)
+    foo = service.rpc(:Foo)
+    assert_same foo, service.rpc(foo.name)
     assert_equal "proto2_unittest.TestServiceWithCustomOptions.Foo", foo.full_name
     assert_equal "proto2_unittest.CustomOptionFooRequest", foo.input_type.full_name
     assert_equal "proto2_unittest.CustomOptionFooResponse", foo.output_type.full_name
@@ -87,7 +87,7 @@ class Proto2Test < Minitest::Test
 
   def test_streaming_methods
     pool, = SchemaFixtures.cached("ruby/tests/service_test.proto")
-    methods = pool.files.last.services.flat_map(&:methods)
+    methods = pool.files.last.services.flat_map(&:rpcs)
     assert methods.any?(&:client_streaming?)
     assert methods.any?(&:server_streaming?)
     streaming = methods.find(&:client_streaming?)

@@ -141,8 +141,8 @@ Build cost: `unittest.proto` 13ms, `descriptor.proto` 3ms; all 237 file builds o
   built once. Extensions: `Pool#find_extension(extendee, number)`, `Message#extension_number?`.
   Shareable side tables you build at class-definition time should be deep-frozen before
   `Ractor.make_shareable` (see above).
-- **Shim (WS4)**: `Service#methods` and `Service#method(name)` shadow `Object#methods/#method`
-  as the spec asked; avoid `obj.method(:x)` on a Service. `Pool` is per-process and mutable; the
+- **Shim (WS4)**: a service's RPCs are `Service#rpcs` and `Service#rpc(name)` (renamed on merge so
+  `Object#methods` and `Object#method` keep working). `Pool` is per-process and mutable; the
   generated-pool singleton is yours to define.
 
 ## Open questions

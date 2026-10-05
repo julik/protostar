@@ -154,7 +154,7 @@ class ResolverTest < Minitest::Test
   def test_method_types_resolve_from_the_service_scope
     file = add(name: "s.proto", package: "pkg", message_type: [{name: "Req"}],
       service: [{name: "S", method: [{name: "M", input_type: "Req", output_type: ".pkg.Req"}]}])
-    method = file.services.first.method(:M)
+    method = file.services.first.rpc(:M)
     assert_same file.find_message("pkg.Req"), method.input_type
     assert_same method.input_type, method.output_type
   end

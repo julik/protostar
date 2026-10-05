@@ -284,7 +284,7 @@ module Protostar
           @methods << method
           method
         end
-        service.__methods(methods)
+        service.__rpcs(methods)
       end
 
       def link_fields
@@ -354,7 +354,7 @@ module Protostar
         @file.extensions.each { |f| resolve_field_features(f, file_features) }
         @file.services.each do |service|
           service_features = inherit(file_features, service)
-          service.methods.each { |m| inherit(service_features, m) }
+          service.rpcs.each { |m| inherit(service_features, m) }
         end
       end
 

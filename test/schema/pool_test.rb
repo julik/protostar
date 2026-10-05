@@ -27,7 +27,7 @@ class PoolTest < Minitest::Test
     assert_nil @pool.find_message("pkg.E")
     assert_same file.enums.first, @pool.find_enum("pkg.E")
     assert_same file.services.first, @pool.find_service("pkg.S")
-    assert_same file.services.first.method(:Call), @pool.find_symbol("pkg.S.Call")
+    assert_same file.services.first.rpc(:Call), @pool.find_symbol("pkg.S.Call")
     assert_same file.enums.first.value(0), @pool.find_symbol("pkg.E_ZERO")
     assert_same file.extensions.first, @pool.find_extension("pkg.M", 10)
     assert_same file.extensions.first, @pool.find_extension(file.messages.first, 10)
