@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "forwardable"
+
 module Google
   module Protobuf
     module Internal
@@ -54,18 +56,6 @@ module Google
           @descriptor_pool = pool
         end
 
-        def method_missing(name, *args, **kwargs, &block)
-          if @__schema.respond_to?(name)
-            @__schema.public_send(name, *args, **kwargs, &block)
-          else
-            super
-          end
-        end
-
-        def respond_to_missing?(name, include_private = false)
-          @__schema.respond_to?(name) || super
-        end
-
         def wrap(schema)
           schema && @descriptor_pool.__wrap(schema)
         end
@@ -99,6 +89,13 @@ module Google
     class Descriptor
       include Internal::Wrapper
       include Enumerable
+      extend Forwardable
+
+      # protostar's runtime reads `klass.descriptor` as a Protostar::Schema::Message
+      # (JSON, text, Any); these are the methods it calls
+      # @api private
+      def_delegators :@__schema, :full_name, :file, :fields, :fields_by_name, :fields_by_number,
+        :fields_by_json_name, :map_entry?, :message_set_wire_format?, :extension_number?
 
       # @return [String] the full name
       def name
@@ -403,9 +400,9 @@ module Google
         nil
       end
 
-      # @return [Boolean] whether numbers without a name are refused (the gem treats every enum as open)
+      # @return [false] the gem treats every enum as open, whatever the .proto says
       def is_closed?
-        @__schema.closed?
+        false
       end
 
       # @return [Module] the enum module: a constant per value, `lookup`, `resolve`, `descriptor`

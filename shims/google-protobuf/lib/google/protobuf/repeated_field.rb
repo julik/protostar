@@ -90,7 +90,7 @@ module Google
         check_frozen
         count = @array.size
         index += count if index < 0
-        return nil if index < 0
+        return if index < 0
         v = convert(value)
         if index >= count
           zero = Internal::Convert.zero(@type, @sub)

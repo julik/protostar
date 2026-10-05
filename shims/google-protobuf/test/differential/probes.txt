@@ -1171,3 +1171,26 @@ BasicTestProto2::TestMessageDefaults.encode_json(BasicTestProto2::TestMessageDef
 BasicTestProto2::TestMessage.decode_json('{"optionalEnum": 99}')
 ---
 BasicTestProto2::TestMessage.decode_json('{"optionalEnum": 99}').optional_enum
+---
+M.new(optional_int32: 1)._optional_int32
+---
+M.new(optional_int32: 1).has__optional_int32?
+---
+m = M.new(optional_int32: 1); m.clear__optional_int32; m.has_optional_int32?
+---
+M.new.respond_to?(:_optional_int32)
+---
+[BasicTest::TestEnum.descriptor.is_closed?, BasicTestProto2::TestMessage.descriptor.lookup("optional_enum").subtype.is_closed?]
+---
+M.descriptor.file_descriptor.respond_to?(:syntax)
+---
+#~ protostar's own message methods (encode, to_text, merge! and so on) are there as well
+M.new.respond_to?(:encode)
+---
+def chain(n); deep = BasicTest::Recursive1.new; node = deep; n.times { c = BasicTest::Recursive2.new; node.foo = c; node = BasicTest::Recursive1.new; c.foo = node }; deep; end; [31, 32, 49, 50, 64, 99, 100, 101, 200].map { |n| (BasicTest::Recursive1.encode(chain(n)).bytesize rescue $!.class) }
+---
+[31, 32, 49, 50, 51, 99, 100, 101].map { |n| (BasicTest::Recursive1.decode(BasicTest::Recursive1.encode(chain(n), recursion_limit: 1000)) && :ok rescue $!.class) }
+---
+[3, 4, 5].map { |l| (BasicTest::Recursive1.decode(BasicTest::Recursive1.encode(chain(2)), recursion_limit: l) && :ok rescue $!.class) }
+---
+[3, 4, 5, 6].map { |l| (BasicTest::Recursive1.encode(chain(2), recursion_limit: l) && :ok rescue $!.class) }

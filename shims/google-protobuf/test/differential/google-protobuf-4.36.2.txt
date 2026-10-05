@@ -1127,3 +1127,25 @@ false
 <BasicTestProto2::TestMessage: optional_enum: 99, repeated_int32: [], repeated_int64: [], repeated_uint32: [], repeated_uint64: [], repeated_bool: [], repeated_float: [], repeated_double: [], repeated_string: [], repeated_bytes: [], repeated_msg: [], repeated_enum: []>
 ---
 99
+---
+:optional_int32
+---
+true
+---
+false
+---
+true
+---
+[false, false]
+---
+false
+---
+~ protostar's own message methods (encode, to_text, merge! and so on) are there as well
+---
+[124, 128, 230, RuntimeError, RuntimeError, RuntimeError, RuntimeError, RuntimeError, RuntimeError]
+---
+[:ok, :ok, :ok, :ok, Google::Protobuf::ParseError, Google::Protobuf::ParseError, Google::Protobuf::ParseError, Google::Protobuf::ParseError]
+---
+[Google::Protobuf::ParseError, :ok, :ok]
+---
+[RuntimeError, RuntimeError, :ok, :ok]

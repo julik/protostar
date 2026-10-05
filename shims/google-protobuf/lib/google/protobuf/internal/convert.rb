@@ -105,7 +105,9 @@ module Google
               else
                 unsigned ? "unsigned long long" : "long long"
               end
-              text = given.infinite? ? ((given > 0) ? "Inf" : "-Inf") : format("%-.10g", given)
+              text = if given.infinite? then (given > 0) ? "Inf" : "-Inf"
+              else format("%-.10g", given)
+              end
               return "float #{text} out of range of #{target}"
             end
             given = given.to_i

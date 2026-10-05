@@ -27,7 +27,7 @@ module Differential
   rescue Exception => e # standard:disable Lint/RescueException
     case e
     when NameError then "!! #{e.class}: #{e.name}" # Ruby 3.4 reworded these
-    else (e.class.name == "Google::Protobuf::ParseError") ? "!! #{e.class}" : "!! #{e.class}: #{e.message[0, 200]}"
+    else e.instance_of?(Google::Protobuf::ParseError) ? "!! #{e.class}" : "!! #{e.class}: #{e.message[0, 200]}"
     end
   end
 

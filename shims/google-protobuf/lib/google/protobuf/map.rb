@@ -145,10 +145,9 @@ module Google
         __types == other.__types && @hash == other.__hash
       end
 
+      # Independent of entry order, like equality
       def hash
-        h = 0
-        @hash.each { |k, v| h += [k, v].hash }
-        h
+        @hash.to_a.sort_by(&:hash).hash
       end
 
       # @return [Map] a copy; message values are shared
