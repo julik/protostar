@@ -324,21 +324,44 @@ module Protostar
     end
 
     def inspect
-      parts = []
-      self.class.__fields.each do |info|
-        v = @values[info.index]
-        next if v.nil?
-        next if (info.repeated || info.map) && v.empty?
-        next if !info.presence && !info.repeated && !info.map && info.zero?(v)
-        parts << "#{info.name}: #{v.inspect}"
-      end
+      parts = __shown.map { |name, v| "#{name}: #{v.inspect}" }
       name = self.class.descriptor.full_name
       parts.empty? ? "#<#{name}>" : "#<#{name} #{parts.join(", ")}>"
     end
     alias_method :to_s, :inspect
 
+    # For `pp`: the fields `inspect` shows, one per line with nested
+    # messages indented when they do not fit on one
     def pretty_print(q)
-      q.text(inspect)
+      Message.__pretty_print(q, self.class.descriptor.full_name, __shown)
+    end
+
+    # @api private
+    def self.__pretty_print(q, name, fields)
+      return q.text("#<#{name}>") if fields.empty?
+      q.group(2, "#<#{name}", ">") do
+        fields.each_with_index do |(field, v), i|
+          q.text(",") if i > 0
+          q.breakable
+          q.text("#{field}: ")
+          q.pp(v)
+        end
+      end
+    end
+
+    # The fields `inspect` shows: set, and not at their zero value
+    # @return [Array<Array(String, Object)>]
+    # @api private
+    def __shown
+      shown = []
+      self.class.__fields.each do |info|
+        v = @values[info.index]
+        next if v.nil?
+        next if (info.repeated || info.map) && v.empty?
+        next if !info.presence && !info.repeated && !info.map && info.zero?(v)
+        shown << [info.name, v]
+      end
+      shown
     end
 
     # @api private

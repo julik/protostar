@@ -149,6 +149,10 @@ module Protostar
         to_h.inspect
       end
 
+      def pretty_print(q)
+        q.pp(to_h)
+      end
+
       # Decodes every entry and freezes what it keeps, after which the
       # container is Ractor-shareable when its buffer is
       # @return [self]

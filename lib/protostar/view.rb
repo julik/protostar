@@ -215,7 +215,21 @@ module Protostar
     end
 
     def inspect
-      parts = []
+      parts = __shown.map { |name, v| "#{name}: #{v.inspect}" }
+      name = "view #{descriptor.full_name}"
+      parts.empty? ? "#<#{name}>" : "#<#{name} #{parts.join(", ")}>"
+    end
+    alias_method :to_s, :inspect
+
+    # For `pp`, laid out as {Message#pretty_print} lays out messages
+    def pretty_print(q)
+      Message.__pretty_print(q, "view #{descriptor.full_name}", __shown)
+    end
+
+    # @return [Array<Array(String, Object)>] the fields `inspect` shows
+    # @api private
+    def __shown
+      shown = []
       ix = @ix
       readers = self.class.__readers
       self.class.__fields.each do |info|
@@ -223,15 +237,9 @@ module Protostar
         v = __send__(readers[info.index])
         next if (info.repeated || info.map) && v.empty?
         next if !info.presence && !info.repeated && !info.map && info.zero?(v)
-        parts << "#{info.name}: #{v.inspect}"
+        shown << [info.name, v]
       end
-      name = "view #{descriptor.full_name}"
-      parts.empty? ? "#<#{name}>" : "#<#{name} #{parts.join(", ")}>"
-    end
-    alias_method :to_s, :inspect
-
-    def pretty_print(q)
-      q.text(inspect)
+      shown
     end
 
     # @return [Array<Array(Integer, Integer)>] offset and length of each
