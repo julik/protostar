@@ -102,10 +102,14 @@ module Protostar
     # @param names [Array<String>] file names relative to an include path, e.g. "foo/bar.proto"
     # @param source_info [Boolean] keep `source_code_info` in the built files
     # @param retain_options [Boolean] return the pool's files, source-retention options included
+    # @param sources [Hash{String => String}] file contents by name, consulted before the include paths
+    # @param protoc_cli [Boolean] @api private: false checks like a bare DescriptorPool rather than
+    #   protoc's command line (no imports loaded from disk, no unused import, naming style or other
+    #   command-line checks), as protoc's own parser tests do
     # @return [Array<Schema::File>] the named files and their transitive imports, imports first
     # @raise [Error] with every diagnostic when a file cannot be compiled
-    def compile(names, source_info: false, retain_options: false)
-      run = Run.new(self, names, source_info)
+    def compile(names, source_info: false, retain_options: false, sources: {}, protoc_cli: true)
+      run = Run.new(self, names, source_info, sources: sources, protoc_cli: protoc_cli)
       files = run.call
       @diagnostics = run.diagnostics
       raise Error.new(run.diagnostics) if run.failed?
@@ -114,8 +118,8 @@ module Protostar
 
     # Same as {#compile}, as descriptor hashes
     # @return [Array<Hash>]
-    def compile_to_hashes(names, source_info: false, retain_options: false)
-      compile(names, source_info: source_info, retain_options: retain_options).map(&:to_h)
+    def compile_to_hashes(names, source_info: false, retain_options: false, sources: {})
+      compile(names, source_info: source_info, retain_options: retain_options, sources: sources).map(&:to_h)
     end
 
     # @param name [String] a virtual file name

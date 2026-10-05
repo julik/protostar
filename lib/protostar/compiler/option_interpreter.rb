@@ -43,6 +43,14 @@ module Protostar
         @local = Schema::Builder.build(@linker.structural_hash, pool: @pool)
         state = pending.map { |p| [p, [], []] }
         state.each { |p, first, _| interpret(p, first, skip_extensions: true) }
+        if block_given?
+          features = {}.compare_by_identity
+          state.each do |p, first, _|
+            folded = fold(first)
+            features[p.node] = folded[:features] if folded.key?(:features)
+          end
+          yield features
+        end
         state.each { |p, first, second| interpret(p, second, skip_extensions: false, earlier: first) }
         result = {}.compare_by_identity
         state.each do |p, first, second|

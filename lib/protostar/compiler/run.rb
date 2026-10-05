@@ -12,17 +12,26 @@ module Protostar
       # @return [Array<Diagnostic>]
       attr_reader :diagnostics
 
-      def initialize(compiler, names, source_info)
+      # @param compiler [Compiler]
+      # @param names [Array<String>] the files asked for
+      # @param source_info [Boolean]
+      # @param sources [Hash{String => String}] file contents to use instead of reading include paths
+      # @param protoc_cli [Boolean] behave like protoc's command line (see {Linker#initialize});
+      #   false behaves like a bare DescriptorPool, which loads no imports itself
+      def initialize(compiler, names, source_info, sources: {}, protoc_cli: true)
         @compiler = compiler
         @pool = compiler.pool
         @names = names
         @source_info = source_info
+        @sources = sources
+        @protoc_cli = protoc_cli
         @diagnostics = []
         @pending = []
         @done = {}
         @failed = false
         @order = []
         @listed = {}
+        @linkers = {}
       end
 
       def failed?
@@ -31,18 +40,16 @@ module Protostar
 
       # @return [Array<Schema::File>]
       def call
-        built = []
+        direct = []
         @names.each do |name|
           file = load(name, direct: true)
           if file.nil?
             @failed = true
             break
           end
-          built << [name, file]
+          direct << @linkers[name] if @linkers[name]
         end
-        unless failed?
-          built.each { |_, file| Validator.cli_checks(file, @compiler, self) if @linkers[file] }
-        end
+        Validator.cli_checks(direct, self) if @protoc_cli && !failed?
         @order
       end
 
@@ -51,11 +58,6 @@ module Protostar
         line, column = position
         line = nil if line && line < 0
         @diagnostics << Diagnostic.new(file, line && line + 1, line && column + 1, message, severity)
-      end
-
-      # @return [Linker, nil] the linker that built a file in this run
-      def linker_for(file)
-        @linkers&.[](file)
       end
 
       private
@@ -67,9 +69,21 @@ module Protostar
         @order << file
       end
 
+      def read(name)
+        return @sources[name] if @sources.key?(name)
+        return nil unless @protoc_cli
+        path = @compiler.resolve(name)
+        path && ::File.binread(path)
+      end
+
       # @return [Schema::File, nil]
       def load(name, direct: false)
         return @done[name] if @done.key?(name)
+        if direct && !@protoc_cli && @pool.include?(name)
+          ast = Parser.new(read(name).to_s).parse(name)
+          report(name, ast.position(:other), "A file with this name is already in the pool.")
+          return @done[name] = nil
+        end
         if (existing = @pool.file(name))
           list(existing)
           return @done[name] = existing
@@ -83,13 +97,13 @@ module Protostar
           return nil
         end
 
-        path = @compiler.resolve(name)
-        unless path
-          report(name, nil, "File not found.")
+        source = read(name)
+        unless source
+          report(name, nil, "File not found.") if @protoc_cli
           return @done[name] = nil
         end
 
-        parser = Parser.new(::File.binread(path))
+        parser = Parser.new(source)
         ast = parser.parse(name)
         parser.errors.each { |line, column, message| report(name, [line, column], message) }
         parser.warnings.each { |line, column, message| report(name, [line, column], message, :warning) }
@@ -102,10 +116,11 @@ module Protostar
         end
         @pending.pop
 
-        linker = Linker.new(ast, pool: @pool, missing: missing, direct: direct,
-          options_fallback: ->(type) { @compiler.builtin_options_type(type) }, source_info: @source_info)
+        linker = Linker.new(ast, pool: @pool, missing: missing, direct: direct && @protoc_cli,
+          options_fallback: ->(type) { @compiler.builtin_options_type(type) }, source_info: @source_info,
+          protoc_cli: @protoc_cli)
         linker.link
-        Validator.new(linker).validate if linker.file
+        Validator.new(linker).validate
         linker.problems.each do |problem|
           position = if problem.location == :import
             ast.import_positions[problem.import]
@@ -117,7 +132,7 @@ module Protostar
         file = linker.errors? ? nil : linker.file
         if file
           @pool.add(file)
-          (@linkers ||= {}.compare_by_identity)[file] = linker
+          @linkers[name] = linker
           list(file)
         end
         @done[name] = file

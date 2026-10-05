@@ -53,8 +53,14 @@ module Protostar
       #   (unused imports are only reported for those)
       # @param options_fallback [#call] returns the bundled descriptor.proto's
       #   options message for a name, when the pool has no descriptor.proto
-      def initialize(ast, pool:, missing: [], direct: true, options_fallback: nil, source_info: false)
+      # @param protoc_cli [Boolean] apply what protoc's command line enables on
+      #   top of a plain DescriptorPool: imports loaded from disk, unused import
+      #   warnings, naming style, proto limits, symbol visibility and
+      #   feature support checks
+      def initialize(ast, pool:, missing: [], direct: true, options_fallback: nil, source_info: false,
+        protoc_cli: true)
         @ast = ast
+        @protoc_cli = protoc_cli
         @source_info = source_info
         @pool = pool
         @missing = missing
@@ -64,6 +70,13 @@ module Protostar
         @pending = []
         @hints = {}
         @locations = ast.locations
+      end
+
+      # @return [OptionInterpreter, nil] set once options have been interpreted
+      attr_reader :interpreter
+
+      def protoc_cli?
+        @protoc_cli
       end
 
       # @return [Boolean] whether the file was named on the command line
@@ -204,6 +217,15 @@ module Protostar
         edition.to_s.delete_prefix("EDITION_")
       end
 
+      # AddImportError: protoc's command line loads imports on demand, a bare pool does not
+      def missing_import_message(name)
+        if @protoc_cli
+          "Import \"#{name}\" was not found or had errors."
+        else
+          "Import \"#{name}\" has not been loaded."
+        end
+      end
+
       def setup_symbols
         dependencies = []
         unused = []
@@ -217,7 +239,7 @@ module Protostar
           dep = @pool.file(name)
           dep = nil if @missing.include?(name)
           if dep.nil?
-            import_error(name, "Import \"#{name}\" was not found or had errors.") unless option
+            import_error(name, missing_import_message(name)) unless option
           elsif @direct && dep.public_dependencies.empty? && !option
             unused << dep
           end
@@ -521,6 +543,7 @@ module Protostar
             error(field, :extendee, "\"#{field.extendee}\" is not a message type.")
             return
           end
+          return unless visible?(extendee, field, :extendee, "target of extend")
           field.resolved_extendee = extendee
           holder = extendee
           unless extension_number?(extendee, field.number)
@@ -538,6 +561,7 @@ module Protostar
             not_defined(field, :type, field.type_name)
             return
           end
+          return unless visible?(type, field, :type)
           if field.type.nil? && !type.type?
             error(field, :type, "\"#{field.type_name}\" is not a type.")
             return
@@ -618,13 +642,42 @@ module Protostar
         end
       end
 
+      # Symbol::IsVisibleFrom: edition 2024 `local` types are invisible outside their file
+      def visible?(symbol, node, location, usage = "used")
+        return true unless @protoc_cli
+        return true unless symbol.type? && !symbol.local?
+        descriptor = symbol.object
+        visibility = descriptor.visibility
+        if visibility.nil? || visibility == :VISIBILITY_UNSET
+          visibility = case descriptor.features.default_symbol_visibility
+          when :EXPORT_ALL then :VISIBILITY_EXPORT
+          when :EXPORT_TOP_LEVEL then descriptor.containing_message ? :VISIBILITY_LOCAL : :VISIBILITY_EXPORT
+          when :LOCAL_ALL, :STRICT then :VISIBILITY_LOCAL
+          else :VISIBILITY_EXPORT
+          end
+          explicit = false
+        else
+          explicit = true
+        end
+        return true if visibility == :VISIBILITY_EXPORT
+        reason = if explicit && descriptor.visibility == :VISIBILITY_LOCAL
+          "It is explicitly marked 'local'"
+        else
+          "It defaulted to local from file-level 'option features.default_symbol_visibility = " \
+            "'#{descriptor.features.default_symbol_visibility}';"
+        end
+        error(node, location, "Symbol \"#{descriptor.full_name}\", defined in \"#{descriptor.file.name}\" #{usage} " \
+          "is not visible from \"#{@ast.name}\". #{reason} and cannot be accessed outside its own file")
+        false
+      end
+
       def cross_link_method(method)
         input = @table.lookup(method.input_type, method.full_name)
         if input.nil?
           not_defined(method, :input_type, method.input_type)
         elsif input.kind != :message
           error(method, :input_type, "\"#{method.input_type}\" is not a message type.")
-        else
+        elsif visible?(input, method, :input_type)
           method.resolved_input = input
         end
         output = @table.lookup(method.output_type, method.full_name)
@@ -632,7 +685,7 @@ module Protostar
           not_defined(method, :output_type, method.output_type)
         elsif output.kind != :message
           error(method, :output_type, "\"#{method.output_type}\" is not a message type.")
-        else
+        elsif visible?(output, method, :output_type)
           method.resolved_output = output
         end
       end
@@ -681,12 +734,40 @@ module Protostar
 
       def interpret_options
         unless @pending.empty?
-          @unknown_option_imports.each { |name| import_error(name, "Import \"#{name}\" was not found or had errors.") }
+          @unknown_option_imports.each { |name| import_error(name, missing_import_message(name)) }
         end
         return if errors?
         @interpreter = OptionInterpreter.new(self, @pool, @options_fallback)
-        @option_hashes = @interpreter.run(@pending)
+        @option_hashes = @interpreter.run(@pending) { |features| check_features(features) }
         @locations = SourceInfo.rewrite_option_paths(@ast.locations, @interpreter.interpreted_paths)
+      end
+
+      FEATURE_UNKNOWNS = {
+        field_presence: :FIELD_PRESENCE_UNKNOWN, enum_type: :ENUM_TYPE_UNKNOWN,
+        repeated_field_encoding: :REPEATED_FIELD_ENCODING_UNKNOWN, utf8_validation: :UTF8_VALIDATION_UNKNOWN,
+        message_encoding: :MESSAGE_ENCODING_UNKNOWN, json_format: :JSON_FORMAT_UNKNOWN,
+        enforce_naming_style: :ENFORCE_NAMING_STYLE_UNKNOWN,
+        default_symbol_visibility: :DEFAULT_SYMBOL_VISIBILITY_UNKNOWN, enforce_proto_limits: :PROTO_LIMITS_UNKNOWN
+      }.freeze
+
+      # ResolveFeaturesImpl's checks, in VisitDescriptors order, once the
+      # non-extension options (`features` among them) are known
+      # @param features [Hash{AST::Node => Hash}] the `features` each element sets
+      def check_features(features)
+        each_element do |node, kind|
+          raw = features[node]
+          next if raw.nil?
+          location = (kind == :file) ? :editions : :name
+          if legacy?
+            error(node, location, "Features are only valid under editions.")
+            next
+          end
+          FEATURE_UNKNOWNS.each do |name, unknown|
+            next unless raw[name] == unknown
+            error(node, location, "Feature field `#{name}` must resolve to a known value, found #{unknown}")
+            break
+          end
+        end
       end
 
       def build_schema
