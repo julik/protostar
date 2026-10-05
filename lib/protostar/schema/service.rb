@@ -9,12 +9,13 @@ module Protostar
       attr_reader :file
 
       # @api private
-      def initialize(name:, full_name:, file:, index:, options:)
+      def initialize(name:, full_name:, file:, index:)
         @name = name
         @full_name = full_name
         @file = file
         @index = index
-        @options = options
+        @rpcs = Freezer::EMPTY_ARRAY
+        @rpcs_by_name = Freezer::EMPTY_HASH
       end
 
       # @api private
@@ -32,13 +33,6 @@ module Protostar
       def rpc(name)
         @rpcs_by_name[name.to_s]
       end
-
-      # @return [Hash] the ServiceDescriptorProto hash
-      def to_h
-        h = {name: @name}
-        h[:method] = @rpcs.map(&:to_h) unless @rpcs.empty?
-        options_to_h(h)
-      end
     end
 
     # One RPC of a {Service}
@@ -54,13 +48,12 @@ module Protostar
       attr_reader :input_type_name, :output_type_name
 
       # @api private
-      def initialize(name:, full_name:, service:, index:, options:, input_type_name:, output_type_name:,
+      def initialize(name:, full_name:, service:, index:, input_type_name:, output_type_name:,
         client_streaming:, server_streaming:)
         @name = name
         @full_name = full_name
         @service = service
         @index = index
-        @options = options
         @input_type_name = input_type_name
         @output_type_name = output_type_name
         @client_streaming = client_streaming
@@ -80,15 +73,6 @@ module Protostar
       # @return [Boolean]
       def server_streaming?
         @server_streaming
-      end
-
-      # @return [Hash] the MethodDescriptorProto hash
-      def to_h
-        h = {name: @name, input_type: ".#{@input_type.full_name}", output_type: ".#{@output_type.full_name}"}
-        options_to_h(h)
-        h[:client_streaming] = true if @client_streaming
-        h[:server_streaming] = true if @server_streaming
-        h
       end
     end
   end

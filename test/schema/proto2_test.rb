@@ -98,10 +98,11 @@ class Proto2Test < Minitest::Test
     pool, = SchemaFixtures.cached("google/protobuf/unittest_custom_options.proto")
     m = pool.find_message("proto2_unittest.TestMessageWithCustomOptions")
     map_field = m.field("map_field")
-    assert map_field.options.empty?
+    assert_empty map_field.options.fields, "only a custom option, which to_h cannot show"
     assert_equal({}, map_field.to_h[:options])
     refute m.field("oneof_field").to_h.key?(:options)
-    assert_same Protostar::Schema::Options::EMPTY, m.field("oneof_field").options
+    assert map_field.options.declared?
+    refute m.field("oneof_field").options.declared?
     assert m.options.key?(:message_set_wire_format)
     assert_equal false, m.options[:message_set_wire_format]
     refute m.message_set_wire_format?

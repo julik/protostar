@@ -10,11 +10,10 @@ module Protostar
       attr_reader :range
 
       # @api private
-      def initialize(containing_message:, index:, range:, options:)
+      def initialize(containing_message:, index:, range:)
         @containing_message = containing_message
         @index = index
         @range = range
-        @options = options
         @name = "#{range.begin}..#{range.end}"
         @full_name = "#{containing_message.full_name}.extensions(#{@name})"
       end
@@ -32,11 +31,6 @@ module Protostar
       # @return [Integer] last extension number, inclusive
       def end
         @range.end
-      end
-
-      # @return [Hash] the ExtensionRange hash (with an exclusive `end`, as in descriptor.proto)
-      def to_h
-        options_to_h({start: @range.begin, end: @range.end + 1})
       end
     end
   end

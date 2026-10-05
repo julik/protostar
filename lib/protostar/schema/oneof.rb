@@ -10,12 +10,11 @@ module Protostar
       attr_reader :fields
 
       # @api private
-      def initialize(name:, full_name:, containing_message:, index:, options:)
+      def initialize(name:, full_name:, containing_message:, index:)
         @name = name
         @full_name = full_name
         @containing_message = containing_message
         @index = index
-        @options = options
         @fields = []
         @synthetic = false
       end
@@ -28,11 +27,6 @@ module Protostar
       # @return [Boolean] whether protoc synthesized it for a proto3 `optional` field
       def synthetic?
         @synthetic
-      end
-
-      # @return [Hash] the OneofDescriptorProto hash
-      def to_h
-        options_to_h({name: @name})
       end
     end
   end

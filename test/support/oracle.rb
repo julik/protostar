@@ -16,7 +16,7 @@ module Oracle
 
   # The FileDescriptorProto hashes of a .binpb golden, as google-protobuf's
   # `to_h` gives them. Editions its own descriptor.proto has no name for come
-  # back as Integers; they are named here the way GoldenHash names them.
+  # back as Integers; they are named here as protostar's descriptor.proto names them.
   def self.file_hashes(binpb_path, source_info: false)
     set = Google::Protobuf::FileDescriptorSet.decode(File.binread(binpb_path))
     set.file.map do |file|
@@ -31,7 +31,7 @@ module Oracle
     when Array then value.map { |v| name_editions(v, key) }
     when Integer
       return value unless EDITION_KEYS.include?(key)
-      GoldenHash.schema.fetch(:enums).fetch("google.protobuf.Edition").fetch(value, value)
+      Protostar::Schema::Features::EDITION_NAMES.fetch(value, value)
     else value
     end
   end

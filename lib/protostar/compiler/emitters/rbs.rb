@@ -90,14 +90,13 @@ module Protostar
         end
 
         def deprecation(p, descriptor)
-          p.print("# @deprecated\n") if descriptor.options[:deprecated]
+          p.print("# @deprecated\n") if descriptor.options.deprecated?
         end
 
         # rbs_generator.cc's ModulePath: the package's modules as "::A::B"
         def module_path(file)
           convert = true
-          if file.options.key?(:ruby_package)
-            package = file.options[:ruby_package]
+          if (package = file.options.ruby_package)
             convert = false if package.include?("::")
           else
             package = file.package

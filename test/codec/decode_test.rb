@@ -109,19 +109,22 @@ class DecodeTest < Minitest::Test
 
   # Two proto3 messages with the same fields, one packed and one expanded
   def packed_pair
-    fields = ->(packed) do
-      PACKABLE.each_with_index.map do |type, i|
-        f = {name: "f_#{type.downcase}", number: i + 1, label: :LABEL_REPEATED, type: type, options: {packed: packed}}
-        f[:type_name] = ".pk.E" if type == :TYPE_ENUM
-        f
+    fields = ->(m, packed) do
+      PACKABLE.each_with_index do |type, i|
+        short = Protostar::Schema::Field::TYPES.fetch(type)
+        m.field "f_#{type.downcase}", i + 1, short, (".pk.E" if short == :enum), label: :repeated,
+          options: {packed: packed}
       end
     end
     pool = Protostar::Schema::Pool.new
-    file = SchemaFixtures.add(pool, {
-      name: "packed_pair.proto", package: "pk", syntax: "proto3",
-      enum_type: [{name: "E", value: [{name: "Z", number: 0}, {name: "A", number: 1}]}],
-      message_type: [{name: "P", field: fields.call(true)}, {name: "U", field: fields.call(false)}]
-    })
+    file = SchemaFixtures.add(pool, "packed_pair.proto", package: "pk", syntax: :proto3) do |f|
+      f.enum("E") do |e|
+        e.value "Z", 0
+        e.value "A", 1
+      end
+      f.message("P") { |m| fields.call(m, true) }
+      f.message("U") { |m| fields.call(m, false) }
+    end
     types = Protostar::Types::Registry.new.define(file)
     [types.fetch("pk.P"), types.fetch("pk.U")]
   end

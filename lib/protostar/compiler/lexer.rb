@@ -9,9 +9,38 @@ module Protostar
     #
     # @api private
     class Lexer
-      # A token. `line`, `column` and `end_column` are 0-based; `text` is the
-      # source text of the token, quotes and escapes included for strings
-      Token = ::Struct.new(:type, :text, :line, :column, :end_column)
+      # A token. The lexer reuses its current token as it advances, as
+      # protoc's Tokenizer does, and copies it into {Lexer#previous}.
+      class Token
+        # @return [Symbol] :start, :identifier, :integer, :float, :string, :symbol, :end,
+        #   and :whitespace or :newline when asked for
+        attr_accessor :type
+        # @return [String] the source text, quotes and escapes included for strings
+        attr_accessor :text
+        # @return [Integer] 0-based
+        attr_accessor :line
+        # @return [Integer] 0-based, a tab advancing to the next multiple of 8
+        attr_accessor :column
+        # @return [Integer] 0-based column just after the token
+        attr_accessor :end_column
+
+        def initialize(type:, text:, line:, column:, end_column:)
+          @type = type
+          @text = text
+          @line = line
+          @column = column
+          @end_column = end_column
+        end
+
+        # @return [Array] type, text, line, column and end column
+        def to_a
+          [@type, @text, @line, @column, @end_column]
+        end
+
+        def inspect
+          "#<#{self.class.name} #{to_a.inspect}>"
+        end
+      end
 
       TAB_WIDTH = 8
 
@@ -50,7 +79,7 @@ module Protostar
         @record_start = -1
         @report_whitespace = false
         @report_newlines = false
-        @current = Token.new(:start, +"", 0, 0, 0)
+        @current = Token.new(type: :start, text: +"", line: 0, column: 0, end_column: 0)
         @previous = @current.dup
       end
 

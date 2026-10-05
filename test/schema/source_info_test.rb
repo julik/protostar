@@ -16,7 +16,7 @@ class SourceInfoTest < Minitest::Test
   }.freeze
 
   def build
-    S::Builder.build({name: "src.proto", message_type: [{name: "M"}], source_code_info: SOURCE}, pool: S::Pool.new)
+    SchemaFixtures.from_proto({name: "src.proto", message_type: [{name: "M"}], source_code_info: SOURCE}, S::Pool.new)
   end
 
   def test_keeps_locations_verbatim
@@ -46,7 +46,7 @@ class SourceInfoTest < Minitest::Test
   end
 
   def test_absent_without_source_code_info
-    file = S::Builder.build({name: "bare.proto"}, pool: S::Pool.new)
+    file = SchemaFixtures.from_proto({name: "bare.proto"}, S::Pool.new)
     assert_nil file.source_info
     refute file.to_h.key?(:source_code_info)
   end
@@ -56,7 +56,7 @@ class SourceInfoTest < Minitest::Test
     Dir[File.join(Corpus::GOLDENS, "**", "*.binpb")].sort.each do |binpb|
       pool = S::Pool.new
       Oracle.file_hashes(binpb, source_info: true).each do |hash|
-        file = S::Builder.build(hash, pool: pool)
+        file = SchemaFixtures.from_proto(hash, pool)
         assert_equal hash, file.to_h, "#{binpb}: #{hash[:name]}"
         refute_nil file.source_info
         pool.add(file)

@@ -131,10 +131,9 @@ class TypesTest < Minitest::Test
   end
 
   def test_refuses_names_that_are_not_identifiers
-    hash = {name: "evil.proto", package: "evil", message_type: [{name: "M", field: [
-      {name: "a; raise 'pwned'", number: 1, label: :LABEL_OPTIONAL, type: :TYPE_INT32}
-    ]}]}
-    file = Protostar::Schema::Builder.build(hash, pool: Protostar::Schema::Pool.new)
+    file = SchemaFixtures.add(Protostar::Schema::Pool.new, "evil.proto", package: "evil") do |f|
+      f.message("M") { |m| m.field "a; raise 'pwned'", 1, :int32 }
+    end
     err = assert_raises(Protostar::Error) { Protostar::Types.define(file) }
     assert_includes err.message, "evil.M"
   end

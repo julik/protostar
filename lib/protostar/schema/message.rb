@@ -34,21 +34,19 @@ module Protostar
       attr_reader :reserved_ranges
       # @return [Array<String>]
       attr_reader :reserved_names
-      # @return [Symbol, nil] declared `visibility` (:VISIBILITY_LOCAL, :VISIBILITY_EXPORT)
+      # @return [Symbol, nil] declared `visibility`: :local or :export (edition 2024), nil when not declared
       attr_reader :visibility
 
       # @api private
-      def initialize(name:, full_name:, file:, containing_message:, index:, options:, reserved_ranges:,
-        reserved_names:, visibility:)
+      def initialize(name:, full_name:, file:, containing_message:, index:)
         @name = name
         @full_name = full_name
         @file = file
         @containing_message = containing_message
         @index = index
-        @options = options
-        @reserved_ranges = reserved_ranges
-        @reserved_names = reserved_names
-        @visibility = visibility
+        @reserved_ranges = Freezer::EMPTY_ARRAY
+        @reserved_names = Freezer::EMPTY_ARRAY
+        @visibility = nil
       end
 
       # @api private
@@ -88,28 +86,12 @@ module Protostar
 
       # @return [Boolean] a synthesized `map<K, V>` entry type
       def map_entry?
-        options[:map_entry] == true
+        options.map_entry?
       end
 
       # @return [Boolean]
       def message_set_wire_format?
-        options[:message_set_wire_format] == true
-      end
-
-      # @return [Hash] the DescriptorProto hash
-      def to_h
-        h = {name: @name}
-        h[:field] = @fields.map(&:to_h) unless @fields.empty?
-        h[:extension] = @extensions.map(&:to_h) unless @extensions.empty?
-        h[:nested_type] = @nested_messages.map(&:to_h) unless @nested_messages.empty?
-        h[:enum_type] = @nested_enums.map(&:to_h) unless @nested_enums.empty?
-        h[:extension_range] = @extension_range_descriptors.map(&:to_h) unless @extension_range_descriptors.empty?
-        options_to_h(h)
-        h[:oneof_decl] = @oneofs.map(&:to_h) unless @oneofs.empty?
-        h[:reserved_range] = @reserved_ranges.map { |r| {start: r.begin, end: r.end + 1} } unless @reserved_ranges.empty?
-        h[:reserved_name] = @reserved_names unless @reserved_names.empty?
-        h[:visibility] = @visibility if @visibility
-        h
+        options.message_set_wire_format?
       end
     end
   end

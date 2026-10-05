@@ -210,7 +210,7 @@ module Protostar
           return error("Non-repeated Any specified multiple times.")
         end
         entries << [type.field(1), text]
-        entries << [type.field(2), WireEncoder.encode(target, @interpreter.fold(inner))]
+        entries << [type.field(2), @interpreter.fold(inner).encode(target)]
         try_consume(";") || try_consume(",")
         true
       end
@@ -334,92 +334,6 @@ module Protostar
           return nil
         end
         negative ? -value : value
-      end
-    end
-
-    # Encodes a folded option message to protobuf wire format, as protoc
-    # serializes the message inside an `Any` written in an aggregate
-    # @api private
-    module WireEncoder
-      WIRE = {
-        int32: 0, int64: 0, uint32: 0, uint64: 0, sint32: 0, sint64: 0, bool: 0, enum: 0,
-        fixed64: 1, sfixed64: 1, double: 1, string: 2, bytes: 2, message: 2, group: 3,
-        fixed32: 5, sfixed32: 5, float: 5
-      }.freeze
-
-      def self.encode(type, hash)
-        out = "".b
-        fields = type.fields.map { |f| [f, hash[f.name.to_sym]] }
-        (hash[:__extensions] || {}).each do |name, value|
-          ext = type.file.all_extensions.find { |e| e.full_name == name } ||
-            type.extensions.find { |e| e.full_name == name }
-          fields << [ext, value] if ext
-        end
-        fields.sort_by { |f, _| f.number }.each do |field, value|
-          next if value.nil?
-          if field.repeated?
-            if field.packed? && WIRE[field.type] != 2 && WIRE[field.type] != 3
-              body = "".b
-              value.each { |v| body << scalar(field, v) }
-              out << tag(field.number, 2) << varint(body.bytesize) << body
-            else
-              value.each { |v| out << one(field, v) }
-            end
-          else
-            out << one(field, value)
-          end
-        end
-        out
-      end
-
-      def self.one(field, value)
-        wire = WIRE.fetch(field.type)
-        case field.type
-        when :message
-          body = encode(field.message_type, value)
-          tag(field.number, 2) << varint(body.bytesize) << body
-        when :group
-          tag(field.number, 3) << encode(field.message_type, value) << tag(field.number, 4)
-        when :string, :bytes
-          bytes = value.b
-          tag(field.number, 2) << varint(bytes.bytesize) << bytes
-        else
-          tag(field.number, wire) << scalar(field, value)
-        end
-      end
-
-      def self.scalar(field, value)
-        case field.type
-        when :int32, :int64, :uint32, :uint64 then varint(value & 0xFFFFFFFFFFFFFFFF)
-        when :sint32, :sint64 then varint((value << 1) ^ (value >> 63))
-        when :bool then varint(value ? 1 : 0)
-        when :enum
-          number = value.is_a?(Symbol) ? field.enum_type.value(value.to_s).number : value
-          varint(number & 0xFFFFFFFFFFFFFFFF)
-        when :fixed64 then [value].pack("Q<")
-        when :sfixed64 then [value].pack("q<")
-        when :double then [value].pack("E")
-        when :fixed32 then [value].pack("L<")
-        when :sfixed32 then [value].pack("l<")
-        when :float then [value].pack("e")
-        end
-      end
-
-      def self.tag(number, wire)
-        varint((number << 3) | wire)
-      end
-
-      def self.varint(value)
-        out = "".b
-        loop do
-          byte = value & 0x7F
-          value >>= 7
-          if value.zero?
-            out << byte
-            return out
-          end
-          out << (byte | 0x80)
-        end
       end
     end
   end

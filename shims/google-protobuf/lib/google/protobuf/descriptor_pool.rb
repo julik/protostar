@@ -38,7 +38,7 @@ module Google
           name = file_name(serialized)
           raise TypeError, "Unable to build file to DescriptorPool: duplicate file name #{name}" if @schema_pool.include?(name)
           file = begin
-            file = Protostar::Schema::Proto.build(serialized, @schema_pool)
+            file = Protostar::Schema::File.from_proto(serialized, pool: @schema_pool)
             @schema_pool.add(file)
           rescue Protostar::DecodeError
             raise ArgumentError, "Unable to parse FileDescriptorProto"

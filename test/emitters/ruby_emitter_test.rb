@@ -7,10 +7,21 @@ require "test_helper"
 # rebuild the same descriptors
 class RubyEmitterTest < Minitest::Test
   Emitters = Protostar::Compiler::Emitters
-  Builder = Protostar::Schema::Builder
+  # A file from a FileDescriptorProto hash; file options may carry
+  # `__unknown_fields` as [number, wire type, bytes]
+  def build(hash)
+    unknown = hash.dig(:options, :__unknown_fields)
+    hash = hash.merge(options: hash[:options].except(:__unknown_fields)) if unknown
+    proto = Protostar::Schema::Proto.types::FileDescriptorProto.new(hash)
+    if unknown
+      bytes = proto.options.encode + Protostar::Schema::MessageValue.unknown_bytes(unknown)
+      proto.options = proto.options.class.decode(bytes)
+    end
+    Protostar::Schema::File.from_proto(proto, pool: Protostar::Schema::Pool.new)
+  end
 
   def round_trip(hash)
-    built = Builder.build(hash, pool: Protostar::Schema::Pool.new)
+    built = build(hash)
     source = Emitters::Ruby.new.definition(built)
     pool = Protostar::Schema::Pool.new
     saved = Protostar.generated_pool
@@ -20,7 +31,7 @@ class RubyEmitterTest < Minitest::Test
     ensure
       Protostar.instance_variable_set(:@generated_pool, saved)
     end
-    assert_equal built.to_h, pool.file(built.name).to_h, source
+    assert_equal built.serialize, pool.file(built.name).serialize, source
     source
   end
 
@@ -140,5 +151,37 @@ class RubyEmitterTest < Minitest::Test
     assert_includes source, "module X\n  module Y\n    M = "
     plain = Emitters::Ruby.new(bootstrap_requires: false).file(file)
     assert_includes plain, "require \"google/protobuf/timestamp_pb\"\n"
+  end
+
+  def test_options_from_import_option_files_are_written_as_bytes
+    opts = <<~PROTO
+      edition = "2024";
+      package rt.io.opts;
+      import "google/protobuf/descriptor.proto";
+      extend google.protobuf.MessageOptions { int32 level = 50001; }
+    PROTO
+    user = <<~PROTO
+      edition = "2024";
+      package rt.io.app;
+      import option "rt/io/opts.proto";
+      message M { option (rt.io.opts.level) = 7; option deprecated = true; }
+    PROTO
+    sources = {"rt/io/opts.proto" => opts, "rt/io/app.proto" => user}
+    file = Protostar::Compiler.new.compile(["rt/io/app.proto"], sources: sources).last
+    source = Emitters::Ruby.new.definition(file)
+    assert_includes source, "__unknown_fields: [[50001, 0, \"\\a\".b]]"
+    refute_includes source, "opts.level"
+    pool = Protostar::Schema::Pool.new
+    saved = Protostar.generated_pool
+    Protostar.instance_variable_set(:@generated_pool, pool)
+    begin
+      eval(source, TOPLEVEL_BINDING, "(emitted)") # rubocop:disable Security/Eval
+    ensure
+      Protostar.instance_variable_set(:@generated_pool, saved)
+    end
+    loaded = pool.file("rt/io/app.proto")
+    assert_equal "\x88\xb5\x18\x07".b, loaded.messages.first.options.unknown_fields
+    assert loaded.messages.first.options.deprecated?
+    assert_equal file.serialize(source_info: false), loaded.serialize
   end
 end

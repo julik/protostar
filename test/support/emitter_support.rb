@@ -27,9 +27,9 @@ module EmitterSupport
 
     # The bare (source-info-free) copy of a file
     def bare(file, pool)
-      hash = file.to_h
-      hash.delete(:source_code_info)
-      pool.file(file.name) || pool.add(Protostar::Schema::Builder.build(hash, pool: pool))
+      pool.file(file.name) || pool.add(Protostar::Schema::Draft.copy(file, pool: pool, source_info: nil) do |d|
+        d.options if d.options.declared?
+      end)
     end
 
     # What a fresh process loaded for the golden's files
@@ -92,7 +92,7 @@ module EmitterSupport
     def compatible?(bucket, set)
       set.bare.all? do |file|
         known = bucket[:files][file.name]
-        next known == file.to_h if known
+        next known == file.serialize if known
         file.symbols.keys.none? { |s| bucket[:symbols].key?(s) } &&
           constants(file).none? { |c| bucket[:constants].key?(c) }
       end
@@ -102,7 +102,7 @@ module EmitterSupport
       bucket[:rels] << set.rel
       set.bare.each do |file|
         next if bucket[:files].key?(file.name)
-        bucket[:files][file.name] = file.to_h
+        bucket[:files][file.name] = file.serialize
         file.symbols.each_key { |s| bucket[:symbols][s] = true }
         constants(file).each { |c| bucket[:constants][c] = true }
       end

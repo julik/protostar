@@ -31,20 +31,17 @@ module Protostar
           copy
         end
 
-        def to_h
-          h = {}
-          h[:path] = @path.dup unless @path.empty?
-          h[:span] = @span.dup unless @span.empty?
-          h[:leading_comments] = utf8(@leading_comments) if @leading_comments
-          h[:trailing_comments] = utf8(@trailing_comments) if @trailing_comments
-          h[:leading_detached_comments] = @leading_detached_comments.map { |c| utf8(c) } unless @leading_detached_comments.empty?
-          h
+        # @return [Schema::SourceInfo::Location] the finished location, comments as UTF-8
+        def to_schema
+          Schema::SourceInfo::Location.new(path: @path, span: @span, leading_comments: utf8(@leading_comments),
+            trailing_comments: utf8(@trailing_comments),
+            leading_detached_comments: @leading_detached_comments.map { |c| utf8(c) })
         end
 
         private
 
         def utf8(text)
-          text.dup.force_encoding(Encoding::UTF_8)
+          text&.dup&.force_encoding(Encoding::UTF_8)
         end
       end
 

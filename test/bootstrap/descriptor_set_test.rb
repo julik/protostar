@@ -18,9 +18,8 @@ class LoadDescriptorSetTest < Minitest::Test
       files.zip(compiled, golden) do |file, ours, expected|
         assert_same file, pool.file(file.name)
         assert Ractor.shareable?(file)
-        assert_equal EmitterSupport.comparable(ours.to_h), EmitterSupport.comparable(file.to_h), file.name
-        bare = CompilerSupport.strip_extensions(file.to_h)
-        bare.delete(:source_code_info)
+        assert_equal ours.serialize, file.serialize, file.name
+        bare = file.to_proto(source_info: false).to_h
         assert_equal EmitterSupport.comparable(expected), EmitterSupport.comparable(bare), file.name
       end
       emitter = Protostar::Compiler::Emitters::DescriptorSet.new(include_source_info: true, pool: pool)

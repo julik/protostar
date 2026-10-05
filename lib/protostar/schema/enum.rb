@@ -18,21 +18,19 @@ module Protostar
       attr_reader :reserved_ranges
       # @return [Array<String>]
       attr_reader :reserved_names
-      # @return [Symbol, nil] declared `visibility`
+      # @return [Symbol, nil] declared `visibility`: :local or :export (edition 2024), nil when not declared
       attr_reader :visibility
 
       # @api private
-      def initialize(name:, full_name:, file:, containing_message:, index:, options:, reserved_ranges:,
-        reserved_names:, visibility:)
+      def initialize(name:, full_name:, file:, containing_message:, index:)
         @name = name
         @full_name = full_name
         @file = file
         @containing_message = containing_message
         @index = index
-        @options = options
-        @reserved_ranges = reserved_ranges
-        @reserved_names = reserved_names
-        @visibility = visibility
+        @reserved_ranges = Freezer::EMPTY_ARRAY
+        @reserved_names = Freezer::EMPTY_ARRAY
+        @visibility = nil
       end
 
       # @api private
@@ -57,7 +55,7 @@ module Protostar
 
       # @return [Boolean]
       def allow_alias?
-        options[:allow_alias] == true
+        options.allow_alias?
       end
 
       # @return [Boolean] unknown numbers go to unknown fields (proto2, editions
@@ -70,17 +68,6 @@ module Protostar
       def open?
         !closed?
       end
-
-      # @return [Hash] the EnumDescriptorProto hash
-      def to_h
-        h = {name: @name}
-        h[:value] = @values.map(&:to_h) unless @values.empty?
-        options_to_h(h)
-        h[:reserved_range] = @reserved_ranges.map { |r| {start: r.begin, end: r.end} } unless @reserved_ranges.empty?
-        h[:reserved_name] = @reserved_names unless @reserved_names.empty?
-        h[:visibility] = @visibility if @visibility
-        h
-      end
     end
 
     # A value of an enum. Its {#full_name} lives in the enum's enclosing scope,
@@ -92,23 +79,17 @@ module Protostar
       attr_reader :enum
 
       # @api private
-      def initialize(name:, full_name:, number:, enum:, index:, options:)
+      def initialize(name:, full_name:, number:, enum:, index:)
         @name = name
         @full_name = full_name
         @number = number
         @enum = enum
         @index = index
-        @options = options
       end
 
       # @return [File]
       def file
         @enum.file
-      end
-
-      # @return [Hash] the EnumValueDescriptorProto hash
-      def to_h
-        options_to_h({name: @name, number: @number})
       end
     end
   end

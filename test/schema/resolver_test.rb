@@ -12,7 +12,7 @@ class ResolverTest < Minitest::Test
   end
 
   def add(hash)
-    SchemaFixtures.add(@pool, hash)
+    @pool.add(SchemaFixtures.from_proto(hash, @pool))
   end
 
   def field(name, number, type_name)

@@ -2,7 +2,7 @@
 
 module Protostar
   # A pure-Ruby protoc front end: turns `.proto` source into
-  # {Protostar::Schema::File}s whose `to_h` matches what protoc 36.2 puts in a
+  # {Protostar::Schema::File}s whose `to_proto` is what protoc 36.2 puts in a
   # `FileDescriptorProto`, and rejects what protoc rejects with protoc's
   # `file:line:col: message` diagnostics.
   #
@@ -135,7 +135,7 @@ module Protostar
       retain_options ? files : files.map { |f| output_file(f) }
     end
 
-    # Same as {#compile}, as descriptor hashes
+    # Same as {#compile}, each file as `to_proto.to_h`, for reading
     # @return [Array<Hash>]
     def compile_to_hashes(names, source_info: false, retain_options: false, sources: {})
       compile(names, source_info: source_info, retain_options: retain_options, sources: sources).map(&:to_h)
@@ -188,14 +188,8 @@ module Protostar
       existing = @output.file(file.name)
       return existing if existing
       file.dependency_files.each { |dep| output_file(dep) }
-      type = @pool.find_message("google.protobuf.FileDescriptorProto") ||
-        builtin_options_type("google.protobuf.FileDescriptorProto")
-      extension = lambda do |name|
-        found = @pool.find_symbol(name)
-        found if found.is_a?(Schema::Field) && found.extension?
-      end
-      hash = Retention.strip(file.to_h, type, extension)
-      @output.add(Schema::Builder.build(hash, pool: @output), warn: false)
+      options_type = ->(name) { @pool.find_message(name) || builtin_options_type(name) }
+      @output.add(Retention.strip(file, @output, options_type), warn: false)
     end
     private :output_file
 

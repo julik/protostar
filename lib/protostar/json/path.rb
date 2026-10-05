@@ -6,7 +6,16 @@ module Protostar
     # names, Integer indexes and map keys, turned into text only for errors
     # @api private
     module Path
-      MapKey = ::Struct.new(:key)
+      # A map key on the stack, printed as `[key]`
+      class MapKey
+        # @return [Object]
+        attr_reader :key
+
+        def initialize(key)
+          @key = key
+          freeze
+        end
+      end
 
       module_function
 

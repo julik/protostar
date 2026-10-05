@@ -206,15 +206,14 @@ class AccessorsTest < Minitest::Test
 
   def test_fields_named_like_ruby_methods_go_through_brackets
     pool = Protostar::Schema::Pool.new
-    file = SchemaFixtures.add(pool, {
-      name: "clash.proto", package: "clash", syntax: "proto3",
-      message_type: [{name: "M", field: [
-        {name: "hash", number: 1, label: :LABEL_OPTIONAL, type: :TYPE_INT32},
-        {name: "class", number: 2, label: :LABEL_OPTIONAL, type: :TYPE_STRING},
-        {name: "encode", number: 3, label: :LABEL_OPTIONAL, type: :TYPE_BOOL},
-        {name: "plain", number: 4, label: :LABEL_OPTIONAL, type: :TYPE_INT32}
-      ]}]
-    })
+    file = SchemaFixtures.add(pool, "clash.proto", package: "clash", syntax: :proto3) do |f|
+      f.message "M" do |m|
+        m.field "hash", 1, :int32
+        m.field "class", 2, :string
+        m.field "encode", 3, :bool
+        m.field "plain", 4, :int32
+      end
+    end
     klass = Protostar::Types::Registry.new.define(file).fetch("clash.M")
     m = klass.new(hash: 5, class: "c", encode: true, plain: 1)
     assert_equal klass, m.class

@@ -3,10 +3,11 @@
 require "test_helper"
 
 # Every corpus file goes through the native emitter, is loaded in a fresh
-# process with a fresh generated pool, and must build to exactly the
-# descriptors the compiler made (custom options included) and to the golden
-# hash; every message and enum must sit under protoc's Ruby constant name.
-# Emitting again from the loaded descriptors gives the same text.
+# process with a fresh generated pool, and must serialize to exactly the
+# bytes of the descriptors the compiler made (custom options included) and
+# translate to the golden; every message and enum must sit under protoc's
+# Ruby constant name. Emitting again from the loaded descriptors gives the
+# same text.
 class RubyCorpusTest < Minitest::Test
   Emitters = Protostar::Compiler::Emitters
 
@@ -20,10 +21,10 @@ class RubyCorpusTest < Minitest::Test
       compiled.bare.zip(golden) do |file, expected|
         loaded = answer[:files].fetch(file.name)
         refute loaded[:missing], "#{file.name} was not loaded"
-        assert_equal EmitterSupport.comparable(file.to_h), EmitterSupport.comparable(loaded[:to_h]),
-          "#{file.name} differs from the compiled descriptors"
-        assert_equal EmitterSupport.comparable(expected),
-          EmitterSupport.comparable(CompilerSupport.strip_extensions(loaded[:to_h])), "#{file.name} differs from the golden"
+        assert_equal file.serialize(source_info: false), loaded[:bytes], "#{file.name} differs from the compiled descriptors"
+        loaded_proto = Protostar::Schema::Proto.types::FileDescriptorProto.decode(loaded[:bytes])
+        assert_equal EmitterSupport.comparable(expected), EmitterSupport.comparable(loaded_proto.to_h),
+          "#{file.name} differs from the golden"
         assert_empty loaded[:wrong_constants], "#{file.name} constants"
         assert loaded[:shareable]
         next if Emitters::BOOTSTRAP.include?(file.name)

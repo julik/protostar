@@ -10,7 +10,22 @@ module Protostar
     # comment that runs to the end of the line.
     # @api private
     class Tokenizer
-      Token = ::Struct.new(:type, :text, :pos)
+      # One token: `type` is :identifier, :integer, :float, :string, :symbol
+      # or :eof, `text` its source text, `pos` its byte offset
+      class Token
+        attr_reader :type, :text, :pos
+
+        def initialize(type, text, pos)
+          @type = type
+          @text = text
+          @pos = pos
+          freeze
+        end
+
+        def ==(other)
+          other.is_a?(Token) && other.type == @type && other.text == @text && other.pos == @pos
+        end
+      end
 
       SKIP = /(?:\s+|#[^\n]*)+/
       IDENTIFIER = /[A-Za-z_][A-Za-z0-9_]*/

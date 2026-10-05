@@ -2,17 +2,21 @@
 
 require "test_helper"
 
-# Every corpus golden builds, links, freezes and reproduces protoc's own hash
+# Every corpus golden reads through Schema::File.from_proto, links, freezes,
+# and translates back to exactly what protoc wrote: the same bytes, and the
+# same descriptors as the golden JSON
 class GoldenRoundTripTest < Minitest::Test
   Dir[File.join(Corpus::GOLDENS, "**", "*.json")].sort.each do |path|
     relative = path.delete_prefix(Corpus::GOLDENS + "/").delete_suffix(".json")
     define_method(:"test_round_trips_#{relative.gsub(/\W+/, "_")}") do
       pool = Protostar::Schema::Pool.new
-      GoldenHash.load(path).each do |hash|
-        file = Protostar::Schema::Builder.build(hash, pool: pool)
-        assert_equal hash, file.to_h, "#{hash[:name]} does not round-trip"
-        assert Ractor.shareable?(file), "#{hash[:name]} is not shareable"
-        refute hash.frozen?, "building froze the caller's hash"
+      types = Protostar::Schema::Proto.types
+      protos = types::FileDescriptorSet.decode(File.binread(path.sub(/\.json\z/, ".binpb"))).file
+      protos.zip(GoldenHash.load(path)) do |proto, expected|
+        file = Protostar::Schema::File.from_proto(proto, pool: pool)
+        assert_equal proto.encode, file.serialize, "#{proto.name} does not round-trip"
+        assert_equal expected, file.to_proto(source_info: false).to_h, "#{proto.name} differs from the golden"
+        assert Ractor.shareable?(file), "#{proto.name} is not shareable"
         pool.add(file)
       end
     end

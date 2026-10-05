@@ -4,9 +4,11 @@ require "test_helper"
 
 # Tier A: every corpus file compiles to exactly the descriptors protoc 36.2
 # wrote for it with --include_imports, in the same order, with the same
-# diagnostics. The goldens cannot hold custom option values (protoc's JSON
-# drops extensions it cannot name), so those are compared in
-# custom_options_test.rb instead.
+# diagnostics. Each file is translated to protoc's shape (`to_proto`) and
+# compared with the golden JSON read by protostar's JSON parser. The goldens
+# cannot hold custom option values (protoc's JSON drops extensions it cannot
+# name, as `to_proto.to_h` drops the unknown fields that hold them), so those
+# are compared in custom_options_test.rb and descriptor_set_test.rb instead.
 class CompilerCorpusTest < Minitest::Test
   CompilerSupport.goldens.each do |rel|
     define_method(:"test_#{rel.tr("/.", "__")}") do
@@ -16,7 +18,7 @@ class CompilerCorpusTest < Minitest::Test
 
       assert_equal expected.map { |h| h[:name] }, files.map(&:name)
       expected.zip(files) do |hash, file|
-        assert_equal hash, CompilerSupport.strip_extensions(file.to_h), "#{file.name} differs from the golden"
+        assert_equal hash, file.to_proto.to_h, "#{file.name} differs from the golden"
         assert Ractor.shareable?(file)
       end
       assert_equal CompilerSupport::CORPUS_WARNINGS.fetch(rel, []), compiler.diagnostics.map(&:to_s)
