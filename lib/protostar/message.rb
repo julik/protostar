@@ -75,6 +75,15 @@ module Protostar
         a.dup.merge!(b)
       end
 
+      # What a field of this type makes of a value that is neither an
+      # instance nor a Hash. The well-known types' mixins override it, so that
+      # a Time can be assigned to a Timestamp field.
+      # @return [Message, nil] nil when the value cannot become one
+      # @api private
+      def __coerce(_value)
+        nil
+      end
+
       # @return [Message] a message with every field unset, bypassing argument parsing
       # @api private
       def __empty

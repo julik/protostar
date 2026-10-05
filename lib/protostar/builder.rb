@@ -69,9 +69,6 @@ module Protostar
       DoubleValue FloatValue Int64Value UInt64Value Int32Value UInt32Value BoolValue StringValue BytesValue
     ].to_h { |n| ["google.protobuf.#{n}", :wrapper] }
     WELL_KNOWN = WRAPPERS.merge("google.protobuf.Timestamp" => :timestamp, "google.protobuf.Duration" => :duration).freeze
-    # Duration's range, about 10,000 years
-    MAX_DURATION = 315_576_000_000
-    NANOS = 1_000_000_000
 
     class << self
       # @param klass [Class, Schema::Message] the message class, or its descriptor
@@ -420,17 +417,15 @@ module Protostar
       fields = info.message_class.__fields
       case wk
       when :timestamp
-        t = if v.is_a?(Time) then v
-        elsif defined?(::Date) && v.is_a?(::Date) then v.to_time
-        else return false
-        end
+        seconds, nanos = WellKnown::Timestamp.parts(v)
+        return false unless seconds
         __nested(info, index) do
-          __put(fields[0], t.to_i)
-          __put(fields[1], t.nsec)
+          __put(fields[0], seconds)
+          __put(fields[1], nanos)
         end
       when :duration
-        return false unless v.is_a?(Numeric)
         seconds, nanos = __duration(info, v, index)
+        return false unless seconds
         __nested(info, index) do
           __put(fields[0], seconds)
           __put(fields[1], nanos)
@@ -443,17 +438,11 @@ module Protostar
     end
 
     def __duration(info, v, index)
-      r = v.to_r
-      seconds = r.truncate
-      nanos = ((r - seconds) * NANOS).round
-      if nanos.abs >= NANOS
-        seconds += nanos <=> 0
-        nanos -= (nanos <=> 0) * NANOS
-      end
-      raise __error(info, "is out of Duration's range: #{__show(v)}", index) if seconds.abs > MAX_DURATION
-      [seconds, nanos]
-    rescue RangeError # FloatDomainError for NaN and Infinity
+      WellKnown::Duration.parts(v)
+    rescue FloatDomainError
       raise __error(info, "expects a finite duration, got #{__show(v)}", index)
+    rescue RangeError
+      raise __error(info, "is out of Duration's range: #{__show(v)}", index)
     end
 
     # Runs the block with a buffer of its own as the current message, then

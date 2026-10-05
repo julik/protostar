@@ -56,6 +56,12 @@ module Protostar
           klass = info.message_class
           return value if value.instance_of?(klass)
           return klass.new(value) if value.is_a?(Hash)
+          begin
+            coerced = klass.__coerce(value)
+          rescue RangeError
+            raise_type(info, value, "a finite value in #{klass.descriptor.full_name}'s range")
+          end
+          return coerced if coerced
           raise_type(info, value, "a #{klass.descriptor.full_name} or a Hash")
         end
         scalar(info, value)

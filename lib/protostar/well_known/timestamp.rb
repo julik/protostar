@@ -8,11 +8,31 @@ module Protostar
         base.extend(ClassMethods)
       end
 
+      # @param value [Object]
+      # @return [Array(Integer, Integer), nil] seconds and nanos of a Time, a
+      #   DateTime or a Date; nil for anything else
+      def self.parts(value)
+        time = if value.is_a?(::Time) then value
+        elsif defined?(::Date) && value.is_a?(::Date) then value.to_time
+        else return nil
+        end
+        [time.to_i, time.nsec]
+      end
+
       module ClassMethods
         # @param time [Time]
         # @return [Message] a new Timestamp at the same instant, to the nanosecond
         def from_time(time)
           new.from_time(time)
+        end
+
+        # What a Timestamp field makes of a value that is neither a Timestamp
+        # nor a Hash: a Time, a DateTime or a Date becomes a Timestamp
+        # @return [Message, nil]
+        # @api private
+        def __coerce(value)
+          seconds, nanos = Timestamp.parts(value)
+          new(seconds: seconds, nanos: nanos) if seconds
         end
       end
 
