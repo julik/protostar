@@ -1,0 +1,1 @@
+{"file":[{"name":"editions/golden/simple_proto3.proto","package":"protobuf_editions_test.golden","messageType":[{"name":"SimpleProto3","field":[{"name":"int32_field","number":1,"label":"LABEL_OPTIONAL","type":"TYPE_INT32","oneofIndex":0,"jsonName":"int32Field","proto3Optional":true}],"oneofDecl":[{"name":"_int32_field"}]}],"syntax":"proto3"}]}

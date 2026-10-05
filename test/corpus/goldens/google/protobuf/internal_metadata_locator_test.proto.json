@@ -1,0 +1,1 @@
+{"file":[{"name":"google/protobuf/internal_metadata_locator_test.proto","package":"proto2_unittest","messageType":[{"name":"TestOneRepeatedField","field":[{"name":"repeated_int32","number":1,"label":"LABEL_REPEATED","type":"TYPE_INT32","jsonName":"repeatedInt32"}]}],"syntax":"editions","edition":"EDITION_2023"}]}

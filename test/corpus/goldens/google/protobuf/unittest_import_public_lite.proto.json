@@ -1,0 +1,1 @@
+{"file":[{"name":"google/protobuf/unittest_import_public_lite.proto","package":"proto2_unittest_import","messageType":[{"name":"PublicImportMessageLite","field":[{"name":"e","number":1,"label":"LABEL_OPTIONAL","type":"TYPE_INT32","jsonName":"e"}]}],"options":{"javaPackage":"com.google.protobuf","optimizeFor":"LITE_RUNTIME"},"syntax":"editions","edition":"EDITION_2023"}]}

@@ -1,0 +1,1 @@
+{"file":[{"name":"ruby/tests/test_import.proto","package":"foo_bar","messageType":[{"name":"TestImportedMessage"}],"syntax":"proto3"}]}

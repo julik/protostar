@@ -1,0 +1,1 @@
+{"file":[{"name":"google/protobuf/unittest_lite_edition_2024.proto","package":"proto2_unittest","enumType":[{"name":"EnumNameStringView","value":[{"name":"ENUM_NAME_STRING_VIEW_DEFAULT","number":0},{"name":"ENUM_NAME_STRING_VIEW_ANOTHER_VALUE","number":1}]}],"options":{"optimizeFor":"LITE_RUNTIME"},"syntax":"editions","edition":"EDITION_2024"}]}

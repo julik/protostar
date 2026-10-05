@@ -1,0 +1,1 @@
+{"file":[{"name":"google/protobuf/compiler/ruby/ruby_generated_pkg_explicit.proto","package":"one.two.a_three","messageType":[{"name":"Four","field":[{"name":"a_string","number":1,"label":"LABEL_OPTIONAL","type":"TYPE_STRING","jsonName":"aString"}]}],"options":{"rubyPackage":"A::B::C"},"syntax":"proto3"}]}

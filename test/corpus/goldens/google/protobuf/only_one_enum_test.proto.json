@@ -1,0 +1,1 @@
+{"file":[{"name":"google/protobuf/only_one_enum_test.proto","package":"proto2_unittest","enumType":[{"name":"OnlyOneEnum","value":[{"name":"ONLY_ONE_ENUM_DEFAULT","number":0},{"name":"ONLY_ONE_ENUM_VALID","number":10}]}],"options":{"optimizeFor":"LITE_RUNTIME"},"syntax":"editions","edition":1002}]}

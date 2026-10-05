@@ -1,0 +1,1 @@
+{"file":[{"name":"ruby/tests/test_import_proto2.proto","package":"foo_bar.proto2","messageType":[{"name":"TestImportedMessage"}]}]}

@@ -1,0 +1,1 @@
+{"file":[{"name":"ruby/tests/test_ruby_package_proto2.proto","package":"foo_bar_proto2","messageType":[{"name":"TestRubyPackageMessage"}],"options":{"rubyPackage":"A::B::Proto2"}}]}

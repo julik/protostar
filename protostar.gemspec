@@ -1,0 +1,34 @@
+# frozen_string_literal: true
+
+require_relative "lib/protostar/version"
+
+Gem::Specification.new do |spec|
+  spec.name = "protostar"
+  spec.version = Protostar::VERSION
+  spec.authors = ["Julik Tarkhanov"]
+  spec.email = ["me@julik.nl"]
+
+  spec.summary = "Pure Ruby protocol buffers: compiler, encoder, decoder and a google-protobuf replacement"
+  spec.description = "Compiles .proto files to Ruby, encodes and decodes protobuf messages, and can stand in for the google-protobuf gem. No protoc, no native extensions."
+  spec.homepage = "https://github.com/julik/protostar"
+  spec.license = "MIT"
+  spec.required_ruby_version = ">= 3.2.0"
+
+  spec.metadata["homepage_uri"] = spec.homepage
+  spec.metadata["source_code_uri"] = spec.homepage
+  spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/main/CHANGELOG.md"
+  spec.metadata["rubygems_mfa_required"] = "true"
+
+  spec.files = Dir["lib/**/*.rb", "exe/*", "LICENSE.txt", "README.md", "CHANGELOG.md"]
+  spec.bindir = "exe"
+  spec.executables = Dir["exe/*"].map { |f| File.basename(f) }
+  spec.require_paths = ["lib"]
+
+  spec.add_development_dependency "rake", "~> 13.0"
+  spec.add_development_dependency "minitest", "~> 5.0"
+  spec.add_development_dependency "minitest-fail-fast"
+  spec.add_development_dependency "standard", "~> 1.50"
+  spec.add_development_dependency "magic_frozen_string_literal"
+  spec.add_development_dependency "yard"
+  spec.add_development_dependency "benchmark-ips"
+end

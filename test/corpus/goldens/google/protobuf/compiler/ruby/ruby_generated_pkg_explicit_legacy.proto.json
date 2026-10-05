@@ -1,0 +1,1 @@
+{"file":[{"name":"google/protobuf/compiler/ruby/ruby_generated_pkg_explicit_legacy.proto","package":"one.two.a_three.and","messageType":[{"name":"Four","field":[{"name":"another_string","number":1,"label":"LABEL_OPTIONAL","type":"TYPE_STRING","jsonName":"anotherString"}]}],"options":{"rubyPackage":"AA.BB.CC"},"syntax":"proto3"}]}
