@@ -142,3 +142,28 @@ plugin goes through `Builder.from_proto`, not the parser.
 
 The google-protobuf facade (the Google-format emitter only writes files; running them
 needs WS6's shim), JSON and text (WS5), conformance.
+
+## Notes from WS2, which landed after this spec was drafted
+
+Read `llm/outputs/ws2-report.md` in full. The points that shape your work:
+
+- `Compiler#compile` returns *stripped copies* of the pool's files: source-retention
+  options and their source locations removed, exactly what `--descriptor_set_out`
+  carries. Generated code embeds those. `retain_options: true` returns the pool's own
+  objects instead. Do not change this split.
+- Diagnostics carry the virtual file name (`foo/bar.proto`), while protoc prints the
+  path on disk in its stderr. Add a `path` to `Compiler::Diagnostic` (you may touch
+  `lib/protostar/compiler/` for this and for the emitters; keep every other compiler
+  change out) and have the CLI print the disk path like protoc does.
+- The compiler's pool is shared across `compile` calls on one `Compiler` instance; the
+  CLI makes a fresh `Compiler` per run. That is fine.
+- Custom option values sit in `options.extensions` keyed by the extension's full name;
+  `Any`-typed values are `{type_url:, value: <bytes>}`; float options hold the float32
+  value. Emit them under `extensions:` in the DSL and encode them from there in
+  `to_proto`.
+- `Schema::Pool#add` raises when two files use the same extension number for one
+  extendee, where protoc only warns. Do not work around it in generated code; note it in
+  your report if the corpus trips it.
+- `script/extract_parser_cases.rb` and `script/record_validation_cases.rb` show how
+  protoc-made fixtures are produced and committed; follow that pattern for the
+  `grpc-tools` goldens.
