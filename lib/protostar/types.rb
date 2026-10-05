@@ -111,7 +111,13 @@ module Protostar
 
       private
 
+      # Names end up inside class_eval'd source, so anything a .proto could not spell is refused
+      IDENTIFIER = /\A[A-Za-z_][A-Za-z0-9_]*\z/
+
       def setup(klass, descriptor)
+        (descriptor.fields.map(&:name) + descriptor.real_oneofs.map(&:name)).each do |n|
+          raise Protostar::Error, "#{descriptor.full_name} has a name that is not an identifier: #{n.inspect}" unless IDENTIFIER.match?(n)
+        end
         oneof_slots = descriptor.real_oneofs.to_h do |o|
           [o, o.fields.map { |f| descriptor.fields.index(f) }]
         end
