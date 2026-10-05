@@ -354,10 +354,11 @@ module Google
         raise ArgumentError, "Expected at least #{before + 2} arguments for message/enum." if rest.empty?
         klass = rest[0]
         descriptor = klass.respond_to?(:descriptor) ? klass.descriptor : nil
-        expected = (type == :enum) ? EnumDescriptor : Descriptor
-        unless descriptor.is_a?(expected)
-          raise ArgumentError, "Type class #{klass} has no descriptor. Please pass a class or enum as returned by the DescriptorPool."
+        unless descriptor.is_a?(Descriptor) || descriptor.is_a?(EnumDescriptor)
+          raise ArgumentError, "Type class has no descriptor. Please pass a class or enum as returned by the DescriptorPool."
         end
+        expected = (type == :enum) ? EnumDescriptor : Descriptor
+        raise ::TypeError, "wrong argument type #{descriptor.class} (expected #{expected})" unless descriptor.is_a?(expected)
         [descriptor, rest[1]]
       end
     end

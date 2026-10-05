@@ -54,7 +54,7 @@ module Google
           fd = klass.__gpool.lookup(name)
           unless fd.is_a?(FieldDescriptor) && fd.__owner.equal?(klass.descriptor)
             return if options[:ignore_unknown_fields]
-            raise ParseError, "Error occurred during parsing: unknown extension #{name}"
+            raise ParseError, "Error occurred during parsing: No such field: [#{name}]"
           end
           if fd.repeated?
             list = RepeatedField.__for_field(fd, [])

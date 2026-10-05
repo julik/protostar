@@ -159,9 +159,11 @@ module Google
         # @return [Message]
         # @raise [ParseError]
         def decode_json(data, options = {})
-          options = Internal.options_hash(options)
+          raise ArgumentError, "Expected hash arguments." unless options.is_a?(Hash)
           raise ArgumentError, "Expected string for JSON data." unless data.is_a?(String)
           raise "Cannot parse a wrapper directly" if descriptor.send(:wrapper?)
+          # upb reads empty input as an empty message
+          return new if data.empty?
           Internal::Json.decode(self, data, options)
         end
 
@@ -183,7 +185,7 @@ module Google
       def self.options_hash(options)
         return options if options.is_a?(Hash)
         return options.to_h if options.respond_to?(:to_h)
-        raise ArgumentError, "Expected hash arguments"
+        raise ArgumentError, "Expected hash arguments."
       end
 
       # Instance methods of every message class
