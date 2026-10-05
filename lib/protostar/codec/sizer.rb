@@ -2,10 +2,12 @@
 
 module Protostar
   module Codec
-    # The first encoding pass: the encoded size of a message and of every
-    # message and packed run inside it, memoised in `sizes` (an identity Hash
-    # that lives for one encode) so the writer knows each length prefix
-    # before writing the bytes it covers.
+    # The first encoding pass computes the encoded size of a message and of
+    # every message and packed run inside it, recorded in `sizes` (an
+    # identity Hash that lives for one encode) so the writer knows each
+    # length prefix before it writes the bytes it covers. The per-class
+    # `__size` methods ({EncodeGenerator}) do the work; this module has the
+    # parts they share.
     # @api private
     module Sizer
       F = Message::FieldInfo
@@ -13,46 +15,10 @@ module Protostar
       module_function
 
       # @param msg [Message]
-      # @param sizes [Hash] compare_by_identity; filled with message and packed-run sizes
+      # @param sizes [Hash] compare_by_identity
       # @return [Integer]
       def message(msg, sizes)
-        known = sizes[msg]
-        return known if known
-        total = 0
-        values = msg.__values
-        msg.class.__encode_order.each do |info|
-          v = values[info.index]
-          next if v.nil?
-          if info.map
-            next if v.empty?
-            tag = info.tag.bytesize
-            v.each do |key, val|
-              entry = entry(info, key, val, sizes)
-              total += tag + Wire.varint_size(entry) + entry
-            end
-          elsif info.repeated
-            next if v.empty?
-            check(info, v)
-            if info.packed
-              run = packed(info, v)
-              sizes[v] = run
-              total += info.packed_tag.bytesize + Wire.varint_size(run) + run
-            else
-              tag = info.tag.bytesize
-              tag *= 2 if info.kind == F::GROUP
-              total += tag * v.size
-              v.each { |e| total += value(info, e, sizes) }
-            end
-          elsif info.presence || !info.zero?(v)
-            total += info.tag.bytesize
-            total += info.end_tag.bytesize if info.kind == F::GROUP
-            total += value(info, v, sizes)
-          end
-        end
-        msg.unknown_fields.each do |u|
-          total += Wire.varint_size((u.number << 3) | u.wire_type) + u.bytes.bytesize
-        end
-        sizes[msg] = total
+        msg.__size(sizes)
       end
 
       # Size of one value, without its tag; a group's end tag is not included either
@@ -66,9 +32,9 @@ module Protostar
           n = v.bytesize
           Wire.varint_size(n) + n
         when F::MESSAGE
-          n = message(v, sizes)
+          n = v.__size(sizes)
           Wire.varint_size(n) + n
-        when F::GROUP then message(v, sizes)
+        when F::GROUP then v.__size(sizes)
         when F::DOUBLE, F::FIXED64, F::SFIXED64 then 8
         else 4
         end
@@ -76,6 +42,7 @@ module Protostar
 
       # Payload size of a packed run, without tag or length prefix
       def packed(info, list)
+        list.each { |e| check(info, e) }
         case info.kind
         when F::DOUBLE, F::FIXED64, F::SFIXED64 then 8 * list.size
         when F::FLOAT, F::FIXED32, F::SFIXED32 then 4 * list.size
@@ -86,21 +53,37 @@ module Protostar
         end
       end
 
+      # Size of every entry of a map field, tags and length prefixes included
+      def map(info, hash, sizes)
+        tag = info.tag.bytesize
+        total = 0
+        hash.each do |key, val|
+          n = entry(info, key, val, sizes)
+          total += tag + Wire.varint_size(n) + n
+        end
+        total
+      end
+
       # Size of a map entry message: key field then value field, both always written
       def entry(info, key, val, sizes)
         k = info.key
         v = info.value
-        check_one(k, key)
-        check_one(v, val)
+        check(k, key)
+        check(v, val)
         k.tag.bytesize + value(k, key, sizes) + v.tag.bytesize + value(v, val, sizes)
       end
 
-      def check(info, list)
-        list.each { |e| check_one(info, e) }
+      # @param list [Array<UnknownField>]
+      def unknown(list)
+        list.sum { |u| Wire.varint_size((u.number << 3) | u.wire_type) + u.bytes.bytesize }
       end
 
-      def check_one(info, value)
-        return if Message::Coercion.storable?(info, value)
+      def check(info, value)
+        invalid(info, value) unless Message::Coercion.storable?(info, value)
+      end
+
+      # @raise [EncodeError]
+      def invalid(info, value)
         raise EncodeError, "#{info.descriptor.full_name} holds #{value.inspect[0, 64]}, which it cannot encode"
       end
     end

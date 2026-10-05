@@ -123,6 +123,7 @@ module Protostar
         klass.__define(descriptor: descriptor, fields: fields, oneofs: oneofs)
         Message::Accessors.install(klass, fields, oneofs)
         Codec::DecodeGenerator.install(klass, fields)
+        Codec::EncodeGenerator.install(klass, fields)
       end
 
       def resolve(descriptor)

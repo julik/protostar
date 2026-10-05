@@ -30,6 +30,7 @@ class PropertyTest < Minitest::Test
   def assert_round_trip(message)
     klass = message.class
     bytes = message.encode
+    assert_equal bytes.bytesize, message.__size({}.compare_by_identity), "sizer and writer disagree"
     decoded = klass.decode(bytes)
     assert_equal message, decoded, "decode(encode(m)) differs for #{klass.descriptor.full_name}"
     assert_equal message.unknown_fields, decoded.unknown_fields

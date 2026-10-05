@@ -65,7 +65,7 @@ module Protostar
       def branch(info)
         i = info.index
         tag = (info.number << 3) | info.wire_type
-        out = +"when #{tag} # #{info.name}\n"
+        out = "when #{tag} # #{info.name}\n"
         out << if info.map
           slow("Protostar::Codec::Decoder.map_entry(self, values, self.class.__fields[#{i}], r, depth, frozen)")
         elsif info.message?
@@ -148,14 +148,14 @@ module Protostar
       end
 
       def enum(info)
-        src = +"start = pos\n#{varint("v")}"
+        src = "start = pos\n#{varint("v")}"
         src << "v -= 0x1_0000_0000 if (v &= 0xFFFF_FFFF) >= 0x8000_0000\n"
         src << "if (e = self.class.__fields[#{info.index}].enum_names[v])\n"
         src << store(info, "e")
-        if info.closed_enum
-          src << "else\nProtostar::Codec::Decoder.closed_enum_value(self, #{info.number}, buf, start, pos)\n"
+        src << if info.closed_enum
+          "else\nProtostar::Codec::Decoder.closed_enum_value(self, #{info.number}, buf, start, pos)\n"
         else
-          src << "else\n#{store(info, "v")}"
+          "else\n#{store(info, "v")}"
         end
         src << "end\n"
       end
