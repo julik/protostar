@@ -1,0 +1,28 @@
+1: 1
+2 {
+  1: "type.googleapis.com/proto2_unittest.TestAny"
+  2 {
+    2 {
+      1: "example.com/x/proto2_unittest.TestAny"
+      2 {
+        1: 7
+      }
+    }
+    4: "inner"
+  }
+}
+3 {
+  1: "type.googleapis.com/unknown.Type"
+  2: "\001\002"
+}
+3 {
+  1: "type.googleapis.com/google.protobuf.Any"
+  2 {
+    1: "type.googleapis.com/proto2_unittest.TestAny"
+    2 {
+      1: 3
+    }
+  }
+}
+3: ""
+4: "outer"

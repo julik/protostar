@@ -131,6 +131,8 @@ module Protostar
         Message::Accessors.install(klass, fields, oneofs, @reserved)
         Codec::DecodeGenerator.install(klass, fields)
         Codec::EncodeGenerator.install(klass, fields)
+        well_known = WellKnown::MIXINS[descriptor.full_name]
+        klass.include(well_known) if well_known
       end
 
       def resolve(descriptor)

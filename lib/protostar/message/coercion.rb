@@ -23,6 +23,9 @@ module Protostar
       }.freeze
 
       ENUM_RANGE = RANGES.fetch(FieldInfo::INT32)
+      FLOAT_MAX = 3.4028234663852886e+38
+      # Halfway between FLT_MAX and 2**128: doubles below it round to FLT_MAX
+      FLOAT_ROUNDS_TO_MAX = 3.4028235677973366e+38
       UTF_8 = Encoding::UTF_8
       BINARY = Encoding::BINARY
 
@@ -66,7 +69,7 @@ module Protostar
         when FieldInfo::FLOAT
           raise_type(info, value, "a Numeric") unless value.is_a?(Float) || value.is_a?(Integer)
           # stored at single precision so that reads match what decoding gives back
-          [value.to_f].pack("e").unpack1("e")
+          float32(value.to_f)
         when FieldInfo::BOOL
           raise_type(info, value, "true or false") unless value == true || value == false
           value
@@ -83,6 +86,18 @@ module Protostar
             raise_type(info, value, "an Integer in #{info.descriptor.type} range")
           end
           value
+        end
+      end
+
+      # The nearest single-precision value, as C's double-to-float conversion
+      # gives it. `pack("e")` alone turns everything above FLT_MAX into
+      # Infinity, even values that round down to FLT_MAX.
+      def float32(f)
+        a = f.abs
+        if a > FLOAT_MAX && a < FLOAT_ROUNDS_TO_MAX
+          (f > 0) ? FLOAT_MAX : -FLOAT_MAX
+        else
+          [f].pack("e").unpack1("e")
         end
       end
 

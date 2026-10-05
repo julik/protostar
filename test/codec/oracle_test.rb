@@ -65,10 +65,10 @@ class OracleTest < Minitest::Test
     name = message.class.descriptor.full_name
     bytes = message.encode
     theirs = oracle.decode(bytes)
-    expected = normalize(message.to_h)
+    expected = normalize(message.__to_h)
     assert_equal expected, normalize(theirs.to_h), "the oracle reads our #{name} differently"
     ours = message.class.decode(oracle.encode(theirs))
-    assert_equal expected, normalize(ours.to_h), "we read the oracle's #{name} differently"
+    assert_equal expected, normalize(ours.__to_h), "we read the oracle's #{name} differently"
     assert_equal message, ours
   end
 

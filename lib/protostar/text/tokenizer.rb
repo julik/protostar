@@ -1,0 +1,84 @@
+# frozen_string_literal: true
+
+require "strscan"
+
+module Protostar
+  module Text
+    # Splits text format into tokens the way protoc's io::Tokenizer does:
+    # identifiers, integers (decimal, hex, octal), floats (an `f` suffix
+    # allowed), quoted strings, and single-character symbols. `#` starts a
+    # comment that runs to the end of the line.
+    # @api private
+    class Tokenizer
+      Token = ::Struct.new(:type, :text, :pos)
+
+      SKIP = /(?:\s+|#[^\n]*)+/
+      IDENTIFIER = /[A-Za-z_][A-Za-z0-9_]*/
+      HEX = /0[xX][0-9A-Fa-f]+/
+      FLOAT = /(?:\d+\.\d*|\.\d+)(?:[eE][-+]?\d+)?[fF]?|\d+[eE][-+]?\d+[fF]?|\d+[fF]/
+      INTEGER = /\d+/
+      STRING = /"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'/
+      NUMBER_TAIL = /[A-Za-z0-9_.]/
+
+      def initialize(text)
+        @text = text
+        @scanner = StringScanner.new(text)
+        @peeked = nil
+      end
+
+      # @return [Token] the next token without consuming it
+      def peek
+        @peeked ||= scan
+      end
+
+      # @return [Token] the next token, consumed
+      def next
+        t = peek
+        @peeked = nil
+        t
+      end
+
+      # @return [Array(Integer, Integer)] 1-based line and column of a byte position
+      def line_col(pos)
+        before = @text.byteslice(0, pos)
+        line = before.count("\n") + 1
+        last = before.rindex("\n")
+        [line, before.length - (last ? last + 1 : 0) + 1]
+      end
+
+      # @raise [ParseError]
+      def fail!(message, pos)
+        raise ParseError.new(message, *line_col(pos))
+      end
+
+      private
+
+      def scan
+        s = @scanner
+        s.skip(SKIP)
+        pos = s.pos
+        return Token.new(:eof, "", pos) if s.eos?
+        if (t = s.scan(IDENTIFIER))
+          Token.new(:identifier, t, pos)
+        elsif (t = s.scan(HEX))
+          number(:integer, t, pos)
+        elsif (t = s.scan(FLOAT))
+          number(:float, t, pos)
+        elsif (t = s.scan(INTEGER))
+          number(:integer, t, pos)
+        elsif (t = s.scan(STRING))
+          Token.new(:string, t, pos)
+        elsif s.check(/["']/)
+          fail!("unterminated string", pos)
+        else
+          Token.new(:symbol, s.getch, pos)
+        end
+      end
+
+      def number(type, text, pos)
+        fail!("need space between number and identifier", @scanner.pos) if @scanner.check(NUMBER_TAIL)
+        Token.new(type, text, pos)
+      end
+    end
+  end
+end

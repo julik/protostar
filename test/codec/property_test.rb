@@ -35,7 +35,7 @@ class PropertyTest < Minitest::Test
     assert_equal message, decoded, "decode(encode(m)) differs for #{klass.descriptor.full_name}"
     assert_equal message.unknown_fields, decoded.unknown_fields
     assert_equal bytes, decoded.encode, "re-encoding differs for #{klass.descriptor.full_name}"
-    assert_equal message, klass.new(message.to_h), "to_h does not round trip for #{klass.descriptor.full_name}"
+    assert_equal message, klass.new(message.__to_h), "to_h does not round trip for #{klass.descriptor.full_name}"
     frozen = klass.decode(bytes, frozen: true)
     assert_equal message, frozen
     assert Ractor.shareable?(frozen)

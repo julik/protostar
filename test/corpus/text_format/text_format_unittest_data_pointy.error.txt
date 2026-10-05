@@ -1,0 +1,2 @@
+input:134:22: Field "oneof_nested_message" is specified along with field "oneof_uint32", another member of oneof "oneof_field".
+Failed to parse input.
