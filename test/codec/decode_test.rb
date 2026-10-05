@@ -268,7 +268,7 @@ class DecodeTest < Minitest::Test
     bad = wire { |w| w.write_tag(14, 2).write_bytes("\xC3\x28".b) }
     error = assert_raises(Protostar::DecodeError) { @all3.decode(bad) }
     assert_match "invalid UTF-8 in proto3_unittest.TestAllTypes.optional_string", error.message
-    assert_equal 1, error.offset, "the offset of the string's length prefix"
+    assert_equal 2, error.offset, "the offset of the string's bytes"
     m = @all.decode(bad)
     assert_equal "\xC3\x28".b, m.optional_string.b, "unittest.proto turns utf8_validation off"
     refute m.optional_string.valid_encoding?

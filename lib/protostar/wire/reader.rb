@@ -225,7 +225,8 @@ module Protostar
           result |= (byte & 0x7F) << shift
           if byte < 0x80
             @pos = pos
-            return result & MASK64
+            # masking with a Bignum allocates, and only a tenth byte can overflow 64 bits
+            return (shift == 63) ? result & MASK64 : result
           end
           shift += 7
         end

@@ -42,7 +42,7 @@ module Protostar
           buf << value
           return self
         end
-        value &= MASK64
+        value &= MASK64 if value < 0
         while value >= 0x80
           buf << ((value & 0x7F) | 0x80)
           value >>= 7

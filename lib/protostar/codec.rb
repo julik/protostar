@@ -8,5 +8,6 @@ module Protostar
 end
 
 require_relative "codec/decoder"
+require_relative "codec/decode_generator"
 require_relative "codec/sizer"
 require_relative "codec/encoder"

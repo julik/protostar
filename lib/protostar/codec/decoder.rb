@@ -17,7 +17,7 @@ module Protostar
       def decode(klass, bytes, recursion_limit: RECURSION_LIMIT, frozen: false)
         r = Wire::Reader.new(bytes)
         msg = klass.__empty
-        fields(msg, r, recursion_limit, 0, frozen)
+        msg.__decode_fields(r, recursion_limit, 0, frozen)
         msg.freeze if frozen
         msg
       end
@@ -56,56 +56,59 @@ module Protostar
         end
       end
 
-      # Reads fields into `msg` up to the reader's limit, or through the end
-      # tag of group `end_group` when that is not 0
-      def fields(msg, r, depth, end_group, frozen)
-        by_number = msg.class.__by_number
-        values = msg.__values
-        while r.pos < r.limit
-          at = r.pos
-          tag = r.read_varint
-          number = tag >> 3
-          wt = tag & 7
-          if wt == Wire::END_GROUP
-            if number == end_group && end_group != 0
-              msg.__seal_unknown
-              return
-            end
-            raise DecodeError.new("unmatched end of group #{number}", offset: at)
-          end
-          Wire::Reader.check_tag(tag, at)
-          info = by_number[number]
-          if info.nil?
-            unknown(msg, r, number, wt, depth)
-          elsif wt == info.wire_type
-            if info.map
-              map_entry(msg, values, info, r, depth, frozen)
-            elsif info.message?
-              if info.repeated
-                sub = info.message_class.__empty
-                nested(sub, info, r, depth, frozen, at)
-                (values[info.index] ||= []) << sub
-              else
-                singular_message(values, info, r, depth, frozen, at)
-              end
-            elsif info.kind == F::ENUM
-              enum(msg, values, info, r)
-            elsif info.repeated
-              (values[info.index] ||= []) << scalar(r, info)
-            else
-              siblings = info.siblings
-              siblings&.each { |s| values[s] = nil }
-              values[info.index] = scalar(r, info)
-            end
-          elsif wt == Wire::LENGTH_DELIMITED && info.packable
-            packed(msg, values, info, r)
-          else
-            # a wire type that does not match the field makes it unknown, as in protoc
-            unknown(msg, r, number, wt, depth)
-          end
+      # Decodes one field whose tag was just read from offset `at`. The
+      # decoders generated for each class ({DecodeGenerator}) handle a class's
+      # own fields inline and come here for everything else.
+      # @return [Boolean] true when the tag ends the group being read
+      def field(msg, r, tag, at, depth, end_group, frozen)
+        number = tag >> 3
+        wt = tag & 7
+        if wt == Wire::END_GROUP
+          return true if number == end_group && end_group != 0
+          raise DecodeError.new("unmatched end of group #{number}", offset: at)
         end
+        Wire::Reader.check_tag(tag, at)
+        info = msg.class.__by_number[number]
+        values = msg.__values
+        if info.nil?
+          unknown(msg, r, number, wt, depth)
+        elsif wt == info.wire_type
+          if info.map
+            map_entry(msg, values, info, r, depth, frozen)
+          elsif info.message?
+            if info.repeated
+              repeated_message(values, info, r, depth, frozen, at)
+            else
+              singular_message(values, info, r, depth, frozen, at)
+            end
+          elsif info.kind == F::ENUM
+            enum(msg, values, info, r)
+          elsif info.repeated
+            (values[info.index] ||= []) << scalar(r, info)
+          else
+            siblings = info.siblings
+            siblings&.each { |s| values[s] = nil }
+            values[info.index] = scalar(r, info)
+          end
+        elsif wt == Wire::LENGTH_DELIMITED && info.packable
+          packed(msg, values, info, r)
+        else
+          # a wire type that does not match the field makes it unknown, as in protoc
+          unknown(msg, r, number, wt, depth)
+        end
+        false
+      end
+
+      # Checks the end of a message's fields: a group must have seen its end tag
+      def finish(msg, r, end_group)
         raise DecodeError.new("missing end of group #{end_group}", offset: r.pos) if end_group != 0
         msg.__seal_unknown
+      end
+
+      def repeated_message(values, info, r, depth, frozen, at)
+        sub = info.message_class.__empty
+        nested(sub, info, r, depth, frozen, at)
+        (values[info.index] ||= []) << sub
       end
 
       def singular_message(values, info, r, depth, frozen, at)
@@ -125,10 +128,10 @@ module Protostar
       def nested(sub, info, r, depth, frozen, at)
         raise DecodeError.new("recursion limit exceeded", offset: at) if depth <= 0
         if info.kind == F::GROUP
-          fields(sub, r, depth - 1, info.number, frozen)
+          sub.__decode_fields(r, depth - 1, info.number, frozen)
         else
           old = r.push_limit(r.read_varint)
-          fields(sub, r, depth - 1, 0, frozen)
+          sub.__decode_fields(r, depth - 1, 0, frozen)
           r.pop_limit(old)
         end
         sub.freeze if frozen
@@ -186,12 +189,17 @@ module Protostar
       end
 
       def string(r, info)
-        at = r.pos
         s = r.read_bytes.force_encoding(UTF_8)
         if info.utf8_validation && !s.valid_encoding?
-          raise DecodeError.new("invalid UTF-8 in #{info.descriptor.full_name}", offset: at)
+          raise DecodeError.new("invalid UTF-8 in #{info.descriptor.full_name}", offset: r.pos - s.bytesize)
         end
         s.freeze
+      end
+
+      # Keeps a closed enum's number that has no name as an unknown varint field
+      def closed_enum_value(msg, number, buf, start, pos)
+        bytes = buf.byteslice(start, pos - start).force_encoding(BINARY).freeze
+        msg.__add_unknown(UnknownField.new(number, Wire::VARINT, bytes))
       end
 
       def packed(msg, values, info, r)

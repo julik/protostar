@@ -122,6 +122,7 @@ module Protostar
         oneofs = oneof_slots.map { |o, slots| [o.name.to_sym, slots] }
         klass.__define(descriptor: descriptor, fields: fields, oneofs: oneofs)
         Message::Accessors.install(klass, fields, oneofs)
+        Codec::DecodeGenerator.install(klass, fields)
       end
 
       def resolve(descriptor)
