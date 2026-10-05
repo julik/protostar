@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package checkout;
+
+// What the shop front sends when a customer pays.
+message PlaceOrder {
+  string customer_email = 1;
+  repeated LineItem items = 2;
+  string coupon_code = 3;
+}
+
+message LineItem {
+  string sku = 1;
+  uint32 quantity = 2;
+  int64 unit_price_cents = 3;
+}
+
+// What the checkout service answers.
+message OrderPlaced {
+  string order_id = 1;
+  int64 total_cents = 2;
+}

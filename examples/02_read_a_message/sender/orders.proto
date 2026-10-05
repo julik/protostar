@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package shop;
+
+message Order {
+  string id = 1;
+  Customer customer = 2;
+  repeated LineItem items = 3;
+  Status status = 4;
+  // Free-form labels, like "channel" => "web".
+  map<string, string> labels = 5;
+  optional string coupon_code = 6;
+  // Added after the reader in ../orders.proto was compiled.
+  string gift_note = 7;
+}
+
+message Customer {
+  string email = 1;
+  string full_name = 2;
+  Address address = 3;
+}
+
+message Address {
+  string street = 1;
+  string city = 2;
+  string country_code = 3;
+}
+
+message LineItem {
+  string sku = 1;
+  uint32 quantity = 2;
+  int64 unit_price_cents = 3;
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_PLACED = 1;
+  STATUS_SHIPPED = 2;
+}

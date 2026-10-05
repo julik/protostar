@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package shop;
+
+// An order as the checkout service records it.
+message Order {
+  string id = 1;
+  string customer_email = 2;
+  repeated LineItem items = 3;
+  Status status = 4;
+}
+
+// One product in an order.
+message LineItem {
+  string sku = 1;
+  uint32 quantity = 2;
+  // Price of one unit, in cents.
+  int64 unit_price_cents = 3;
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_PLACED = 1;
+  STATUS_SHIPPED = 2;
+}
