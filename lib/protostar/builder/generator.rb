@@ -59,7 +59,7 @@ module Protostar
       end
 
       def field_method(name, entries)
-        src = +"def #{name}(value = NONE, &block)\ncase @k\n"
+        src = "def #{name}(value = NONE, &block)\ncase @k\n"
         entries.each do |i, f|
           c = "F#{i}_#{f.index}"
           src << "when #{i} then (block || NONE.equal?(value)) ? __set(#{c}, value, EMPTY, block) : __put(#{c}, value)\n"

@@ -223,11 +223,11 @@ module Protostar
       store = @store
       return tap(&block) unless store
       missed = false
-      bytes = if options.empty?
-        store.fetch(key) { missed = true; __capture(block) }
-      else
-        store.fetch(key, options) { missed = true; __capture(block) }
+      miss = proc do
+        missed = true
+        __capture(block)
       end
+      bytes = options.empty? ? store.fetch(key, &miss) : store.fetch(key, options, &miss)
       raise __error(nil, "the cache store returned a #{bytes.class} for #{key.inspect}, not bytes") unless bytes.is_a?(String)
       __mark_fragment(bytes) unless missed
       @w.write_raw(bytes)
@@ -366,15 +366,11 @@ module Protostar
       klass = info.message_class
       if v.instance_of?(klass)
         bytes = v.encode
-        if info.kind == F::GROUP
-          @buf << info.tag
-          @w.write_raw(bytes)
-          @buf << info.end_tag
-        else
-          @buf << info.tag
-          __varint(bytes.bytesize)
-          @w.write_raw(bytes)
-        end
+        @buf << info.tag
+        group = info.kind == F::GROUP
+        __varint(bytes.bytesize) unless group
+        @w.write_raw(bytes)
+        @buf << info.end_tag if group
       elsif v.is_a?(Hash)
         __nested(info, index) { __hash(v) }
       elsif v.is_a?(Message)
@@ -393,8 +389,10 @@ module Protostar
       fields = info.message_class.__fields
       case wk
       when :timestamp
-        return false unless v.is_a?(Time) || (defined?(::Date) && v.is_a?(::Date))
-        t = v.is_a?(Time) ? v : v.to_time
+        t = if v.is_a?(Time) then v
+        elsif defined?(::Date) && v.is_a?(::Date) then v.to_time
+        else return false
+        end
         __nested(info, index) do
           __put(fields[0], t.to_i)
           __put(fields[1], t.nsec)
@@ -423,7 +421,7 @@ module Protostar
       end
       raise __error(info, "is out of Duration's range: #{__show(v)}", index) if seconds.abs > MAX_DURATION
       [seconds, nanos]
-    rescue FloatDomainError, RangeError
+    rescue RangeError # FloatDomainError for NaN and Infinity
       raise __error(info, "expects a finite duration, got #{__show(v)}", index)
     end
 

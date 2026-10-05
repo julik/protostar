@@ -158,10 +158,12 @@ class BuilderDslTest < Minitest::Test
   end
 
   def test_set_and_merge
+    strings = {"id" => 3, "nicknames" => ["n"]}
     bytes = build do |pb|
       pb.set! "name", "Jane"
       pb.set!(:address) { pb.set! :street, "x" }
-      pb.merge!(id: 3, "nicknames" => ["n"], friends: [{name: "f"}], email: nil)
+      pb.merge!(strings)
+      pb.merge!({friends: [{name: "f"}], email: nil})
     end
     assert_equal Person.new(name: "Jane", id: 3, address: {street: "x"}, nicknames: ["n"], friends: [{name: "f"}]),
       decode(bytes)
