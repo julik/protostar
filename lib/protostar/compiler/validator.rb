@@ -262,7 +262,7 @@ module Protostar
       def json_name_uniqueness(node, message, use_custom)
         seen = {}
         node.field.each do |field|
-          default = Schema::Builder.json_name(field.name)
+          default = Schema.json_name(field.name)
           custom = use_custom && field.json_name && field.json_name != default
           name = custom ? field.json_name : default
           if custom && name.start_with?("[") && name.end_with?("]")
@@ -393,7 +393,7 @@ module Protostar
         end
         validate_map(node, field) if field.type == :message && field.message_type.map_entry?
         jstype(node, field)
-        if field.extension? && node.json_name && node.json_name != Schema::Builder.json_name(node.name)
+        if field.extension? && node.json_name && node.json_name != Schema.json_name(node.name)
           error(node, :option_name, "option json_name is not allowed on extension fields.")
         end
         if field.json_name.include?("\0")

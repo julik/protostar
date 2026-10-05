@@ -67,7 +67,7 @@ module Protostar
           %i[field extension].each do |key|
             next unless out[key]
             out[key] = out[key].map do |f|
-              next f unless f[:json_name] == Schema::Builder.json_name(f[:name])
+              next f unless f[:json_name] == Schema.json_name(f[:name])
               f = f.dup
               f.delete(:json_name)
               f

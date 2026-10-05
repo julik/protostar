@@ -506,15 +506,11 @@ module Protostar
 
       # protoc's GenerateSyntheticOneofs
       def generate_synthetic_oneofs(message)
-        names = {}
-        message.field.each { |f| names[f.name] = true }
-        message.oneof_decl.each { |o| names[o.name] = true }
-        message.field.each do |field|
-          next unless field.proto3_optional
-          name = field.name.to_s
-          name = "_#{name}" if name.empty? || !name.start_with?("_")
-          name = "X#{name}" while names.key?(name)
-          names[name] = true
+        fields = message.field.select(&:proto3_optional)
+        return if fields.empty?
+        taken = message.field.map(&:name) + message.oneof_decl.map(&:name)
+        names = Schema::Draft.synthetic_oneof_names(fields.map { |f| f.name.to_s }, taken)
+        fields.zip(names) do |field, name|
           field.oneof_index = message.oneof_decl.size
           oneof = AST::Oneof.new
           oneof.name = name
@@ -709,7 +705,7 @@ module Protostar
             if first.nil? || first < 65 || first > 90
               record_error_at(name_token.line, name_token.column, "Group names must start with a capital letter.")
             end
-            field.name = field.name.downcase(:ascii)
+            field.name = Schema::Draft.group_field_name(field.name)
             field.type_name = group.name
             if looking_at?("{")
               return false unless parse_message_block(group, group_location)
@@ -755,27 +751,10 @@ module Protostar
         true
       end
 
-      # protoc's MapEntryName: CamelCase the field name, then "Entry"
-      def map_entry_name(field_name)
-        out = +""
-        cap_next = true
-        field_name.each_char do |c|
-          if c == "_"
-            cap_next = true
-          elsif cap_next
-            out << (c.between?("a", "z") ? c.upcase : c)
-            cap_next = false
-          else
-            out << c
-          end
-        end
-        out << "Entry"
-      end
-
       def generate_map_entry(map_field, field, messages)
         entry = AST::Message.new
         messages << entry
-        entry_name = map_entry_name(field.name)
+        entry_name = Schema::Draft.map_entry_name(field.name)
         field.type_name = entry_name
         entry.name = entry_name
         entry.options = AST::Options.new

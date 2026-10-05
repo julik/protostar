@@ -126,19 +126,7 @@ module Protostar
       # @param field_name [String]
       # @return [String]
       def map_entry_name(field_name)
-        out = +""
-        cap_next = true
-        field_name.to_s.each_char do |c|
-          if c == "_"
-            cap_next = true
-          elsif cap_next
-            out << (c.between?("a", "z") ? c.upcase : c)
-            cap_next = false
-          else
-            out << c
-          end
-        end
-        out << "Entry"
+        Schema::Draft.map_entry_name(field_name)
       end
 
       # The entry message protoc's parser synthesizes for a map field. The

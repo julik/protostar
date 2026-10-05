@@ -304,7 +304,7 @@ module Protostar
         end
 
         def custom_json_name?(f)
-          f.key?(:json_name) && f[:json_name] != Schema::Builder.json_name(f[:name])
+          f.key?(:json_name) && f[:json_name] != Schema.json_name(f[:name])
         end
 
         def extensions(out, depth, var, list, path)

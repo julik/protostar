@@ -844,7 +844,7 @@ module Protostar
         h[:type] = type
         h[:extendee] = ".#{field.resolved_extendee.full_name}" if field.resolved_extendee
         h[:default_value] = default_text(field, type) if field.default_value
-        h[:json_name] = field.json_name || Schema::Builder.json_name(field.name)
+        h[:json_name] = field.json_name || Schema.json_name(field.name)
         h[:oneof_index] = field.oneof_index if field.oneof_index
         put_options(h, field)
         h[:proto3_optional] = true if field.proto3_optional
