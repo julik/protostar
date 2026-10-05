@@ -2,3 +2,8 @@ ruby_version: 3.2
 ignore:
   - "test/corpus/**/*"
   - "tmp/**/*"
+  # the shim's generated files are protoc's and grpc's format, and its
+  # test/google holds Google's own tests, kept as they are upstream
+  - "shims/google-protobuf/lib/google/protobuf/**/*_pb.rb"
+  - "shims/google-protobuf/test/google/**/*"
+  - "shims/google-protobuf/test/*/generated/**/*"

@@ -1,0 +1,17 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+# This bundle must never contain Google's google-protobuf: the gemspec here is
+# the only google-protobuf, and grpc's dependency on it resolves to this path.
+gemspec
+
+gem "protostar", path: "../.."
+
+group :test do
+  gem "rake"
+  gem "test-unit"
+  gem "bigdecimal"
+  gem "grpc"
+  gem "googleapis-common-protos-types"
+end

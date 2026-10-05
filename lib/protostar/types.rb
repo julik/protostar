@@ -14,7 +14,11 @@ module Protostar
   module Types
     # A set of defined types, by full name, and the files they came from
     class Registry
-      def initialize
+      # @param open_enums [Boolean] treat every enum as open: numbers without a
+      #   name are kept in the field on decode and accepted on assignment, as
+      #   google-protobuf's Ruby gem does, instead of going to unknown fields
+      def initialize(open_enums: false)
+        @open_enums = open_enums
         @mutex = Mutex.new
         @types = {}
         @files = {}
@@ -46,7 +50,7 @@ module Protostar
             return defined.last if defined.first.equal?(file)
             raise Error, "file \"#{file.name}\" is already defined from another descriptor"
           end
-          types = Definer.new(file, @types).define
+          types = Definer.new(file, @types, open_enums: @open_enums).define
           types.each_key do |full_name|
             raise Error, "\"#{full_name}\" is already defined by \"#{@types[full_name].descriptor.file.name}\"" if @types.key?(full_name)
           end
@@ -94,9 +98,10 @@ module Protostar
     # Makes the classes and modules of one file
     # @api private
     class Definer
-      def initialize(file, known)
+      def initialize(file, known, open_enums: false)
         @file = file
         @known = known
+        @open_enums = open_enums
         @types = {}
         @reserved = Message::Accessors.reserved
       end
@@ -124,7 +129,7 @@ module Protostar
         classes = method(:resolve)
         fields = descriptor.fields.each_with_index.map do |f, i|
           slots = oneof_slots[f.real_oneof] if f.real_oneof
-          Message::FieldInfo.new(f, i, classes, siblings: slots && (slots - [i]))
+          Message::FieldInfo.new(f, i, classes, siblings: slots && (slots - [i]), open_enums: @open_enums)
         end
         oneofs = oneof_slots.map { |o, slots| [o.name.to_sym, slots] }
         klass.__define(descriptor: descriptor, fields: fields, oneofs: oneofs)

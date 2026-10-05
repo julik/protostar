@@ -76,4 +76,16 @@ namespace :examples do
   end
 end
 
+namespace :shim do
+  desc "Run the google-protobuf shim's tests from its directory, with its own bundle"
+  task :test do
+    Bundler.with_unbundled_env do
+      Dir.chdir(File.join(__dir__, "shims/google-protobuf")) do
+        sh "bundle check > /dev/null || bundle install"
+        sh "bundle exec rake generate:check test"
+      end
+    end
+  end
+end
+
 task default: %i[test standard]

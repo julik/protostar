@@ -1,0 +1,1151 @@
+["BasicTest::TestMessage", "BasicTestProto2::TestMessage", "A::B::C::TestMessage"]
+---
+{}
+---
+{:optional_int32 => 0, :optional_string => ""}
+---
+{}
+---
+{:singular_msg => {:foo => 0}, :singular_string => "x"}
+---
+{}
+---
+"<BasicTestProto2::TestMessageDefaults: >" UTF-8 frozen=false
+---
+"\xCF\xA5s\xBD\xBA\xE6fubar" ASCII-8BIT frozen=true
+---
+"Default Str" UTF-8 frozen=true
+---
+"" UTF-8 frozen=true
+---
+"" ASCII-8BIT frozen=true
+---
+"<BasicTest::TestSingularFields: singular_int32: 0, singular_int64: 0, singular_uint32: 0, singular_uint64: 0, singular_bool: false, singular_float: 0.0, singular_double: 0.0, singular_string: \"\", singular_bytes: \"\", singular_enum: :Default>" UTF-8 frozen=false
+---
+{:map_string_int32 => {"a" => 1}, :map_string_msg => {"b" => {:foo => 2}}}
+---
+"<BasicTest::MapMessage: map_string_int32: {\"a\"=>1}, map_string_msg: {\"b\"=><BasicTest::TestMessage2: foo: 2>}, map_string_enum: {}>" UTF-8 frozen=false
+---
+{:a => "x"}
+---
+{:c => {}}
+---
+[[1, 2, 3], [1, 2, 3]]
+---
+5
+---
+[true, true]
+---
+[true, true]
+---
+RepeatedField([]) frozen=true
+---
+nil
+---
+true
+---
+[true, nil]
+---
+true
+---
+!! TypeError: wrong argument type Symbol (expected String)
+---
+nil
+---
+!! ArgumentError: Unknown field: nope
+---
+5
+---
+!! Google::Protobuf::TypeError: Invalid type Hash to assign to submessage field 'optional_msg'.
+---
+!! Google::Protobuf::TypeError: Expected repeated field array
+---
+!! ArgumentError: Expected array as initializer value for repeated field 'repeated_int32' (given Google::Protobuf::RepeatedField).
+---
+!! ArgumentError: Expected Hash object as initializer value for map field 'map_string_int32' (given Google::Protobuf::Map).
+---
+3
+---
+3
+---
+!! ArgumentError: Expected hash arguments or message, not Integer
+---
+!! ArgumentError: Expected string or symbols as hash keys when initializing proto from hash.
+---
+!! ArgumentError: Expected hash arguments or message, not NilClass
+---
+1
+---
+!! RangeError: integer 2147483648 too big to convert to 'int'
+---
+-2147483648
+---
+!! RangeError: Assigning negative value to unsigned integer field 'optional_uint32' (given Integer).
+---
+!! RangeError: bignum too big to convert into 'unsigned long long'
+---
+!! RangeError: bignum too big to convert into 'long long'
+---
+!! RangeError: Non-integral floating point value assigned to integer field 'optional_int32' (given Float).
+---
+!! RangeError: float Inf out of range of integer
+---
+!! Google::Protobuf::TypeError: Expected number type for integral field 'optional_int32' (given Rational).
+---
+!! Google::Protobuf::TypeError: Expected number type for integral field 'optional_int32' (given BigDecimal).
+---
+!! Google::Protobuf::TypeError: Expected number type for double field 'optional_double' (given Rational).
+---
+0.10000000149011612
+---
+Infinity
+---
+!! Google::Protobuf::TypeError: Expected number type for float field 'optional_float' (given String).
+---
+<BasicTest::TestMessage: repeated_int32: [], repeated_int64: [], repeated_uint32: [], repeated_uint64: [], repeated_bool: [], repeated_float: [], repeated_double: [], repeated_string: [], repeated_bytes: [], repeated_msg: [], repeated_enum: []>
+---
+!! Google::Protobuf::TypeError: Invalid argument for boolean field 'optional_bool' (given Integer).
+---
+"sym" UTF-8 frozen=true
+---
+"é" UTF-8 frozen=true
+---
+!! Encoding::UndefinedConversionError: U+00E9 from UTF-8 to ASCII-8BIT
+---
+!! Google::Protobuf::TypeError: Invalid argument for bytes field 'optional_bytes' (given Symbol).
+---
+"abc" ASCII-8BIT frozen=true
+---
+:B
+---
+:B
+---
+99
+---
+!! RangeError: integer 1099511627776 too big to convert to 'int'
+---
+!! RangeError: Non-integral floating point value assigned to integer field 'optional_enum' (given Float).
+---
+:Default
+---
+2
+---
+[1, 7]
+---
+!! Google::Protobuf::TypeError: Invalid type BasicTest::TestMessage to assign to submessage field 'optional_msg'.
+---
+false
+---
+!! Google::Protobuf::TypeError: Expected number type for integral field 'optional_int32' (given NilClass).
+---
+nil
+---
+!! RuntimeError: Oneof accessors are read-only.
+---
+[false, true, true]
+---
+[nil, false]
+---
+[true, false, true]
+---
+false
+---
+!! NoMethodError: has_singular_int32?
+---
+!! Google::Protobuf::TypeError: Invalid type Float to assign to submessage field 'double'.
+---
+[2.0, <Google::Protobuf::DoubleValue: value: 2.0>]
+---
+nil
+---
+<Google::Protobuf::StringValue: value: "x">
+---
+!! Google::Protobuf::TypeError: Expected number type for integral field 'int32' (given String).
+---
+[nil, true, false]
+---
+<Google::Protobuf::Timestamp: seconds: 5, nanos: 7>
+---
+<Google::Protobuf::Duration: seconds: 1, nanos: 500000000>
+---
+<Google::Protobuf::Duration: seconds: -1, nanos: -500000000>
+---
+<Google::Protobuf::Duration: seconds: 0, nanos: 333333333>
+---
+!! Google::Protobuf::TypeError: Invalid type Integer to assign to submessage field 'timestamp'.
+---
+<Google::Protobuf::Timestamp: seconds: 1, nanos: 0>
+---
+"\b\x01" ASCII-8BIT frozen=false
+---
+!! ArgumentError: Message of wrong type.
+---
+!! ArgumentError: Expected hash arguments.
+---
+<BasicTest::TestMessage: optional_int32: 1, repeated_int32: [], repeated_int64: [], repeated_uint32: [], repeated_uint64: [], repeated_bool: [], repeated_float: [], repeated_double: [], repeated_string: [], repeated_bytes: [], repeated_msg: [], repeated_enum: []>
+---
+!! Google::Protobuf::ParseError
+---
+!! ArgumentError: Expected string for binary protobuf data.
+---
+!! ArgumentError: Expected hash arguments.
+---
+1
+---
+!! Google::Protobuf::ParseError
+---
+!! Google::Protobuf::ParseError
+---
+<BasicTest::TestMessage: repeated_int32: [], repeated_int64: [], repeated_uint32: [], repeated_uint64: [], repeated_bool: [], repeated_float: [], repeated_double: [], repeated_string: [], repeated_bytes: [], repeated_msg: [], repeated_enum: []>
+---
+"{\"optionalInt32\":1,\"repeatedString\":[\"a\"]}" UTF-8 frozen=false
+---
+"{\"optionalInt32\":1}" UTF-8 frozen=false
+---
+"{\"optional_int32\":1}" UTF-8 frozen=false
+---
+"{\"repeatedInt32\":[],\"repeatedInt64\":[],\"repeatedUint32\":[],\"repeatedUint64\":[],\"repeatedBool\":[],\"repeatedFloat\":[],\"repeatedDouble\":[],\"repeatedString\":[],\"repeatedBytes\":[],\"repeatedMsg\":[],\"repeatedEnum\":[]}" UTF-8 frozen=false
+---
+"{\"foo\":1}" UTF-8 frozen=false
+---
+"\b\x01" ASCII-8BIT frozen=false
+---
+2
+---
+"{\"optionalInt32\":1}" UTF-8 frozen=false
+---
+3
+---
+!! TypeError: wrong argument type Integer (expected Google::Protobuf::Message)
+---
+"\b\x01" ASCII-8BIT frozen=false
+---
+true
+---
+true
+---
+false
+---
+"<BasicTest::TestMessage: repeated_int32: [], repeated_int64: [], repeated_uint32: [], repeated_uint64: [], repeated_bool: [], repeated_float: [], repeated_double: [], repeated_string: [], repeated_bytes: [], repeated_msg: [], repeated_enum: []>" UTF-8 frozen=false
+---
+{}
+---
+~ descriptor names are frozen UTF-8 Strings; the C gem makes a new ASCII-8BIT String per call
+---
+~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+---
+~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+---
+~ descriptor names are frozen UTF-8 Strings; the C gem makes a new ASCII-8BIT String per call
+---
+~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+---
+~ lookups take Strings and Symbols alike; the C gem wants one or the other
+---
+nil
+---
+["optional_int32", "optional_int64", "optional_uint32"]
+---
+["_optional_int32", "_optional_int64", "_optional_uint32", "_optional_uint64", "_optional_bool", "_optional_float", "_optional_double", "_optional_string", "_optional_bytes", "_optional_msg", "_optional_enum", "_optional_proto2_submessage", "_optional_msg2"]
+---
+nil
+---
+nil
+---
+~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+---
+["optional_int32"]
+---
+~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+---
+~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+---
+~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+---
+<Google::Protobuf::MessageOptions: uninterpreted_option: []>
+---
+true
+---
+~ FieldDescriptor#map? exists, as in the FFI implementation; the C gem lacks it
+---
+[:int32, :repeated, 0, nil, nil, false, true, true]
+---
+:Default
+---
+[nil, "basic_test.TestMessage2"]
+---
+~ FieldDescriptor#map? exists, as in the FFI implementation; the C gem lacks it
+---
+[Class, nil]
+---
+"\xCF\xA5s\xBD\xBA\xE6fubar" ASCII-8BIT frozen=true
+---
+:B2
+---
+6.0
+---
+"Default Str" UTF-8 frozen=true
+---
+!! Google::Protobuf::TypeError: get method called on wrong message type
+---
+[4, true]
+---
+!! ArgumentError: does not track presence
+---
+~ FieldDescriptor#set on a repeated field wants a RepeatedField; the C gem's message names the element type
+---
+false
+---
+<Google::Protobuf::FieldDescriptorProto: name: "optional_int32", number: 1, label: :LABEL_OPTIONAL, type: :TYPE_INT32, oneof_index: 0, proto3_optional: true>
+---
+"TestMessage" UTF-8 frozen=true
+---
+"basic_test.proto" UTF-8 frozen=true
+---
+true
+---
+~ lookups take Strings and Symbols alike; the C gem wants one or the other
+---
+[:A, :B, :C, :Default, :V0]
+---
+~ lookups take Strings and Symbols alike; the C gem wants one or the other
+---
+4
+---
+false
+---
+~ descriptor names are frozen UTF-8 Strings; the C gem makes a new ASCII-8BIT String per call
+---
+<Google::Protobuf::EnumOptions: uninterpreted_option: []>
+---
+<Google::Protobuf::EnumDescriptorProto: name: "TestEnum", value: [<Google::Protobuf::EnumValueDescriptorProto: name: "Default", number: 0>, <Google::Protobuf::EnumValueDescriptorProto: name: "A", number: 1>, <Google::Protobuf::EnumValueDescriptorProto: name: "B", number: 2>, <Google::Protobuf::EnumValueDescriptorProto: name: "C", number: 3>, <Google::Protobuf::EnumValueDescriptorProto: name: "v0", number: 4>], reserved_range: [], reserved_name: []>
+---
+nil
+---
+~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+---
+nil
+---
+nil
+---
+~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+---
+!! ArgumentError: Unable to parse FileDescriptorProto
+---
+!! TypeError: wrong argument type Integer (expected String)
+---
+!! Google::Protobuf::TypeError: Unable to build file to DescriptorPool: Depends on file 'nope.proto', but it has not been loaded
+---
+!! Google::Protobuf::TypeError: Unable to build file to DescriptorPool: duplicate file name x.proto
+---
+!! Google::Protobuf::TypeError: Unable to build file to DescriptorPool: duplicate file name x.proto
+---
+[nil, "<#<Class:>: >", "x.A"]
+---
+{}
+---
+~ descriptor names are frozen UTF-8 Strings; the C gem makes a new ASCII-8BIT String per call
+---
+~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+---
+~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+---
+~ descriptors refuse Ruby construction with the FFI implementation's RuntimeError
+---
+~ descriptors refuse Ruby construction with the FFI implementation's RuntimeError
+---
+Symbol
+---
+[Google::Protobuf::ParseError, Google::Protobuf::Error, StandardError]
+---
+[Google::Protobuf::TypeError, ErrorHighlight::CoreExt, TypeError]
+---
+!! NameError: AbstractMessage
+---
+true
+---
+true
+---
+Google::Protobuf::MessageExts
+---
+{}
+---
+"<A::B::C::TestMessage: optional_int32: 0, optional_int64: 0, optional_uint32: 0, optional_uint64: 0, optional_bool: false, optional_double: 0.0, optional_float: 0.0, optional_string: \"\", optional_bytes: \"\", optional_enum: :Default, repeated_int32: [], repeated_int64: [], repeated_uint32: [], repeated_uint64: [], repeated_bool: [], repeated_double: [], repeated_float: [], repeated_string: [], repeated_bytes: [], repeated_enum: [], repeated_msg: [], map_int32_string: {}, map_int64_string: {}, map_uint32_string: {}, map_uint64_string: {}, map_bool_string: {}, map_string_string: {}, map_string_msg: {}, map_string_enum: {}, map_string_int32: {}, map_string_bool: {}>" UTF-8 frozen=false
+---
+{:optional_int32 => 1, :repeated_msg => [{:optional_int32 => 2}]}
+---
+!! RangeError: integer 4294967296 too big to convert to 'unsigned int'
+---
+!! RangeError: integer -2147483649 too small to convert to 'int'
+---
+!! RangeError: bignum too big to convert into 'long'
+---
+!! RangeError: bignum too big to convert into 'unsigned long'
+---
+!! RangeError: float 1e+20 out of range of long long
+---
+!! RangeError: integer 10000000000 too big to convert to 'int'
+---
+!! RangeError: bignum too big to convert into 'long long'
+---
+!! RangeError: float -Inf out of range of integer
+---
+15000000000000000000
+---
+!! RangeError: integer 2147483648 too big to convert to 'int'
+---
+-2147483648
+---
+!! ArgumentError: Expected hash arguments or message, not BasicTest::TestMessage
+---
+1
+---
+{"a" => 1, "b" => 2}
+---
+!! FrozenError: can't modify frozen BasicTest::TestMessage: <BasicTest::TestMessage: optional_int32: 1, repeated_int32: [], repeated_int64: [], repeated_uint32: [], repeated_uint64: [], repeated_bool: [], repeated_fl
+---
+false
+---
+!! FrozenError: can't modify frozen Google::Protobuf::RepeatedField: [1]
+---
+[true, true]
+---
+[true, true]
+---
+!! FrozenError: can't modify frozen Google::Protobuf::Map: {"a"=>1}
+---
+!! FrozenError: can't modify frozen BasicTest::TestMessage2: <BasicTest::TestMessage2: foo: 1>
+---
+!! FrozenError: can't modify frozen BasicTest::TestMessage: <BasicTest::TestMessage: repeated_int32: [], repeated_int64: [], repeated_uint32: [], repeated_uint64: [], repeated_bool: [], repeated_float: [], repeated_d
+---
+!! FrozenError: can't modify frozen Google::Protobuf::RepeatedField: [1, 2]
+---
+[true, false, false]
+---
+~ RepeatedField#hash is its elements' Array#hash
+---
+!! ArgumentError: Unknown field type.
+---
+[nil, nil, [1], [2], nil, [], [1, 2]]
+---
+[1, [1], [1, 2], [2, 1], []]
+---
+[1, 2]
+---
+3
+---
+["a", "", "", "x"]
+---
+[nil, nil, <BasicTest::TestMessage2: >]
+---
+[:Default, :Default, :A]
+---
+RepeatedField([1, 2, 3, 4]) frozen=false
+---
+!! Google::Protobuf::TypeError: Expected number type for integral field '' (given String).
+---
+[3]
+---
+!! TypeError: wrong argument type Google::Protobuf::RepeatedField (expected Array)
+---
+!! TypeError: wrong argument type Integer (expected Array)
+---
+!! TypeError: wrong argument type Google::Protobuf::RepeatedField (expected Array)
+---
+!! TypeError: wrong argument type Integer (expected Array)
+---
+!! ArgumentError: Attempt to append RepeatedField with different element type.
+---
+!! ArgumentError: Unknown type appending to RepeatedField
+---
+Google::Protobuf::RepeatedField
+---
+[[], 0]
+---
+RepeatedField([1, 2]) frozen=false
+---
+~ each without a block returns an Enumerator; the C gem raises LocalJumpError
+---
+[2, 4]
+---
+[2]
+---
+[[1, 2, 3], [1, 2, 3], [1, 2, 3]]
+---
+[1, [3, 2], :nf]
+---
+[[4, 2, 3], [4, 2, 3]]
+---
+!! Google::Protobuf::TypeError: Expected number type for integral field '' (given String).
+---
+[[0, 3, 1, 2], 0, [3, 9, 1, 2], [3, 9, 1, 2]]
+---
+[false, true, 1, [2, 1, 3], "3-1-2", 6, 1, 3, 1]
+---
+[Array, false, 4, 3]
+---
+[3, 1, 2]
+---
+[1, 2, 3, 1, 2]
+---
+[3, 1, 2]
+---
+!! ArgumentError: wrong number of arguments (given 1, expected 0)
+---
+[3, 1]
+---
+1
+---
+[[3, 1], [2]]
+---
+false
+---
+"[3, 1, 2]\n" UTF-8 frozen=false
+---
+!! ArgumentError: Expected array as initialize argument
+---
+!! ArgumentError: Expected array as initialize argument
+---
+!! ArgumentError: Unknown field type.
+---
+!! ArgumentError: Expected symbol for field type.
+---
+[:A, :B]
+---
+!! Google::Protobuf::TypeError: Invalid type Hash to assign to submessage field ''.
+---
+!! Google::Protobuf::TypeError: nil message not allowed here.
+---
+!! Google::Protobuf::TypeError: Invalid argument for string field '' (given Integer).
+---
+!! ArgumentError: Expected a maximum of 2 arguments.
+---
+!! ArgumentError: Unknown field type.
+---
+!! ArgumentError: Unknown field type.
+---
+!! ArgumentError: Unknown field type.
+---
+!! Google::Protobuf::TypeError: Repeated field array has wrong element type
+---
+!! Google::Protobuf::TypeError: Repeated field array has wrong message/enum class
+---
+1
+---
+[[1, 2], [1, 2]]
+---
+[[], [1, 5]]
+---
+[[1], [7]]
+---
+false
+---
+[["a"], [1], {"a" => 1}, 1, 1, "{\"a\"=>1}", [["a", 1]]]
+---
+~ each without a block returns an Enumerator; the C gem raises LocalJumpError
+---
+[nil, nil, {}]
+---
+[nil, 1, true]
+---
+!! Google::Protobuf::TypeError: Invalid argument for string field '' (given Integer).
+---
+!! Google::Protobuf::TypeError: Invalid argument for string field '' (given Integer).
+---
+!! ArgumentError: Unknown field type.
+---
+[{"a" => 1}, {"a" => 1, "b" => 2}, Google::Protobuf::Map]
+---
+!! ArgumentError: Attempt to merge Map with mismatching types
+---
+!! ArgumentError: Unknown type merging into Map
+---
+!! FrozenError: can't modify frozen Google::Protobuf::Map: {"a"=>1}
+---
+[[["a", 1]], [["a", 1]], 1, ["a", 1], true, [["a", 1]]]
+---
+true
+---
+[{"a" => {:foo => 1}}, "{\"a\"=><BasicTest::TestMessage2: foo: 1>}"]
+---
+!! Google::Protobuf::TypeError: Invalid type Hash to assign to submessage field ''.
+---
+!! Google::Protobuf::TypeError: nil message not allowed here.
+---
+!! ArgumentError: Invalid key type for map.
+---
+!! ArgumentError: Unknown field type.
+---
+!! ArgumentError: Map constructor expects 2, 3 or 4 arguments.
+---
+!! ArgumentError: Unknown type merging into Map
+---
+!! ArgumentError: Expected a maximum of 3 arguments.
+---
+[:A, {"a" => :A}, "{\"a\"=>:A}"]
+---
+[1, {true => 1}]
+---
+[ASCII-8BIT, 1, true]
+---
+[true, true]
+---
+!! Google::Protobuf::TypeError: Expected Map instance
+---
+!! Google::Protobuf::TypeError: Map value type does not match field's value type
+---
+!! Google::Protobuf::TypeError: Map value type has wrong message/enum class
+---
+[true, {"x" => 3}]
+---
+!! Google::Protobuf::TypeError: Expected number type for integral field '' (given String).
+---
+!! Google::Protobuf::TypeError: Invalid argument for string field '' (given Integer).
+---
+!! ArgumentError: Expected Hash object as initializer value for map field 'map_string_int32' (given Array).
+---
+!! Google::Protobuf::TypeError: nil message not allowed here.
+---
+1
+---
+[1, 2]
+---
+!! Google::Protobuf::TypeError: Invalid type Integer to assign to submessage field 'repeated_msg'.
+---
+!! Google::Protobuf::TypeError: Invalid argument for string field 'repeated_string' (given NilClass).
+---
+[]
+---
+nil
+---
+[{"a" => 1.0}, "<Google::Protobuf::Struct: fields: {\"a\"=><Google::Protobuf::Value: number_value: 1.0>}>"]
+---
+!! Google::Protobuf::UnexpectedStructType: Google::Protobuf::UnexpectedStructType
+---
+!! Google::Protobuf::UnexpectedStructType: Google::Protobuf::UnexpectedStructType
+---
+[1.0, "a"]
+---
+RepeatedField([<Google::Protobuf::Value: number_value: 1.0>, <Google::Protobuf::Value: string_value: "a">]) frozen=false
+---
+~ ListValue#to_h is the message's to_h; in the C gem Enumerable#to_h shadows it
+---
+["type.googleapis.com/google.protobuf.Timestamp", "\b\x01", "google.protobuf.Timestamp", true, nil]
+---
+"\b\x01" ASCII-8BIT frozen=false
+---
+"x.com/google.protobuf.Timestamp" UTF-8 frozen=true
+---
+[(3/2), 1, Time, false]
+---
+1.5
+---
+<Google::Protobuf::Timestamp: seconds: 1, nanos: 2>
+---
+<Google::Protobuf::Timestamp: seconds: 1, nanos: 2>
+---
+"{\"@type\":\"type.googleapis.com/google.protobuf.Timestamp\",\"value\":\"1970-01-01T00:00:01Z\"}" UTF-8 frozen=false
+---
+"{\"a\":[1,null]}" UTF-8 frozen=false
+---
+{"a" => [1.0, nil, {"b" => true}]}
+---
+5.0
+---
+"{\"timestamp\":\"1970-01-01T00:00:00Z\",\"duration\":\"1.500s\"}" UTF-8 frozen=false
+---
+{:duration => {:nanos => -500000000, :seconds => -1}, :timestamp => {:nanos => 500000000, :seconds => 1}}
+---
+"\"a.b\"" UTF-8 frozen=false
+---
+!! NameError: Empty
+---
+{}
+---
+{:optional_int32 => 0}
+---
+"<BasicTestProto2::TestMessage: optional_int32: 0, repeated_int32: [], repeated_int64: [], repeated_uint32: [], repeated_uint64: [], repeated_bool: [], repeated_float: [], repeated_double: [], repeated_string: [], repeated_bytes: [], repeated_msg: [], repeated_enum: []>" UTF-8 frozen=false
+---
+"<BasicTestProto2::TestMessage: repeated_int32: [], repeated_int64: [], repeated_uint32: [], repeated_uint64: [], repeated_bool: [], repeated_float: [], repeated_double: [], repeated_string: [], repeated_bytes: [], repeated_msg: [], repeated_enum: []>" UTF-8 frozen=false
+---
+{:optional_enum => 999}
+---
+999
+---
+[:A, 999]
+---
+{:optional_enum => 999}
+---
+2
+---
+[true, true]
+---
+false
+---
+false
+---
+!! NoMethodError: has_repeated_int32?
+---
+~ accessors are methods defined on the class, not method_missing
+---
+~ accessors are methods defined on the class, not method_missing
+---
+~ accessors are methods defined on the class, not method_missing
+---
+~ accessors are methods defined on the class, not method_missing
+---
+true
+---
+true
+---
+true
+---
+1
+---
+{:optional_msg => {:foo => 3}}
+---
+true
+---
+~ reading a string field returns the stored frozen String; the C gem makes a new one
+---
+"abc" UTF-8 frozen=true
+---
+["abc"]
+---
+[UTF-8, true]
+---
+[ASCII-8BIT, true]
+---
+{:optional_float => 0.10000000149011612}
+---
+{:optional_double => -0.0}
+---
+{:singular_double => -0.0}
+---
+false
+---
+true
+---
+true
+---
+true
+---
+[{}, "\x90\a\x05"]
+---
+"<BasicTest::TestMessage: repeated_int32: [], repeated_int64: [], repeated_uint32: [], repeated_uint64: [], repeated_bool: [], repeated_float: [], repeated_double: [], repeated_string: [], repeated_bytes: [], repeated_msg: [], repeated_enum: []>" UTF-8 frozen=false
+---
+"" ASCII-8BIT frozen=false
+---
+false
+---
+true
+---
+true
+---
+<BasicTest::TestMessage2: foo: 1>
+---
+[0, "", {}]
+---
+"" ASCII-8BIT frozen=false
+---
+"{}" UTF-8 frozen=false
+---
+true
+---
+false
+---
+!! FrozenError: can't modify frozen BasicTest::TestMessage: <BasicTest::TestMessage: repeated_int32: [], repeated_int64: [], repeated_uint32: [], repeated_uint64: [], repeated_bool: [], repeated_float: [], repeated_d
+---
+!! FrozenError: can't modify frozen BasicTest::TestMessage: <BasicTest::TestMessage: repeated_int32: [], repeated_int64: [], repeated_uint32: [], repeated_uint64: [], repeated_bool: [], repeated_float: [], repeated_d
+---
+false
+---
+true
+---
+Array
+---
+Array
+---
+[3]
+---
+nil
+---
+Array
+---
+[3, [1]]
+---
+[[3, 1], [3, 1], nil]
+---
+[nil, nil]
+---
+[7, 7, 7]
+---
+[3, 1, 3]
+---
+[[3, 1], [3]]
+---
+[[1, 3, 3], [3, 3, 1]]
+---
+[1]
+---
+[3, 1, 3]
+---
+Array
+---
+Array
+---
+[[3, 1, 3, 3, 1, 3], [1], [1], [3, 1, 5], 1]
+---
+[Integer, 3, 3, 3]
+---
+7
+---
+3
+---
+!! IndexError: index 9 outside of array bounds: -3...3
+---
+Set[3, 1]
+---
+true
+---
+true
+---
+!! ArgumentError: negative array size
+---
+[3, 1, 3, nil, nil]
+---
+[3, 1]
+---
+[1, 3]
+---
+[]
+---
+[]
+---
+nil
+---
+nil
+---
+!! TypeError: no implicit conversion of String into Integer
+---
+~ RepeatedField#[] with arguments Array#[] refuses raises Array's errors
+---
+~ RepeatedField#[] with arguments Array#[] refuses raises Array's errors
+---
+~ RepeatedField#[] with arguments Array#[] refuses raises Array's errors
+---
+~ RepeatedField#[] with arguments Array#[] refuses raises Array's errors
+---
+[3, 3, 3]
+---
+!! Google::Protobuf::TypeError: Expected number type for integral field '' (given NilClass).
+---
+["a", "b"]
+---
+[ASCII-8BIT, true]
+---
+[0.10000000149011612]
+---
+!! Google::Protobuf::TypeError: Invalid argument for boolean field '' (given Integer).
+---
+!! RangeError: integer 8589934592 too big to convert to 'int'
+---
+true
+---
+["[<BasicTest::TestMessage2: foo: 1>]", [1]]
+---
+!! Google::Protobuf::TypeError: Invalid type Hash to assign to submessage field ''.
+---
+[:A, :B]
+---
+RepeatedField([]) frozen=false
+---
+!! TypeError: wrong argument type Google::Protobuf::EnumDescriptor (expected Google::Protobuf::Descriptor)
+---
+!! TypeError: wrong argument type Google::Protobuf::Descriptor (expected Google::Protobuf::EnumDescriptor)
+---
+!! ArgumentError: Type class has no descriptor. Please pass a class or enum as returned by the DescriptorPool.
+---
+!! ArgumentError: Expected at least 2 arguments for message/enum.
+---
+!! ArgumentError: Expected at least 3 arguments for message/enum.
+---
+{"a" => 9}
+---
+{1 => 2}
+---
+!! RangeError: Non-integral floating point value assigned to integer field '' (given Float).
+---
+{1099511627776 => "a"}
+---
+{"a" => 1.0}
+---
+{"a" => 0.10000000149011612}
+---
+ASCII-8BIT
+---
+!! Google::Protobuf::TypeError: Invalid argument for string field '' (given Integer).
+---
+!! NoMethodError: each_pair
+---
+!! NoMethodError: key?
+---
+!! NoMethodError: fetch
+---
+[["a", 1]]
+---
+[["a", 1]]
+---
+!! NoMethodError: empty?
+---
+!! Google::Protobuf::TypeError: Expected number type for integral field '' (given String).
+---
+{"a" => 1, "b" => 2}
+---
+false
+---
+false
+---
+true
+---
+true
+---
+~ maps iterate in insertion order; upb's order is its hash table's
+---
+~ maps iterate in insertion order; upb's order is its hash table's
+---
+~ maps encode in insertion order; upb's order is its hash table's
+---
+{:map_string_int32 => {"b" => 1}}
+---
+{}
+---
+{}
+---
+"<BasicTest::MapMessage: map_string_int32: {}, map_string_msg: {}, map_string_enum: {}>" UTF-8 frozen=false
+---
+{:map_string_msg => {"a" => {:foo => 1}}}
+---
+!! Google::Protobuf::TypeError: Invalid type Hash to assign to submessage field ''.
+---
+[["key", "value"], {:key => "a"}, true]
+---
+true
+---
+{:b => 2}
+---
+:a
+---
+nil
+---
+[:a, true, {:a => ""}, "\n\x00"]
+---
+[:d, {:d => :Default}]
+---
+nil
+---
+!! ArgumentError: Unknown field name 'my_oneof' in initialization map entry.
+---
+nil
+---
+<Google::Protobuf::OneofDescriptorProto: name: "my_oneof">
+---
+<Google::Protobuf::FieldOptions: targets: [], edition_defaults: [], uninterpreted_option: []>
+---
+true
+---
+<Google::Protobuf::OneofOptions: uninterpreted_option: []>
+---
+true
+---
+true
+---
+true
+---
+[Google::Protobuf::FieldDescriptor, "test_top_level_option", 1000, :string, :optional]
+---
+"Custom option value" UTF-8 frozen=true
+---
+"Another custom option value" UTF-8 frozen=true
+---
+8325
+---
+[false, 0, true, {}, "<BasicTestProto2::TestExtensions: >", "\b\x05"]
+---
+["{\"[basic_test_proto2.optional_int32_extension]\":5}", false, true]
+---
+[false, 0]
+---
+!! Google::Protobuf::TypeError: Expected number type for integral field 'optional_int32_extension' (given String).
+---
+!! Google::Protobuf::TypeError: get method called on wrong message type
+---
+!! FrozenError: can't modify frozen BasicTestProto2::TestExtensions: <BasicTestProto2::TestExtensions: >
+---
+"{\"[basic_test_proto2.optional_int32_extension]\":3}" UTF-8 frozen=false
+---
+!! Google::Protobuf::ParseError
+---
+{}
+---
+1
+---
+["optional_int32", "optional_int64", "optional_uint32", "optional_uint64", "optional_bool", "optional_double", "optional_float", "optional_string", "optional_bytes", "optional_enum", "optional_msg", "repeated_int32", "repeated_int64", "repeated_uint32", "repeated_uint64", "repeated_bool", "repeated_double", "repeated_float", "repeated_string", "repeated_bytes", "repeated_enum", "repeated_msg", "oneof_int32", "oneof_int64", "oneof_uint32", "oneof_uint64", "oneof_bool", "oneof_double", "oneof_float", "oneof_string", "oneof_bytes", "oneof_enum", "oneof_msg", "map_int32_string", "map_int64_string", "map_uint32_string", "map_uint64_string", "map_bool_string", "map_string_string", "map_string_msg", "map_string_enum", "map_string_int32", "map_string_bool", "nested_message"]
+---
+"{\"optionalInt32\":-1,\"optionalInt64\":\"-1099511627776\",\"optionalUint64\":\"9223372036854775808\",\"optionalBool\":true,\"optionalDouble\":0.1,\"optionalFloat\":1.5,\"optionalString\":\"é\\n\",\"optionalBytes\":\"/wA=\",\"optionalEnum\":\"B\",\"optionalMsg\":{\"optionalInt32\":3}}" UTF-8 frozen=false
+---
+"{\"repeatedInt64\":[\"1\",\"-2\"],\"repeatedFloat\":[\"Infinity\",-0],\"repeatedBytes\":[\"YQ==\"],\"repeatedEnum\":[\"A\",7]}" UTF-8 frozen=false
+---
+"{\"repeatedDouble\":[\"NaN\"]}" UTF-8 frozen=false
+---
+"{\"optionalInt32\":0,\"optionalInt64\":\"0\",\"optionalUint32\":0,\"optionalUint64\":\"0\",\"optionalBool\":false,\"optionalDouble\":0,\"optionalFloat\":0,\"optionalString\":\"\",\"optionalBytes\":\"\",\"optionalEnum\":\"Default\",\"repeatedInt32\":[],\"repeatedInt64\":[],\"repeatedUint32\":[],\"repeatedUint64\":[],\"repeatedBool\":[],\"repeatedDouble\":[],\"repeatedFloat\":[],\"repeatedString\":[],\"repeatedBytes\":[],\"repeatedEnum\":[],\"repeatedMsg\":[],\"mapInt32String\":{},\"mapInt64String\":{},\"mapUint32String\":{},\"mapUint64String\":{},\"mapBoolString\":{},\"mapStringString\":{},\"mapStringMsg\":{},\"mapStringEnum\":{},\"mapStringInt32\":{},\"mapStringBool\":{}}" UTF-8 frozen=false
+---
+"{\"optional_int32\":0,\"optional_int64\":\"0\",\"optional_uint32\":0,\"optional_uint64\":\"0\",\"optional_bool\":false,\"optional_double\":0,\"optional_float\":0,\"optional_string\":\"\",\"optional_bytes\":\"\",\"optional_enum\":\"Default\",\"repeated_int32\":[],\"repeated_int64\":[],\"repeated_uint32\":[],\"repeated_uint64\":[],\"repeated_bool\":[],\"repeated_double\":[],\"repeated_float\":[],\"repeated_string\":[],\"repeated_bytes\":[],\"repeated_enum\":[],\"repeated_msg\":[],\"map_int32_string\":{},\"map_int64_string\":{},\"map_uint32_string\":{},\"map_uint64_string\":{},\"map_bool_string\":{},\"map_string_string\":{},\"map_string_msg\":{},\"map_string_enum\":{},\"map_string_int32\":{},\"map_string_bool\":{}}" UTF-8 frozen=false
+---
+"{\"optionalEnum\":7}" UTF-8 frozen=false
+---
+"{\"optionalEnum\":7}" UTF-8 frozen=false
+---
+{:optional_bytes => "\xFF", :optional_enum => :A, :optional_float => Infinity, :optional_int64 => 123, :optional_uint64 => 5, :repeated_enum => [:A, :B]}
+---
+1
+---
+1
+---
+!! Google::Protobuf::ParseError
+---
+{}
+---
+!! Google::Protobuf::ParseError
+---
+{}
+---
+{}
+---
+!! Google::Protobuf::ParseError
+---
+!! Google::Protobuf::ParseError
+---
+<A::B::C::TestMessage: optional_int32: 0, optional_int64: 0, optional_uint32: 0, optional_uint64: 0, optional_bool: false, optional_double: 0.0, optional_float: 0.0, optional_string: "", optional_bytes: "", optional_enum: :Default, repeated_int32: [], repeated_int64: [], repeated_uint32: [], repeated_uint64: [], repeated_bool: [], repeated_double: [], repeated_float: [], repeated_string: [], repeated_bytes: [], repeated_enum: [], repeated_msg: [], map_int32_string: {}, map_int64_string: {}, map_uint32_string: {}, map_uint64_string: {}, map_bool_string: {}, map_string_string: {}, map_string_msg: {}, map_string_enum: {}, map_string_int32: {}, map_string_bool: {}>
+---
+!! ArgumentError: Expected hash arguments.
+---
+!! ArgumentError: Expected string for JSON data.
+---
+"😀" UTF-8 frozen=true
+---
+true
+---
+["optional_msg", "repeated_msg", "oneof_msg", "map_int32_string", "map_int64_string", "map_uint32_string", "map_uint64_string", "map_bool_string", "map_string_string", "map_string_msg", "map_string_enum", "map_string_int32", "map_string_bool", "nested_message"]
+---
+~ accessors are methods defined on the class, not method_missing
+---
+["my_oneof"]
+---
+:oneof_int32
+---
+"{\"oneofInt32\":5}" UTF-8 frozen=false
+---
+false
+---
+"{\"mapInt32String\":{\"1\":\"a\"},\"mapStringMsg\":{\"x\":{\"optionalInt32\":1}}}" UTF-8 frozen=false
+---
+!! ArgumentError: Unknown field name 'map_bool_bool' in initialization map entry.
+---
+~ accessors are methods defined on the class, not method_missing
+---
+{:map_int32_string => {1 => "a", 2 => "b"}}
+---
+!! Google::Protobuf::ParseError
+---
+"\"1969-12-31T23:59:59.000000005Z\"" UTF-8 frozen=false
+---
+{:nanos => 1, :seconds => -3600}
+---
+!! Google::Protobuf::ParseError
+---
+"\"-1.500s\"" UTF-8 frozen=false
+---
+{:nanos => -500000000}
+---
+["foo_bar", "baz"]
+---
+"1" UTF-8 frozen=false
+---
+"null" UTF-8 frozen=false
+---
+!! Google::Protobuf::ParseError
+---
+"[]" UTF-8 frozen=false
+---
+"{}" UTF-8 frozen=false
+---
+"\"5\"" UTF-8 frozen=false
+---
+"\"YQ==\"" UTF-8 frozen=false
+---
+"{\"double\":1.5,\"int64\":\"2\"}" UTF-8 frozen=false
+---
+{:bytes => {:value => "a"}, :double => {:value => 1.5}, :int64 => {:value => 2}, :string => {:value => "x"}}
+---
+"{\"realString\":\"\",\"repeatedDouble\":[],\"repeatedFloat\":[],\"repeatedInt32\":[],\"repeatedInt64\":[],\"repeatedUint32\":[],\"repeatedUint64\":[],\"repeatedBool\":[],\"repeatedString\":[],\"repeatedBytes\":[],\"mapDouble\":{},\"mapFloat\":{},\"mapInt32\":{},\"mapInt64\":{},\"mapUint32\":{},\"mapUint64\":{},\"mapBool\":{},\"mapString\":{},\"mapBytes\":{}}" UTF-8 frozen=false
+---
+"{\"@type\":\"type.googleapis.com/basic_test.TestMessage2\",\"foo\":3}" UTF-8 frozen=false
+---
+<BasicTest::TestMessage2: foo: 3>
+---
+!! Google::Protobuf::ParseError
+---
+!! Google::Protobuf::ParseError
+---
+!! Google::Protobuf::ParseError
+---
+"{}" UTF-8 frozen=false
+---
+"{}" UTF-8 frozen=false
+---
+"{\"foo\":1}" UTF-8 frozen=false
+---
+"{\"a\":{\"foo\":1}}" UTF-8 frozen=false
+---
+"{\"foo\":1}" UTF-8 frozen=false
+---
+"{\"foo\":1}" UTF-8 frozen=false
+---
+"{\"foo\":1}" UTF-8 frozen=false
+---
+!! ArgumentError: Expected hash arguments.
+---
+!! ArgumentError: Expected hash arguments.
+---
+1
+---
+"{\"optionalInt32\":0}" UTF-8 frozen=false
+---
+"{}" UTF-8 frozen=false
+---
+<BasicTestProto2::TestMessage: optional_enum: 99, repeated_int32: [], repeated_int64: [], repeated_uint32: [], repeated_uint64: [], repeated_bool: [], repeated_float: [], repeated_double: [], repeated_string: [], repeated_bytes: [], repeated_msg: [], repeated_enum: []>
+---
+99
+---
+:optional_int32
+---
+true
+---
+false
+---
+true
+---
+[false, false]
+---
+false
+---
+~ protostar's own message methods (encode, to_text, merge! and so on) are there as well
+---
+[124, 128, 230, RuntimeError, RuntimeError, RuntimeError, RuntimeError, RuntimeError, RuntimeError]
+---
+[:ok, :ok, :ok, :ok, Google::Protobuf::ParseError, Google::Protobuf::ParseError, Google::Protobuf::ParseError, Google::Protobuf::ParseError]
+---
+[Google::Protobuf::ParseError, :ok, :ok]
+---
+[RuntimeError, RuntimeError, :ok, :ok]

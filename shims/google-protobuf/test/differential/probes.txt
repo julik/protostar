@@ -1,0 +1,1196 @@
+M = BasicTest::TestMessage
+P2 = BasicTestProto2::TestMessage
+T = A::B::C::TestMessage
+[M, P2, T].map(&:name)
+---
+M.new.to_h
+---
+M.new(optional_int32: 0, optional_string: "").to_h
+---
+BasicTest::TestSingularFields.new.to_h
+---
+BasicTest::TestSingularFields.new(singular_int32: 0, singular_string: "x", singular_msg: {foo: 0}).to_h
+---
+BasicTestProto2::TestMessageDefaults.new.to_h
+---
+BasicTestProto2::TestMessageDefaults.new.inspect
+---
+BasicTestProto2::TestMessageDefaults.new.optional_bytes
+---
+BasicTestProto2::TestMessageDefaults.new.optional_string
+---
+BasicTest::TestSingularFields.new.singular_string
+---
+BasicTest::TestSingularFields.new.singular_bytes
+---
+BasicTest::TestSingularFields.new.inspect
+---
+BasicTest::MapMessage.new(map_string_int32: {"a" => 1}, map_string_msg: {"b" => {foo: 2}}).to_h
+---
+BasicTest::MapMessage.new(map_string_int32: {"a" => 1}, map_string_msg: {"b" => {foo: 2}}).inspect
+---
+BasicTest::OneofMessage.new(a: "x").to_h
+---
+BasicTest::OneofMessage.new(c: {}).to_h
+---
+m = M.new(repeated_int32: [1, 2]); d = m.dup; d.repeated_int32 << 3; [m.repeated_int32.to_a, d.repeated_int32.to_a]
+---
+m = M.new(optional_msg: {foo: 1}); d = m.dup; d.optional_msg.foo = 5; m.optional_msg.foo
+---
+m = M.new(optional_int32: 1); m.freeze; c = m.clone; [c.frozen?, m.dup.frozen?]
+---
+m = M.new(repeated_int32: [1]); m.freeze; r = m.repeated_int32; [r.frozen?, r.equal?(m.repeated_int32)]
+---
+m = M.new; m.freeze; m.repeated_int32
+---
+m = M.new; m.freeze; m.optional_msg
+---
+m = M.new(optional_msg: {foo: 1}); m.freeze; m.optional_msg.frozen?
+---
+m = M.new; r = m.repeated_int32; [r.equal?(m.repeated_int32), (m.map_string_int32 rescue nil)]
+---
+m = BasicTest::MapMessage.new; a = m.map_string_int32; a.equal?(m.map_string_int32)
+---
+m = M.new; m[:optional_int32]
+---
+m = M.new; m["nope"]
+---
+m = M.new; m["nope"] = 1
+---
+m = M.new; m["optional_int32"] = 5; m.optional_int32
+---
+m = M.new; m.optional_msg = {foo: 1}; m.optional_msg
+---
+m = M.new; m.repeated_int32 = [1, 2]
+---
+M.new(repeated_int32: Google::Protobuf::RepeatedField.new(:int32, [1]))
+---
+BasicTest::MapMessage.new(map_string_int32: Google::Protobuf::Map.new(:string, :int32, {"a" => 1}))
+---
+M.new(optional_msg: BasicTest::TestMessage2.new(foo: 3)).optional_msg.foo
+---
+M.new("optional_int32" => 3).optional_int32
+---
+M.new(1)
+---
+M.new({1 => 2})
+---
+M.new(nil)
+---
+M.new(optional_int32: 1.0).optional_int32
+---
+M.new(optional_int32: 2**31)
+---
+M.new(optional_int32: -2**31).optional_int32
+---
+M.new(optional_uint32: -1)
+---
+M.new(optional_uint64: 2**64)
+---
+M.new(optional_int64: 2**63)
+---
+M.new(optional_int32: Float::NAN)
+---
+M.new(optional_int32: Float::INFINITY)
+---
+M.new(optional_int32: Rational(3, 1))
+---
+require "bigdecimal"; M.new(optional_int32: BigDecimal("3"))
+---
+M.new(optional_double: Rational(1, 2)).optional_double
+---
+M.new(optional_float: 0.1).optional_float
+---
+M.new(optional_float: 1e40).optional_float
+---
+M.new(optional_float: "1.0")
+---
+M.new(optional_bool: nil)
+---
+M.new(optional_bool: 1)
+---
+M.new(optional_string: :sym).optional_string
+---
+M.new(optional_string: "é".encode("ISO-8859-1")).optional_string
+---
+M.new(optional_bytes: "é")
+---
+M.new(optional_bytes: :x)
+---
+M.new(optional_bytes: "abc").optional_bytes
+---
+M.new(optional_enum: :B).optional_enum
+---
+M.new(optional_enum: 2).optional_enum
+---
+M.new(optional_enum: 99).optional_enum
+---
+M.new(optional_enum: 2**40)
+---
+M.new(optional_enum: 1.5)
+---
+M.new(optional_enum: nil).optional_enum
+---
+M.new(optional_enum: :B).optional_enum_const
+---
+M.new(repeated_enum: [:A, 7]).repeated_enum_const
+---
+M.new(optional_msg: BasicTest::TestMessage.new)
+---
+m = M.new; m.optional_msg = nil; m.has_optional_msg?
+---
+m = M.new; m.optional_int32 = nil
+---
+m = BasicTest::OneofMessage.new(a: "x"); m.a = nil; m.my_oneof
+---
+m = BasicTest::OneofMessage.new(a: "x"); m.my_oneof = :b
+---
+m = BasicTest::OneofMessage.new(a: "x"); [m.respond_to?(:my_oneof=), m.respond_to?(:my_oneof), m.respond_to?(:has_a?)]
+---
+m = BasicTest::OneofMessage.new(a: "x"); m.clear_my_oneof; [m.my_oneof, m.has_my_oneof?]
+---
+m = M.new; [m.respond_to?(:has_optional_int32?), m.respond_to?(:optional_int32_const), m.respond_to?(:optional_enum_const)]
+---
+m = BasicTest::TestSingularFields.new; m.respond_to?(:has_singular_int32?)
+---
+m = BasicTest::TestSingularFields.new; m.has_singular_int32?
+---
+BasicTest::Wrapper.new(double: 1.5).double_as_value
+---
+w = BasicTest::Wrapper.new; w.double_as_value = 2; [w.double_as_value, w.double]
+---
+w = BasicTest::Wrapper.new; w.double_as_value = nil; w.double
+---
+w = BasicTest::Wrapper.new; w.string_as_value = :x; w.string
+---
+w = BasicTest::Wrapper.new; w.int32_as_value = "x"
+---
+w = BasicTest::Wrapper.new; [w.double_as_value, w.respond_to?(:double_as_value), w.respond_to?(:repeated_double_as_value)]
+---
+BasicTest::TimeMessage.new(timestamp: Time.at(5, 7, :nsec)).timestamp
+---
+BasicTest::TimeMessage.new(duration: 1.5).duration
+---
+BasicTest::TimeMessage.new(duration: -1.5).duration
+---
+BasicTest::TimeMessage.new(duration: Rational(1, 3)).duration
+---
+BasicTest::TimeMessage.new(timestamp: 5)
+---
+BasicTest::TimeMessage.new(timestamp: {seconds: 1}).timestamp
+---
+M.encode(M.new(optional_int32: 1))
+---
+M.encode(BasicTest::TestMessage2.new)
+---
+M.encode(M.new, 5)
+---
+M.decode("\x08\x01")
+---
+M.decode("\x08")
+---
+M.decode(5)
+---
+M.decode("\x08\x01", 5)
+---
+M.decode_json('{"optionalInt32": 1}').optional_int32
+---
+M.decode_json('{"optionalInt32": "x"}')
+---
+M.decode_json('nope')
+---
+M.decode_json('{"nope": 1}', ignore_unknown_fields: true)
+---
+M.encode_json(M.new(optional_int32: 1, repeated_string: ["a"]))
+---
+M.new(optional_int32: 1).to_json
+---
+M.encode_json(M.new(optional_int32: 1), preserve_proto_fieldnames: true)
+---
+M.encode_json(M.new, emit_defaults: true)
+---
+M.encode_json(BasicTest::TestMessage2.new(foo: 1))
+---
+Google::Protobuf.encode(M.new(optional_int32: 1))
+---
+Google::Protobuf.decode(M, "\x08\x02").optional_int32
+---
+Google::Protobuf.encode_json(M.new(optional_int32: 1))
+---
+Google::Protobuf.decode_json(M, '{"optionalInt32":3}').optional_int32
+---
+Google::Protobuf.deep_copy(5)
+---
+m = M.new(optional_int32: 1); m.to_proto
+---
+M.new(optional_int32: 1).hash == M.new(optional_int32: 1).hash
+---
+M.new(optional_int32: 1).eql?(M.new(optional_int32: 1))
+---
+M.new == 5
+---
+M.new.to_s
+---
+M.new.to_hash
+---
+#~ descriptor names are frozen UTF-8 Strings; the C gem makes a new ASCII-8BIT String per call
+M.inspect
+---
+#~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+M.descriptor
+---
+#~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+M.descriptor.to_s
+---
+#~ descriptor names are frozen UTF-8 Strings; the C gem makes a new ASCII-8BIT String per call
+M.descriptor.name
+---
+#~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+M.descriptor.lookup("optional_int32").inspect
+---
+#~ lookups take Strings and Symbols alike; the C gem wants one or the other
+M.descriptor.lookup(:optional_int32)
+---
+M.descriptor.lookup("x")
+---
+M.descriptor.map(&:name).first(3)
+---
+M.descriptor.each_oneof.map(&:name) rescue M.descriptor.enum_for(:each_oneof).map(&:name)
+---
+M.descriptor.each_oneof { }
+---
+M.descriptor.each { }
+---
+#~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+M.descriptor.lookup_oneof("_optional_int32")
+---
+M.descriptor.lookup_oneof("_optional_int32").map(&:name)
+---
+#~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+M.descriptor.lookup_oneof("_optional_int32").inspect
+---
+#~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+M.descriptor.file_descriptor
+---
+#~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+M.descriptor.file_descriptor.inspect
+---
+M.descriptor.options
+---
+M.descriptor.options.frozen?
+---
+#~ FieldDescriptor#map? exists, as in the FFI implementation; the C gem lacks it
+f = M.descriptor.lookup("optional_enum"); [f.type, f.label, f.number, f.json_name, f.default, f.submsg_name, f.subtype, f.has_presence?, f.is_packed?, f.map?, f.repeated?, f.required?, f.sub_message?, f.wrapper?]
+---
+f = M.descriptor.lookup("repeated_int32"); [f.type, f.label, f.default, f.submsg_name, f.subtype, f.has_presence?, f.is_packed?, f.repeated?]
+---
+f = M.descriptor.lookup("repeated_enum"); f.default
+---
+f = M.descriptor.lookup("repeated_msg"); [f.default, f.submsg_name]
+---
+#~ FieldDescriptor#map? exists, as in the FFI implementation; the C gem lacks it
+f = BasicTest::MapMessage.descriptor.lookup("map_string_int32"); [f.type, f.label, f.subtype, f.subtype.name, f.submsg_name, f.map?, f.repeated?, f.is_packed?]
+---
+f = BasicTest::MapMessage.descriptor.lookup("map_string_int32"); [f.subtype.msgclass.class, f.subtype.msgclass.name]
+---
+f = BasicTestProto2::TestMessageDefaults.descriptor.lookup("optional_bytes"); f.default
+---
+f = BasicTestProto2::TestMessageDefaults.descriptor.lookup("optional_enum"); f.default
+---
+f = BasicTestProto2::TestMessageDefaults.descriptor.lookup("optional_float"); f.default
+---
+f = BasicTestProto2::TestMessageDefaults.descriptor.lookup("optional_string"); f.default
+---
+f = M.descriptor.lookup("optional_int32"); f.get(BasicTest::TestMessage2.new)
+---
+f = M.descriptor.lookup("optional_int32"); m = M.new; f.set(m, 4); [f.get(m), f.has?(m)]
+---
+f = M.descriptor.lookup("repeated_int32"); m = M.new; f.has?(m)
+---
+#~ FieldDescriptor#set on a repeated field wants a RepeatedField; the C gem's message names the element type
+f = M.descriptor.lookup("repeated_int32"); m = M.new; f.set(m, [1])
+---
+f = M.descriptor.lookup("optional_int32"); m = M.new(optional_int32: 2); f.clear(m); m.has_optional_int32?
+---
+f = M.descriptor.lookup("optional_int32"); f.to_proto
+---
+M.descriptor.to_proto.name
+---
+M.descriptor.file_descriptor.to_proto.name
+---
+M.descriptor.file_descriptor.options.deprecated
+---
+#~ lookups take Strings and Symbols alike; the C gem wants one or the other
+e = BasicTest::TestEnum.descriptor; [e.name, e.inspect, e.lookup_name(:A), e.lookup_name("B"), e.lookup_value(3), e.lookup_value(99), e.to_a, e.enummodule.equal?(BasicTest::TestEnum)]
+---
+BasicTest::TestEnum.constants.sort
+---
+#~ lookups take Strings and Symbols alike; the C gem wants one or the other
+[BasicTest::TestEnum.lookup(1), BasicTest::TestEnum.resolve(:A), BasicTest::TestEnum.resolve("A"), BasicTest::TestEnum.descriptor.name]
+---
+BasicTest::TestEnum::V0
+---
+BasicTest::TestEnum.frozen?
+---
+#~ descriptor names are frozen UTF-8 Strings; the C gem makes a new ASCII-8BIT String per call
+BasicTest::TestEnum.descriptor.file_descriptor.name
+---
+BasicTest::TestEnum.descriptor.options
+---
+BasicTest::TestEnum.descriptor.to_proto
+---
+BasicTest::TestEnum.descriptor.each { }
+---
+#~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+Google::Protobuf::DescriptorPool.generated_pool.lookup("basic_test.TestEnum")
+---
+Google::Protobuf::DescriptorPool.generated_pool.lookup("basic_test.TestMessage.optional_int32")
+---
+Google::Protobuf::DescriptorPool.generated_pool.lookup("nope")
+---
+#~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+Google::Protobuf::DescriptorPool.generated_pool.lookup("basic_test.proto")
+---
+Google::Protobuf::DescriptorPool.generated_pool.add_serialized_file("garbage\xff")
+---
+Google::Protobuf::DescriptorPool.generated_pool.add_serialized_file(5)
+---
+Google::Protobuf::DescriptorPool.new.add_serialized_file(Google::Protobuf::FileDescriptorProto.encode(Google::Protobuf::FileDescriptorProto.new(name: "x.proto", dependency: ["nope.proto"])))
+---
+p = Google::Protobuf::DescriptorPool.new; b = Google::Protobuf::FileDescriptorProto.encode(Google::Protobuf::FileDescriptorProto.new(name: "x.proto", package: "x", message_type: [{name: "A"}])); f1 = p.add_serialized_file(b); f2 = p.add_serialized_file(b); [f1.class, f1.equal?(f2)]
+---
+p = Google::Protobuf::DescriptorPool.new; b = Google::Protobuf::FileDescriptorProto.encode(Google::Protobuf::FileDescriptorProto.new(name: "x.proto", package: "x", message_type: [{name: "A"}])); p.add_serialized_file(b); b2 = Google::Protobuf::FileDescriptorProto.encode(Google::Protobuf::FileDescriptorProto.new(name: "x.proto", package: "x", message_type: [{name: "B"}])); p.add_serialized_file(b2)
+---
+p = Google::Protobuf::DescriptorPool.new; b = Google::Protobuf::FileDescriptorProto.encode(Google::Protobuf::FileDescriptorProto.new(name: "x.proto", package: "x", message_type: [{name: "A"}])); p.add_serialized_file(b); c = p.lookup("x.A").msgclass; [c.name, c.new.inspect.sub(/0x\h+/, ""), c.descriptor.name]
+---
+p = Google::Protobuf::DescriptorPool.new; b = Google::Protobuf::FileDescriptorProto.encode(Google::Protobuf::FileDescriptorProto.new(name: "x.proto", package: "basic_test", message_type: [{name: "TestMessage"}])); p.add_serialized_file(b); p.lookup("basic_test.TestMessage").msgclass.new.to_h
+---
+#~ descriptor names are frozen UTF-8 Strings; the C gem makes a new ASCII-8BIT String per call
+Google::Protobuf::DescriptorPool.generated_pool.inspect[0, 30]
+---
+#~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+s = Google::Protobuf::DescriptorPool.generated_pool.lookup("service_test_protos.TestService"); [s.name, s.inspect, s.map(&:name), s.file_descriptor.name]
+---
+#~ descriptors inspect as the FFI implementation's do (a name); the C gem's show an address
+s = Google::Protobuf::DescriptorPool.generated_pool.lookup("service_test_protos.TestService"); m = s.first; [m.name, m.inspect, m.input_type, m.output_type, m.client_streaming, m.server_streaming]
+---
+#~ descriptors refuse Ruby construction with the FFI implementation's RuntimeError
+Google::Protobuf::Descriptor.new
+---
+#~ descriptors refuse Ruby construction with the FFI implementation's RuntimeError
+Google::Protobuf::FieldDescriptor.new
+---
+Google::Protobuf::IMPLEMENTATION.class
+---
+Google::Protobuf::ParseError.ancestors.first(3)
+---
+Google::Protobuf::TypeError.ancestors.first(3)
+---
+Google::Protobuf::AbstractMessage
+---
+M.ancestors.include?(Google::Protobuf::MessageExts)
+---
+M.singleton_class.ancestors.include?(Google::Protobuf::MessageExts::ClassMethods)
+---
+M.new.method(:to_json).owner
+---
+A::B::C::TestMessage.new.to_h
+---
+A::B::C::TestMessage.new.inspect
+---
+x = A::B::C::TestMessage.new(optional_int32: 1, repeated_msg: [{optional_int32: 2}]); x.to_h
+---
+M.new(optional_uint32: 2**32)
+---
+M.new(optional_int32: -2**31 - 1)
+---
+M.new(optional_int32: 2**64)
+---
+M.new(optional_uint32: 2**64)
+---
+M.new(optional_int64: 1e20)
+---
+M.new(optional_int32: 1e10)
+---
+M.new(optional_int64: -2**63 - 1)
+---
+M.new(optional_int32: -Float::INFINITY)
+---
+M.new(optional_uint64: 1.5e19).optional_uint64
+---
+M.new(optional_enum: 2**31)
+---
+M.new(optional_enum: -2**31).optional_enum
+---
+M.new(M.new(optional_int32: 1))
+---
+M.new(optional_int32: 1).dup.optional_int32
+---
+m = M.new(map_string_int32: {}) rescue BasicTest::MapMessage.new(map_string_int32: {"a" => 1}); d = m.dup; d.map_string_int32["b"] = 2; m.map_string_int32.to_h
+---
+m = M.new(optional_int32: 1); m.freeze; d = m.dup; d.optional_int32 = 2
+---
+m = M.new(optional_int32: 1); m.freeze; d = m.dup; d.equal?(m)
+---
+m = M.new(repeated_int32: [1]); m.freeze; m.repeated_int32 << 2
+---
+m = M.new(repeated_int32: [1]); r = m.repeated_int32; m.freeze; [r.frozen?, r.equal?(m.repeated_int32)]
+---
+m = BasicTest::MapMessage.new(map_string_int32: {"a" => 1}); m.freeze; mm = m.map_string_int32; [mm.frozen?, mm.equal?(m.map_string_int32)]
+---
+m = BasicTest::MapMessage.new(map_string_int32: {"a" => 1}); m.freeze; m.map_string_int32["b"] = 1
+---
+m = M.new(optional_msg: {foo: 1}); m.freeze; m.optional_msg.foo = 2
+---
+m = M.new; m.freeze; m.optional_msg = nil
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r.freeze; r << 1
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r.freeze; [r.frozen?, r.dup.frozen?, r.clone.frozen?]
+---
+#~ RepeatedField#hash is its elements' Array#hash
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); [r.inspect, r.to_s, r.hash == [1, 2].hash, r.eql?([1, 2])]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); [r == [1, 2], r == Google::Protobuf::RepeatedField.new(:int64, [1, 2]), r == Google::Protobuf::RepeatedField.new(:sint32, [1, 2]), r == 5]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); [r[5], r[-5], r[0, 1], r[1..], r[5, 1], r[2, 1], r[0..10]]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); [r.first, r.first(1), r.last(5), r.pop(2), r.to_a]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r[-5] = 3; r.to_a
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r[3] = 3
+---
+r = Google::Protobuf::RepeatedField.new(:string, ["a"]); r[3] = "x"; r.to_a
+---
+r = Google::Protobuf::RepeatedField.new(:message, BasicTest::TestMessage2); r[2] = BasicTest::TestMessage2.new; r.to_a
+---
+r = Google::Protobuf::RepeatedField.new(:enum, BasicTest::TestEnum); r[2] = :A; r.to_a
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r.push(3, 4)
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r.push(3, "x"); r.to_a
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r.replace([3])
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r.replace(Google::Protobuf::RepeatedField.new(:int32, [5]))
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r.replace(5)
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r.concat(Google::Protobuf::RepeatedField.new(:int32, [5]))
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r.concat(5)
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r + Google::Protobuf::RepeatedField.new(:int64, [5])
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r + 5
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); (r + [3]).class
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); [r.clear, r.length]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r.each { }
+---
+#~ each without a block returns an Enumerator; the C gem raises LocalJumpError
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r.each.class
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r.map { |x| x * 2 }
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [1, 2]); r.select { |x| x > 1 }
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 2]); [r.sort, r.sort!, r.to_a]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 2]); [r.delete(1), r.to_a, r.delete(9) { :nf }]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 2]); [r.map! { |x| x + 1 }, r.to_a]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 2]); r.map! { |x| "x" }
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 2]); [r.unshift(0), r.shift, r.insert(1, 9), r.to_a]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 2]); [r.empty?, r.include?(3), r.index(1), r.reverse, r.join("-"), r.sum, r.min, r.max, r.count(1)]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 2]); [r.to_ary.class, r.to_a.equal?(r.to_a), (r.to_ary << 5).size, r.size]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 2]); a, b, c = *r; [a, b, c]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 2]); [1, 2] + r
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 2]); r.flatten
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 2]); r.values_at(0)
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 2]); r.slice(0, 2)
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 2]); r.at(1)
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 2]); r.each_slice(2).to_a
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 2]); r.frozen?
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 2]); r.pretty_inspect rescue (require "pp"; r.pretty_inspect)
+---
+Google::Protobuf::RepeatedField.new(:int32, 5)
+---
+Google::Protobuf::RepeatedField.new(:int32, {})
+---
+Google::Protobuf::RepeatedField.new(:foo)
+---
+Google::Protobuf::RepeatedField.new("int32")
+---
+Google::Protobuf::RepeatedField.new(:enum, BasicTest::TestEnum, [:A, 2]).to_a
+---
+Google::Protobuf::RepeatedField.new(:message, BasicTest::TestMessage2, [{foo: 1}])
+---
+Google::Protobuf::RepeatedField.new(:message, BasicTest::TestMessage2, [nil])
+---
+Google::Protobuf::RepeatedField.new(:string, [1])
+---
+Google::Protobuf::RepeatedField.new(:int32, [1], 5)
+---
+Google::Protobuf::RepeatedField.new(:group, BasicTest::TestMessage2)
+---
+Google::Protobuf::RepeatedField.new(:sint32, [1]).to_a
+---
+m = M.new; m.repeated_int32 = Google::Protobuf::RepeatedField.new(:sint32, [1]); m.repeated_int32.to_a
+---
+m = M.new; m.repeated_int32 = Google::Protobuf::RepeatedField.new(:int64, [1])
+---
+m = M.new; m.repeated_msg = Google::Protobuf::RepeatedField.new(:message, BasicTest::TestMessage)
+---
+m = M.new; m.repeated_msg = Google::Protobuf::RepeatedField.new(:message, BasicTest::TestMessage2, [{foo: 1}]) rescue m.repeated_msg = Google::Protobuf::RepeatedField.new(:message, BasicTest::TestMessage2, [BasicTest::TestMessage2.new(foo: 1)]); m.repeated_msg.first.foo
+---
+m = M.new; r = Google::Protobuf::RepeatedField.new(:int32, [1]); m.repeated_int32 = r; m2 = M.new; m2.repeated_int32 = r; r << 2; [m.repeated_int32.to_a, m2.repeated_int32.to_a]
+---
+m = M.new(repeated_int32: [1]); r = m.repeated_int32; m.clear_repeated_int32; r << 5; [m.repeated_int32.to_a, r.to_a]
+---
+m = M.new(repeated_int32: [1]); r = m.repeated_int32; m.repeated_int32 = Google::Protobuf::RepeatedField.new(:int32, [7]); [r.to_a, m.repeated_int32.to_a]
+---
+m = M.new(repeated_int32: [1]); r = m.repeated_int32; m2 = M.decode(M.encode(m)); r.equal?(m2.repeated_int32)
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); [mp.keys, mp.values, mp.to_h, mp.length, mp.size, mp.inspect, mp.to_a]
+---
+#~ each without a block returns an Enumerator; the C gem raises LocalJumpError
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); [mp.each { }, mp.each.class]
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); [mp.delete("zz"), mp.clear, mp.to_h]
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); [mp["zz"], mp[:a], mp.has_key?(:a)]
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); mp[1]
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); [mp == {"a" => 1}, mp == {"a" => 2}, mp == {1 => 2}, mp == 5, mp == {a: 1}]
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); [mp == Google::Protobuf::Map.new(:string, :int64, {"a" => 1}), mp == Google::Protobuf::Map.new(:string, :sint32, {"a" => 1})]
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); m2 = mp.merge({"b" => 2}); [mp.to_h, m2.to_h, m2.class]
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); mp.merge(Google::Protobuf::Map.new(:string, :int64, {"a" => 1}))
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); mp.merge(5)
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); mp.freeze; [mp.frozen?, mp.dup.frozen?, (mp["b"] = 1 rescue $!.class)]
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); [mp.map { |k, v| [k, v] }, mp.select { |k, v| true }, mp.count, mp.first, mp.include?(["a", 1]), mp.to_a]
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); mp["b"] = 2; mp.hash == Google::Protobuf::Map.new(:string, :int32, {"b" => 2, "a" => 1}).hash
+---
+mp = Google::Protobuf::Map.new(:string, :message, BasicTest::TestMessage2, {"a" => BasicTest::TestMessage2.new(foo: 1)}); [mp.to_h, mp.inspect]
+---
+mp = Google::Protobuf::Map.new(:string, :message, BasicTest::TestMessage2, {"a" => {foo: 1}})
+---
+mp = Google::Protobuf::Map.new(:string, :message, BasicTest::TestMessage2); mp["a"] = nil
+---
+mp = Google::Protobuf::Map.new(:float, :int32)
+---
+mp = Google::Protobuf::Map.new(:string, :foo)
+---
+mp = Google::Protobuf::Map.new(:string)
+---
+mp = Google::Protobuf::Map.new(:string, :int32, 5)
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}, 5)
+---
+mp = Google::Protobuf::Map.new(:string, :enum, BasicTest::TestEnum, {"a" => 1}); [mp["a"], mp.to_h, mp.inspect]
+---
+mp = Google::Protobuf::Map.new(:bool, :int32, {true => 1}); [mp[true], mp.to_h]
+---
+mp = Google::Protobuf::Map.new(:bytes, :int32, {"a" => 1}); [mp.keys.first.encoding, mp["a".b], mp.keys.first.frozen?]
+---
+mp = Google::Protobuf::Map.new(:string, :string, {"a" => "b"}); [mp.keys.first.frozen?, mp.values.first.frozen?]
+---
+m = BasicTest::MapMessage.new; m.map_string_int32 = {"a" => 1}
+---
+m = BasicTest::MapMessage.new; m.map_string_int32 = Google::Protobuf::Map.new(:string, :int64)
+---
+m = BasicTest::MapMessage.new; m.map_string_msg = Google::Protobuf::Map.new(:string, :message, BasicTest::TestMessage)
+---
+m = BasicTest::MapMessage.new; mp = Google::Protobuf::Map.new(:string, :int32); m.map_string_int32 = mp; mp["x"] = 3; [m.map_string_int32.equal?(mp), m.map_string_int32.to_h]
+---
+BasicTest::MapMessage.new(map_string_int32: {"a" => "x"})
+---
+BasicTest::MapMessage.new(map_string_int32: {1 => 1})
+---
+BasicTest::MapMessage.new(map_string_int32: [1])
+---
+BasicTest::MapMessage.new(map_string_msg: {"a" => nil})
+---
+BasicTest::MapMessage.new(map_string_msg: {"a" => {foo: 1}}).map_string_msg["a"].foo
+---
+M.new(repeated_msg: [{foo: 1}, BasicTest::TestMessage2.new(foo: 2)]).repeated_msg.map(&:foo)
+---
+M.new(repeated_msg: [5])
+---
+M.new(repeated_string: [nil])
+---
+M.new(repeated_int32: nil).repeated_int32.to_a
+---
+M.new(optional_msg: nil).optional_msg
+---
+s = Google::Protobuf::Struct.new; s["a"] = 1; [s.to_h, s.inspect]
+---
+Google::Protobuf::Value.new.to_ruby
+---
+Google::Protobuf::Value.from_ruby(Time.now)
+---
+Google::Protobuf::ListValue.from_a([1, "a"]).to_a
+---
+Google::Protobuf::ListValue.from_a([1, "a"]).each { }
+---
+#~ ListValue#to_h is the message's to_h; in the C gem Enumerable#to_h shadows it
+l = Google::Protobuf::ListValue.from_a([1, "a"]); [l.length, l[0], l.map { |x| x }, l.to_h]
+---
+a = Google::Protobuf::Any.pack(Google::Protobuf::Timestamp.new(seconds: 1)); [a.type_url, a.value, a.type_name, a.is(Google::Protobuf::Timestamp), a.unpack(Google::Protobuf::Duration)]
+---
+a = Google::Protobuf::Any.new; a.pack(Google::Protobuf::Timestamp.new(seconds: 1), "x.com")
+---
+a = Google::Protobuf::Any.new; a.pack(Google::Protobuf::Timestamp.new(seconds: 1), "x.com"); a.type_url
+---
+t = Google::Protobuf::Timestamp.new(seconds: 1, nanos: 500_000_000); [t.to_f, t.to_i, t.to_time.class, t.to_time.utc?]
+---
+Google::Protobuf::Duration.new(seconds: 1, nanos: 500_000_000).to_f
+---
+Google::Protobuf::Timestamp.from_time(Time.at(1, 2, :nsec))
+---
+Google::Protobuf::Timestamp.new.from_time(Time.at(1, 2, :nsec))
+---
+Google::Protobuf::Any.encode_json(Google::Protobuf::Any.pack(Google::Protobuf::Timestamp.new(seconds: 1)))
+---
+Google::Protobuf::Struct.encode_json(Google::Protobuf::Struct.from_hash({"a" => [1, nil]}))
+---
+Google::Protobuf::Struct.decode_json('{"a": [1, null, {"b": true}]}').to_h
+---
+Google::Protobuf::Value.decode_json('5').to_ruby
+---
+BasicTest::TimeMessage.encode_json(BasicTest::TimeMessage.new(timestamp: Time.at(0), duration: 1.5))
+---
+BasicTest::TimeMessage.decode_json('{"timestamp": "1970-01-01T00:00:01.5Z", "duration": "-1.5s"}').to_h
+---
+Google::Protobuf::FieldMask.new(paths: ["a.b"]).to_json
+---
+Google::Protobuf::Empty.new.to_json
+---
+P2.new.to_h
+---
+P2.new(optional_int32: 0).to_h
+---
+P2.new(optional_int32: 0).inspect
+---
+P2.new.inspect
+---
+P2.new(optional_enum: 999).to_h
+---
+P2.decode(P2.encode(P2.new(optional_enum: 999))).optional_enum
+---
+P2.decode(P2.encode(P2.new(repeated_enum: [1, 999]))).repeated_enum.to_a
+---
+P2.decode("\x58\xe7\x07").to_h
+---
+BasicTestProto2::TestMessageDefaults.new.optional_enum_const
+---
+m = P2.new(optional_int32: 1); [m.has_optional_int32?, m.respond_to?(:has_optional_int32?)]
+---
+P2.new.has_optional_msg?
+---
+P2.new.respond_to?(:has_repeated_int32?)
+---
+P2.new.has_repeated_int32?
+---
+#~ accessors are methods defined on the class, not method_missing
+M.new.method(:optional_int32).owner.class
+---
+#~ accessors are methods defined on the class, not method_missing
+m = M.new; m.method(:optional_int32=).arity
+---
+#~ accessors are methods defined on the class, not method_missing
+M.instance_method(:optional_int32).arity
+---
+#~ accessors are methods defined on the class, not method_missing
+M.new.public_methods(false).sort.first(5)
+---
+m = M.new(optional_msg: {foo: 1}); m.optional_msg.equal?(m.optional_msg)
+---
+m = M.new(repeated_msg: [{foo: 1}]); m.repeated_msg[0].equal?(m.repeated_msg[0])
+---
+m = BasicTest::MapMessage.new(map_string_msg: {"a" => {foo: 1}}); m.map_string_msg["a"].equal?(m.map_string_msg["a"])
+---
+m = M.new(optional_msg: {foo: 1}); m2 = M.decode(M.encode(m)); m2.optional_msg.foo
+---
+m = M.new; m.optional_msg ||= BasicTest::TestMessage2.new; m.optional_msg.foo = 3; m.to_h
+---
+m = M.new; s = m.optional_string; s.frozen?
+---
+#~ reading a string field returns the stored frozen String; the C gem makes a new one
+m = M.new(optional_string: "abc"); [m.optional_string.frozen?, m.optional_string.equal?(m.optional_string)]
+---
+s = +"abc"; m = M.new(optional_string: s); s << "d"; m.optional_string
+---
+s = +"abc"; m = M.new(repeated_string: [s]); s << "d"; m.repeated_string.to_a
+---
+m = M.decode(M.encode(M.new(optional_string: "é"))); [m.optional_string.encoding, m.optional_string.frozen?]
+---
+m = M.decode(M.encode(M.new(optional_bytes: "\xff".b))); [m.optional_bytes.encoding, m.optional_bytes.frozen?]
+---
+M.new(optional_float: 0.1).to_h
+---
+M.new(optional_double: -0.0).to_h
+---
+BasicTest::TestSingularFields.new(singular_double: -0.0).to_h
+---
+BasicTest::TestSingularFields.new(singular_double: -0.0) == BasicTest::TestSingularFields.new
+---
+BasicTest::TestSingularFields.new(singular_double: Float::NAN) == BasicTest::TestSingularFields.new(singular_double: Float::NAN)
+---
+M.new(repeated_double: [Float::NAN]) == M.new(repeated_double: [Float::NAN])
+---
+M.new(optional_int32: 1) == M.decode(M.encode(M.new(optional_int32: 1)) + "\x90\x01\x05")
+---
+x = M.decode("\x90\x07\x05"); [x.to_h, M.encode(x)]
+---
+x = M.decode("\x90\x07\x05"); x.inspect
+---
+x = M.decode("\x90\x07\x05"); Google::Protobuf.discard_unknown(x); M.encode(x)
+---
+M.new(optional_int32: 1).frozen?
+---
+m = M.new(optional_int32: 1); m.freeze.equal?(m)
+---
+m = M.new(repeated_msg: [{foo: 1}]); m.freeze; m.repeated_msg[0].frozen?
+---
+m = M.new(optional_msg: {foo: 1}); m.freeze; m.optional_msg
+---
+m = M.new; m.freeze; [m.optional_int32, m.optional_string, m.to_h]
+---
+m = M.new; m.freeze; M.encode(m)
+---
+m = M.new; m.freeze; m.to_json
+---
+m = M.new; m.freeze; m.dup.frozen?
+---
+m = M.new; m.freeze; Google::Protobuf.deep_copy(m).frozen?
+---
+m = M.new; m.freeze; m.clear_optional_int32
+---
+m = M.new; m.freeze; m["optional_int32"] = 1
+---
+m = M.new(optional_msg: {foo: 1}); Google::Protobuf.deep_copy(m).optional_msg.equal?(m.optional_msg)
+---
+r = Google::Protobuf::RepeatedField.new(:message, BasicTest::TestMessage2, [BasicTest::TestMessage2.new(foo: 1)]); r.freeze; r[0].frozen?
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1]); r.sort!.class
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1]); r.sort_by! { |x| x }.class
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1]); r.select! { |x| x > 1 }
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1]); r.select! { |x| true }
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1]); r.keep_if { |x| x > 1 }.class
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1]); [r.delete_at(0), r.to_a]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); [r.uniq!, r.to_a, r.uniq!]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); [r.compact!, r.flatten!]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r.fill(7); r.to_a
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r.each_index { }
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); [r.slice!(0, 2), r.to_a]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); [r.rotate!, r.reverse!]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r.reject! { |x| x == 3 }
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r.reject! { |x| x == 9 }
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r.delete_if { |x| x == 3 }.class
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r.collect! { |x| x * 2 }.class
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); [r * 2, r - [3], r & [1], r | [5], r <=> [3]]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); [r.sample.class, r.shuffle.size, r.product([1]).size, r.combination(2).to_a.size]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r.sum
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r.dig(0)
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r.fetch(9)
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r.to_set rescue (require "set"; r.to_set)
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r.methods.include?(:<<)
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r.respond_to?(:size)
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r.first(-1)
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r.pop(5)
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r[0..-2]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r[-2..]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r[1, 0]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r[3, 1]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r[4, 1]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r[1, -1]
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r["x"]
+---
+#~ RepeatedField#[] with arguments Array#[] refuses raises Array's errors
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r[]
+---
+#~ RepeatedField#[] with arguments Array#[] refuses raises Array's errors
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r[1, 2, 3]
+---
+#~ RepeatedField#[] with arguments Array#[] refuses raises Array's errors
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r[1.5]
+---
+#~ RepeatedField#[] with arguments Array#[] refuses raises Array's errors
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r["1"] = 3
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r[1.5] = 3; r.to_a
+---
+r = Google::Protobuf::RepeatedField.new(:int32, [3, 1, 3]); r << nil
+---
+r = Google::Protobuf::RepeatedField.new(:string); r << "a" << :b; r.to_a
+---
+r = Google::Protobuf::RepeatedField.new(:bytes); r << "a"; [r[0].encoding, r[0].frozen?]
+---
+r = Google::Protobuf::RepeatedField.new(:float, [0.1]); r.to_a
+---
+r = Google::Protobuf::RepeatedField.new(:bool, [true]); r << 1
+---
+r = Google::Protobuf::RepeatedField.new(:enum, BasicTest::TestEnum, [:A]); r << "B"; r << 2**33
+---
+r = Google::Protobuf::RepeatedField.new(:enum, BasicTest::TestEnum, [:A]); r.include?(:A)
+---
+r = Google::Protobuf::RepeatedField.new(:message, BasicTest::TestMessage2, [BasicTest::TestMessage2.new(foo: 1)]); [r.inspect, r.to_a.map(&:foo)]
+---
+r = Google::Protobuf::RepeatedField.new(:message, BasicTest::TestMessage2); r << {foo: 1}
+---
+Google::Protobuf::RepeatedField.new(:enum, BasicTest::TestEnum).push(:A, :B).to_a
+---
+Google::Protobuf::RepeatedField.new(:message, BasicTest::TestMessage)
+---
+Google::Protobuf::RepeatedField.new(:message, BasicTest::TestEnum)
+---
+Google::Protobuf::RepeatedField.new(:enum, BasicTest::TestMessage)
+---
+Google::Protobuf::RepeatedField.new(:message, 5)
+---
+Google::Protobuf::RepeatedField.new(:enum)
+---
+Google::Protobuf::Map.new(:string, :message)
+---
+Google::Protobuf::Map.new(:string, :enum, BasicTest::TestEnum, {"a" => 9}).to_h
+---
+mp = Google::Protobuf::Map.new(:int32, :int32); mp[1.0] = 2; mp.to_h
+---
+mp = Google::Protobuf::Map.new(:int32, :int32); mp[1.5] = 2
+---
+mp = Google::Protobuf::Map.new(:int64, :string); mp[2**40] = "a"; mp.to_h
+---
+mp = Google::Protobuf::Map.new(:string, :double, {"a" => 1}); mp.to_h
+---
+mp = Google::Protobuf::Map.new(:string, :float, {"a" => 0.1}); mp.to_h
+---
+mp = Google::Protobuf::Map.new(:string, :bytes, {"a" => "x"}); mp["a"].encoding
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); mp.delete(1)
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); mp.each_pair { }
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); mp.key?("a")
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); mp.fetch("a")
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); mp.to_a
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); mp.sort
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); mp.empty?
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); mp.merge({"b" => "x"})
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); mp.merge(Google::Protobuf::Map.new(:string, :int32, {"b" => 2})).to_h
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); mp.eql?(mp.dup)
+---
+mp = Google::Protobuf::Map.new(:string, :int32, {"a" => 1}); mp.clone.equal?(mp)
+---
+mp = Google::Protobuf::Map.new(:string, :message, BasicTest::TestMessage2, {"a" => BasicTest::TestMessage2.new(foo: 1)}); mp.freeze; mp["a"].frozen?
+---
+mp = Google::Protobuf::Map.new(:string, :message, BasicTest::TestMessage2, {"a" => BasicTest::TestMessage2.new(foo: 1)}); mp == {"a" => BasicTest::TestMessage2.new(foo: 1)}
+---
+#~ maps iterate in insertion order; upb's order is its hash table's
+BasicTest::MapMessage.new(map_string_int32: {"b" => 1, "a" => 2}).map_string_int32.keys
+---
+#~ maps iterate in insertion order; upb's order is its hash table's
+BasicTest::MapMessage.decode(BasicTest::MapMessage.encode(BasicTest::MapMessage.new(map_string_int32: {"b" => 1, "a" => 2}))).map_string_int32.keys
+---
+#~ maps encode in insertion order; upb's order is its hash table's
+BasicTest::MapMessage.encode(BasicTest::MapMessage.new(map_string_int32: {"b" => 1, "a" => 2}))
+---
+BasicTest::MapMessage.new(map_string_int32: {"b" => 1}).to_h
+---
+BasicTest::MapMessage.new(map_string_int32: {}).to_h
+---
+BasicTest::MapMessage.new.map_string_int32.to_h
+---
+BasicTest::MapMessage.new.inspect
+---
+x = BasicTest::MapMessage.new; x.map_string_msg["a"] = BasicTest::TestMessage2.new(foo: 1); x.to_h
+---
+x = BasicTest::MapMessage.new; x.map_string_msg["a"] = {foo: 1}
+---
+f = BasicTest::MapMessage.descriptor.lookup("map_string_msg"); e = f.subtype; [e.map(&:name), e.msgclass.new(key: "a").to_h, e.options.map_entry]
+---
+f = BasicTest::MapMessage.descriptor.lookup("map_string_msg"); e = f.subtype; e.msgclass.descriptor.equal?(e)
+---
+BasicTest::OneofMessage.new(a: "x", b: 2).to_h
+---
+BasicTest::OneofMessage.new(b: 2, a: "x").my_oneof
+---
+o = BasicTest::OneofMessage.new(c: {foo: 1}); o.c = nil; o.my_oneof
+---
+o = BasicTest::OneofMessage.new(a: ""); [o.my_oneof, o.has_a?, o.to_h, BasicTest::OneofMessage.encode(o)]
+---
+o = BasicTest::OneofMessage.new; o.d = :Default; [o.my_oneof, o.to_h]
+---
+o = BasicTest::OneofMessage.new; o.clear_a; o.my_oneof
+---
+BasicTest::OneofMessage.new(my_oneof: :a)
+---
+o = BasicTest::OneofMessage.new; o["my_oneof"]
+---
+BasicTest::OneofMessage.descriptor.lookup_oneof("my_oneof").to_proto
+---
+M.descriptor.lookup("optional_int32").options
+---
+M.descriptor.lookup("optional_int32").options.frozen?
+---
+Google::Protobuf::DescriptorPool.generated_pool.lookup("basic_test.TestDeprecatedMessage").lookup_oneof("test_deprecated_message_oneof").options
+---
+BasicTest::TestDeprecatedMessage.descriptor.options.deprecated
+---
+BasicTest::TestDeprecatedMessage.descriptor.lookup("foo").options.deprecated
+---
+BasicTest::TestDeprecatedEnum.descriptor.options.deprecated
+---
+ext = Google::Protobuf::DescriptorPool.generated_pool.lookup("basic_test.test_top_level_option"); [ext.class, ext.name, ext.number, ext.type, ext.label]
+---
+ext = Google::Protobuf::DescriptorPool.generated_pool.lookup("basic_test.test_top_level_option"); o = BasicTest::TestDeprecatedMessage.descriptor.lookup_oneof("test_deprecated_message_oneof").options; ext.get(o)
+---
+ext = Google::Protobuf::DescriptorPool.generated_pool.lookup("basic_test.TestDeprecatedMessage.test_nested_option"); o = BasicTest::TestDeprecatedMessage.descriptor.lookup_oneof("test_deprecated_message_oneof").options; ext.get(o)
+---
+ext = Google::Protobuf::DescriptorPool.generated_pool.lookup("service_test_protos.test_options"); s = Google::Protobuf::DescriptorPool.generated_pool.lookup("service_test_protos.TestService"); ext.get(s.options).int_option_value
+---
+x = BasicTestProto2::TestExtensions.new; e = Google::Protobuf::DescriptorPool.generated_pool.lookup("basic_test_proto2.optional_int32_extension"); [e.has?(x), e.get(x), (e.set(x, 5); e.has?(x)), x.to_h, x.inspect, BasicTestProto2::TestExtensions.encode(x)]
+---
+x = BasicTestProto2::TestExtensions.new; e = Google::Protobuf::DescriptorPool.generated_pool.lookup("basic_test_proto2.optional_int32_extension"); e.set(x, 5); [x.to_json, x == BasicTestProto2::TestExtensions.new, x.dup == x]
+---
+x = BasicTestProto2::TestExtensions.new; e = Google::Protobuf::DescriptorPool.generated_pool.lookup("basic_test_proto2.optional_int32_extension"); e.set(x, 5); e.clear(x); [e.has?(x), e.get(x)]
+---
+x = BasicTestProto2::TestExtensions.new; e = Google::Protobuf::DescriptorPool.generated_pool.lookup("basic_test_proto2.optional_int32_extension"); e.set(x, "s")
+---
+x = BasicTestProto2::TestExtensions.new; e = Google::Protobuf::DescriptorPool.generated_pool.lookup("basic_test_proto2.optional_int32_extension"); e.get(BasicTestProto2::TestMessage.new)
+---
+x = BasicTestProto2::TestExtensions.new; e = Google::Protobuf::DescriptorPool.generated_pool.lookup("basic_test_proto2.optional_int32_extension"); x.freeze; e.set(x, 1)
+---
+BasicTestProto2::TestExtensions.decode_json('{"[basic_test_proto2.optional_int32_extension]": 3}').to_json
+---
+BasicTestProto2::TestExtensions.decode_json('{"[nope.ext]": 3}')
+---
+BasicTestProto2::TestExtensions.decode_json('{"[nope.ext]": 3}', ignore_unknown_fields: true).to_h
+---
+Google::Protobuf::DescriptorPool.generated_pool.lookup("basic_test_proto2.TestExtensions").to_proto.extension_range.size
+---
+T.descriptor.map(&:name)
+---
+t = T.new(optional_int32: -1, optional_int64: -2**40, optional_uint64: 2**63, optional_float: 1.5, optional_double: 0.1, optional_bool: true, optional_string: "é\n", optional_bytes: "\xff\x00".b, optional_enum: :B, optional_msg: {optional_int32: 3}); t.to_json
+---
+t = T.new(repeated_int64: [1, -2], repeated_bytes: ["a".b], repeated_enum: [:A, 7], repeated_float: [Float::INFINITY, -0.0]); T.encode_json(t)
+---
+t = T.new(repeated_double: [Float::NAN]); T.encode_json(t)
+---
+T.encode_json(T.new, emit_defaults: true)
+---
+T.encode_json(T.new, emit_defaults: true, preserve_proto_fieldnames: true)
+---
+T.encode_json(T.new(optional_enum: 7))
+---
+T.encode_json(T.new(optional_enum: 7), format_enums_as_integers: true)
+---
+T.decode_json('{"optionalInt64": "123", "optionalUint64": 5, "optionalBytes": "_w==", "optionalEnum": 1, "repeatedEnum": ["A", 2], "optionalFloat": "Infinity"}').to_h
+---
+T.decode_json('{"optional_int32": 1}').optional_int32
+---
+T.decode_json('{"optionalInt32": 1.0}').optional_int32
+---
+T.decode_json('{"optionalInt32": 1.5}')
+---
+T.decode_json('{"optionalInt32": null}').to_h
+---
+T.decode_json('{"optionalEnum": "NOPE"}')
+---
+T.decode_json('{"optionalEnum": "NOPE"}', ignore_unknown_fields: true).to_h
+---
+T.decode_json('{"repeatedInt32": null}').to_h
+---
+T.decode_json('{"repeatedInt32": [null]}')
+---
+T.decode_json('[]')
+---
+T.decode_json('')
+---
+T.decode_json('{"optionalInt32": 1}', 5)
+---
+T.decode_json(5)
+---
+T.decode_json('{"optionalString": "😀"}').optional_string
+---
+T.decode_json('{"optionalMsg": {}}').has_optional_msg?
+---
+T.descriptor.map { |f| [f.name, f.type] }.select { |n, t| t == :message }.map(&:first)
+---
+#~ accessors are methods defined on the class, not method_missing
+T.new.methods.grep(/oneof/).sort
+---
+T.descriptor.each_oneof.map(&:name) rescue T.descriptor.enum_for(:each_oneof).map(&:name)
+---
+T.new(oneof_int32: 5).my_oneof
+---
+T.new(oneof_int32: 5).to_json
+---
+T.encode_json(T.new, emit_defaults: true).include?("oneof")
+---
+T.new(map_int32_string: {1 => "a"}, map_string_msg: {"x" => {optional_int32: 1}}).to_json
+---
+T.new(map_bool_bool: {true => false}).to_json
+---
+#~ accessors are methods defined on the class, not method_missing
+T.new(map_int64_int64: {2**40 => -1}).to_json rescue T.new.methods.grep(/^map_/).first(20)
+---
+x = T.decode_json('{"mapInt32String": {"1": "a", "2": "b"}}'); x.to_h
+---
+T.decode_json('{"mapInt32String": {"x": "a"}}')
+---
+Google::Protobuf::Timestamp.new(seconds: -1, nanos: 5).to_json
+---
+Google::Protobuf::Timestamp.decode_json('"1970-01-01T00:00:00.000000001+01:00"').to_h
+---
+Google::Protobuf::Timestamp.decode_json('"bad"')
+---
+Google::Protobuf::Duration.new(seconds: -1, nanos: -500_000_000).to_json
+---
+Google::Protobuf::Duration.decode_json('"-0.5s"').to_h
+---
+Google::Protobuf::FieldMask.decode_json('"fooBar,baz"').paths.to_a
+---
+Google::Protobuf::Value.new(number_value: 1.0).to_json
+---
+Google::Protobuf::Value.new(null_value: :NULL_VALUE).to_json
+---
+Google::Protobuf::Value.new.to_json
+---
+Google::Protobuf::ListValue.new.to_json
+---
+Google::Protobuf::Struct.new.to_json
+---
+Google::Protobuf::Int64Value.new(value: 5).to_json
+---
+Google::Protobuf::BytesValue.new(value: "a").to_json
+---
+BasicTest::Wrapper.new(double: {value: 1.5}, int64: {value: 2}).to_json
+---
+BasicTest::Wrapper.decode_json('{"double": 1.5, "int64": "2", "string": "x", "bytes": "YQ=="}').to_h
+---
+BasicTest::Wrapper.encode_json(BasicTest::Wrapper.new, emit_defaults: true)
+---
+a = Google::Protobuf::Any.pack(BasicTest::TestMessage2.new(foo: 3)); Google::Protobuf::Any.encode_json(a)
+---
+Google::Protobuf::Any.decode_json('{"@type": "type.googleapis.com/basic_test.TestMessage2", "foo": 3}').unpack(BasicTest::TestMessage2)
+---
+Google::Protobuf::Any.decode_json('{"@type": "type.googleapis.com/nope.Nope", "foo": 3}')
+---
+Google::Protobuf::Any.encode_json(Google::Protobuf::Any.new(type_url: "type.googleapis.com/nope.Nope", value: "x"))
+---
+Google::Protobuf::Any.encode_json(Google::Protobuf::Any.new)
+---
+BasicTest::TimeMessage.new.to_json
+---
+BasicTest::TimeMessage.encode_json(BasicTest::TimeMessage.new, emit_defaults: true)
+---
+JSON.generate(BasicTest::TestMessage2.new(foo: 1))
+---
+JSON.generate({"a" => BasicTest::TestMessage2.new(foo: 1)})
+---
+BasicTest::TestMessage2.new(foo: 1).to_json(nil)
+---
+BasicTest::TestMessage2.new(foo: 1).to_json(preserve_proto_fieldnames: true, unknown: 1)
+---
+BasicTest::TestMessage2.encode_json(BasicTest::TestMessage2.new(foo: 1), [[:emit_defaults, true]])
+---
+BasicTest::TestMessage2.encode_json(BasicTest::TestMessage2.new(foo: 1), 5)
+---
+BasicTest::TestMessage2.decode_json('{"foo": 1}', nil)
+---
+BasicTest::TestMessage2.decode_json('{"foo": 1}', {ignore_unknown_fields: true, bogus: 1}).foo
+---
+BasicTestProto2::TestMessage.encode_json(BasicTestProto2::TestMessage.new(optional_int32: 0))
+---
+BasicTestProto2::TestMessageDefaults.encode_json(BasicTestProto2::TestMessageDefaults.new, emit_defaults: true)
+---
+BasicTestProto2::TestMessage.decode_json('{"optionalEnum": 99}')
+---
+BasicTestProto2::TestMessage.decode_json('{"optionalEnum": 99}').optional_enum
+---
+M.new(optional_int32: 1)._optional_int32
+---
+M.new(optional_int32: 1).has__optional_int32?
+---
+m = M.new(optional_int32: 1); m.clear__optional_int32; m.has_optional_int32?
+---
+M.new.respond_to?(:_optional_int32)
+---
+[BasicTest::TestEnum.descriptor.is_closed?, BasicTestProto2::TestMessage.descriptor.lookup("optional_enum").subtype.is_closed?]
+---
+M.descriptor.file_descriptor.respond_to?(:syntax)
+---
+#~ protostar's own message methods (encode, to_text, merge! and so on) are there as well
+M.new.respond_to?(:encode)
+---
+def chain(n); deep = BasicTest::Recursive1.new; node = deep; n.times { c = BasicTest::Recursive2.new; node.foo = c; node = BasicTest::Recursive1.new; c.foo = node }; deep; end; [31, 32, 49, 50, 64, 99, 100, 101, 200].map { |n| (BasicTest::Recursive1.encode(chain(n)).bytesize rescue $!.class) }
+---
+[31, 32, 49, 50, 51, 99, 100, 101].map { |n| (BasicTest::Recursive1.decode(BasicTest::Recursive1.encode(chain(n), recursion_limit: 1000)) && :ok rescue $!.class) }
+---
+[3, 4, 5].map { |l| (BasicTest::Recursive1.decode(BasicTest::Recursive1.encode(chain(2)), recursion_limit: l) && :ok rescue $!.class) }
+---
+[3, 4, 5, 6].map { |l| (BasicTest::Recursive1.encode(chain(2), recursion_limit: l) && :ok rescue $!.class) }

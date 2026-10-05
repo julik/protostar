@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package shimtest.echo;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+message EchoRequest {
+  string text = 1;
+  int32 times = 2;
+  google.protobuf.Timestamp sent_at = 3;
+  map<string, int64> tags = 4;
+  repeated google.protobuf.Any attachments = 5;
+}
+
+message EchoReply {
+  string text = 1;
+  int32 index = 2;
+  google.protobuf.Timestamp sent_at = 3;
+  map<string, int64> tags = 4;
+  repeated google.protobuf.Any attachments = 5;
+}
+
+service Echo {
+  rpc Say(EchoRequest) returns (EchoReply);
+  rpc Collect(stream EchoRequest) returns (EchoReply);
+  rpc Repeat(EchoRequest) returns (stream EchoReply);
+  rpc Chat(stream EchoRequest) returns (stream EchoReply);
+  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
