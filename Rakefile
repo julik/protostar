@@ -64,4 +64,16 @@ namespace :conformance do
   end
 end
 
+namespace :examples do
+  desc "Regenerate examples/**/*_pb.rb with protostar compile"
+  task :regenerate do
+    ruby "script/examples.rb", "regenerate"
+  end
+
+  desc "Fail when examples/**/*_pb.rb differ from what protostar compile writes"
+  task :check do
+    ruby "script/examples.rb", "check"
+  end
+end
+
 task default: %i[test standard]

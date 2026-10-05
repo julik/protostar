@@ -1,0 +1,8 @@
+# frozen_string_literal: true
+
+rule "_pb.rb" => ->(target) { target.sub(/_pb\.rb\z/, ".proto") } do |t|
+  sh "protostar", "compile", "-I", ".", "--ruby_out=.", t.source
+end
+
+desc "Compile every .proto here into a _pb.rb next to it"
+task protos: FileList["*.proto"].pathmap("%X_pb.rb")

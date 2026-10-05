@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package crm;
+
+import "google/protobuf/timestamp.proto";
+
+message Customer {
+  string id = 1;
+  string full_name = 2;
+  Tier tier = 3;
+  // Can outgrow a JavaScript number, so JSON carries it as a string.
+  int64 lifetime_spend_cents = 4;
+  bytes avatar_digest = 5;
+  repeated string tags = 6;
+  google.protobuf.Timestamp signed_up_at = 7;
+  uint32 open_tickets = 8;
+}
+
+enum Tier {
+  TIER_UNSPECIFIED = 0;
+  TIER_SILVER = 1;
+  TIER_GOLD = 2;
+}
