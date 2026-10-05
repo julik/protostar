@@ -3,7 +3,8 @@
 This document follows a `.proto` file through `Protostar::Compiler` from bytes to frozen
 `Protostar::Schema::File` objects, and from there into generated Ruby. It names the real
 classes and methods, shows the data that moves between stages, and explains why each stage
-is built the way it is.
+is built the way it is. The Schema construction, options and reflection APIs it relies on
+are described on their own in `docs/schema-api.md`.
 
 Every code sample's output in this document was produced by running the code in this
 repository (Ruby 3.4.1, arm64 macOS, no YJIT). Nothing is paraphrased output.
@@ -25,7 +26,7 @@ compiler is such a port. Where it deviates, the deviation is called out.
 10. Option interpretation
 11. Aggregate option values: `TextFormat`
 12. The bootstrap problem: compiling descriptor.proto with its own options
-13. The descriptor hash and `Schema::Builder`
+13. Drafts, the Schema objects and the translation to protoc's shape
 14. Editions and feature resolution
 15. The validator
 16. Source info: spans, paths and comments
@@ -41,10 +42,10 @@ compiler is such a port. Where it deviates, the deviation is called out.
 
 The brief (`llm/instructions/ws2-compiler.md`) is short to state and long to meet:
 
-- For every file protoc accepts, produce a `Schema::File` whose `to_h` equals, key for key,
-  the `FileDescriptorProto` protoc 36.2 writes. That includes custom options, which live
-  under `:__extensions`, and, when asked for, `source_code_info` with protoc's exact paths,
-  spans and comments.
+- For every file protoc accepts, produce a `Schema::File` whose translation to protoc's
+  shape (`to_proto`) is, field for field and byte for byte, the `FileDescriptorProto` protoc
+  36.2 writes. That includes custom options and, when asked for, `source_code_info` with
+  protoc's exact paths, spans and comments.
 - For every file protoc rejects, reject it with the same `file:line:col: message` lines, in
   the same order, including protoc's multiple errors per file.
 - Warnings (unused imports, deprecated features, generic services) are warnings, as in
@@ -60,9 +61,11 @@ The public surface is small:
 ```ruby
 compiler = Protostar::Compiler.new(include_paths: ["proto"], pool: Protostar::Schema::Pool.new)
 files  = compiler.compile(["foo/bar.proto"], source_info: true)  # Array<Schema::File>, imports first
-hashes = compiler.compile_to_hashes(["foo/bar.proto"])          # the FileDescriptorProto hashes
+files.last.to_proto                                              # its FileDescriptorProto message
 compiler.diagnostics                                             # warnings of the last compile
 ```
+
+(`compile_to_hashes` gives each file's `to_proto.to_h`, for reading.)
 
 `compile` also takes `sources: {"name.proto" => text}` for in-memory files (used throughout
 this document and the tests), `retain_options: true` (see section 18) and a private
@@ -75,17 +78,18 @@ this document and the tests), `retain_options: true` (see section 18) and a priv
 | 1 | Lexing | `Compiler::Lexer` (`compiler/lexer.rb`) | source bytes | `Lexer::Token` stream, comments on request | `io/tokenizer.cc` |
 | 2 | Parsing | `Compiler::Parser` (`compiler/parser.rb`) | tokens | `AST::File` + `SourceInfo::Location`s + parse errors | `compiler/parser.cc` |
 | 3 | Loading | `Compiler::Run` (`compiler/run.rb`) | file names | ASTs in dependency order, pool lookups | the importer and CLI driver |
-| 4 | Symbols | `Linker#setup_symbols`, `#build_file` with `SymbolTable` | AST + pool | full names, source paths, symbol table, per-element checks | `DescriptorBuilder::BuildFile` (AddSymbol etc.) |
-| 5 | Cross-linking | `Linker#cross_link` | AST + symbol table | resolved types and extendees on AST nodes | `DescriptorBuilder::CrossLinkFile` |
-| 6 | Options | `OptionInterpreter`, `TextFormat` | uninterpreted options | options hashes per element, rewritten source paths | `OptionInterpreter` |
-| 7 | Hash | `Linker#descriptor_hash` | linked AST + options | `FileDescriptorProto`-shaped Hash | `FileDescriptor::CopyTo` |
-| 8 | Build | `Schema::Builder.build` | descriptor hash + pool | frozen, shareable `Schema::File` | `DescriptorPool::BuildFile` |
-| 9 | Validation | `Compiler::Validator` | built file + AST | more problems | `ValidateOptions` and the CLI checks |
-| 10 | Reporting | `Run#report` | `Linker::Problem`s | `Compiler::Diagnostic`s | the error collector |
-| 11 | Output | `Compiler#output_file`, `Retention.strip` | pool files | stripped copies (what `compile` returns) | `compiler/retention.cc` |
-| 12 | Emitting | `Compiler::Emitters::*` | `Schema::File`s | Ruby source, RBS, descriptor set bytes | the code generators |
+| 4 | Symbols and drafting | `Linker#setup_symbols`, `#build_file` with `SymbolTable` and `Schema::File.draft` | AST + pool | a drafted `Schema::File`, full names, source paths, symbol table, per-element checks | `DescriptorBuilder::BuildFile` (AddSymbol etc.) |
+| 5 | Cross-linking | `Linker#cross_link` | AST + symbol table | resolved types and extendees, recorded on the drafted descriptors | `DescriptorBuilder::CrossLinkFile` |
+| 6 | Options | `OptionInterpreter`, `TextFormat` | uninterpreted options + the linked draft | a `Schema::MessageValue` per element, set on the draft; rewritten source paths | `OptionInterpreter` |
+| 7 | Resolve and freeze | `Schema::Draft::File#resolve`, `#freeze!` | the draft | frozen, shareable `Schema::File`: options objects, features, defaults | `DescriptorPool::BuildFile` |
+| 8 | Validation | `Compiler::Validator` | built file + AST | more problems | `ValidateOptions` and the CLI checks |
+| 9 | Reporting | `Run#report` | `Linker::Problem`s | `Compiler::Diagnostic`s | the error collector |
+| 10 | Output | `Compiler#output_file`, `Retention.strip`, `Schema::Draft.copy` | pool files | stripped copies (what `compile` returns) | `compiler/retention.cc` |
+| 11 | Emitting | `Compiler::Emitters::*` | `Schema::File`s | Ruby source, RBS, descriptor set bytes (through `to_proto`) | the code generators, `FileDescriptor::CopyTo` |
 
-Stages 4 to 8 run inside one call to `Linker#link`. `Validator#validate` runs right after
+Stages 4 to 7 run inside one call to `Linker#link`. No stage hands a `FileDescriptorProto`-shaped
+Hash to the next: the parse tree is translated into Schema descriptors as the linker meets
+its elements, and protoc's shape appears only when a file is written out (`to_proto`). `Validator#validate` runs right after
 it, still per file. `Validator.cli_checks` runs once over the files named on the command
 line, after all of them are built.
 
@@ -117,9 +121,9 @@ tokenizer uses.
 
 ### Token shape
 
-```ruby
-Token = Struct.new(:type, :text, :line, :column, :end_column)
-```
+`Lexer::Token` is a small class with keyword constructor and accessors for `type`, `text`,
+`line`, `column` and `end_column`. It is mutable on purpose: like protoc's `Tokenizer`, the
+lexer reuses one current token as it advances and copies it into `previous`.
 
 | Field | Meaning |
 |---|---|
@@ -132,7 +136,7 @@ Token = Struct.new(:type, :text, :line, :column, :end_column)
 The lexer keeps two tokens, `current` and `previous`. The parser needs `previous` to end a
 source span at the last token it consumed.
 
-Tokens for the first lines of the example:
+Tokens for the first lines of the example (`token.to_a`):
 
 ```
 [:identifier, "syntax", 0, 0, 6]
@@ -204,28 +208,29 @@ and so on. The error messages are protoc's, character for character.
 
 The parser does three jobs at once, as protoc's does:
 
-1. builds an `AST::File` shaped like the `FileDescriptorProto` protoc's parser produces
+1. builds an `AST::File` holding what protoc's parser puts in a `FileDescriptorProto`
    before linking: names as written, options uninterpreted;
 2. records source locations through `SourceInfo::Recorder` (section 16);
 3. records, on every node, the start positions the later stages report errors against.
 
 ### AST node shapes
 
-All nodes are plain Ruby objects in `Compiler::AST`. Each has `to_h`, which returns exactly
-what protoc's parser would put in the proto, and `positions`, a Hash of position kind to
-`[line, column]`.
+All nodes are plain Ruby objects in `Compiler::AST`, with `positions`, a Hash of position
+kind to `[line, column]`. They have no `to_h`: the parse tree is not handed on as a hash.
+The parser tests, which compare it with what `parser_unittest.cc` expects, derive protoc's
+pre-link `FileDescriptorProto` from it in `test/support/ast_hash.rb`.
 
 | Node | Attributes from the source | Attributes set by the linker |
 |---|---|---|
 | `AST::File` | `name package syntax edition options dependency public_dependency weak_dependency option_dependency message_type enum_type service extension import_positions locations` | `full_name path` |
 | `AST::Message` | `name options visibility field nested_type enum_type extension_range extension oneof_decl reserved_range reserved_name` | `parent index full_name path` |
-| `AST::Field` | `name number label type type_name extendee default_value json_name oneof_index proto3_optional options` | `parent index extension full_name path resolved_type resolved_extendee` |
+| `AST::Field` | `name number label type type_name extendee default_value json_name oneof_index proto3_optional options` | `parent index extension full_name path` |
 | `AST::Oneof` | `name options` | `parent index full_name path` |
 | `AST::Range` | `start end options` (extension ranges and reserved ranges) | `parent index full_name path` |
 | `AST::Enum` | `name options visibility value reserved_range reserved_name` | `parent index full_name path` |
 | `AST::EnumValue` | `name number options` | `parent index full_name path` |
 | `AST::Service` | `name options rpcs` | `index full_name path` |
-| `AST::Method` | `name input_type output_type options client_streaming server_streaming` | `parent index full_name path resolved_input resolved_output` |
+| `AST::Method` | `name input_type output_type options client_streaming server_streaming` | `parent index full_name path` |
 | `AST::Options` | `uninterpreted` (Array of `AST::Option`), `known` (options the parser sets itself, only `map_entry`) | |
 | `AST::Option` | `name` (Array of `[part, is_extension]`), `value_kind`, `value` | |
 
@@ -242,7 +247,7 @@ Imports are tracked separately in `AST::File#import_positions`, keyed by the imp
 
 ### The example as an AST
 
-`Parser.new(src).parse("shop.proto").to_h`:
+`AstHash.file(Parser.new(src).parse("shop.proto"))` (the test support's view of the tree):
 
 ```ruby
 {name: "shop.proto",
@@ -389,28 +394,36 @@ end
 |---|---|---|
 | `setup_edition` | maps `syntax`/`edition` to an edition (`:EDITION_PROTO2`, `:EDITION_PROTO3`, or the file's), checks it against the supported range | `BuildFileImpl` edition checks |
 | `setup_symbols` | finds each import in the pool, reports duplicates and missing imports, builds the `SymbolTable` with import visibility and the unused-import candidates | `BuildFileImpl` dependency loop |
-| `build_file` | registers the package, assigns `full_name`, `path`, `parent` and `index` to every node, registers every symbol (`add_symbol`), runs the per-element checks that need no names resolved, and queues options as `Pending` | `BuildMessage`, `BuildFieldOrExtension`, `BuildEnum`, ... |
-| `cross_link` | resolves every type name, extendee, rpc input and output; checks kinds, enum defaults, oneof contiguity, duplicate field numbers | `CrossLinkFile` and friends |
+| `build_file` | registers the package, drafts the file (`Schema::File.draft`) and every message, field, oneof, range, enum, value, service and method in it, assigns `full_name`, `path`, `parent` and `index` to every node, registers every symbol (`add_symbol`) with its drafted descriptor, runs the per-element checks that need no names resolved, and queues options as `Pending`; then seals the draft's lookup tables | `BuildMessage`, `BuildFieldOrExtension`, `BuildEnum`, ... |
+| `cross_link` | resolves every type name, extendee, rpc input and output and records the result on the drafted descriptor; checks kinds, enum defaults, oneof contiguity, duplicate field numbers | `CrossLinkFile` and friends |
 | `suggest_field_numbers` | adds "Suggested field numbers for X: ..." after number errors | `SuggestFieldNumbers` |
-| `interpret_options` | runs `OptionInterpreter` (section 10) and rewrites option source paths | `OptionInterpreter` |
-| `build_schema` | `descriptor_hash` plus source info into `Schema::Builder.build` | `CopyTo` plus pool build |
+| `interpret_options` | links and resolves the draft without options, runs `OptionInterpreter` (section 10) against it, sets each element's options on the draft, and rewrites option source paths | `OptionInterpreter` |
+| `build_schema` | gives the draft its source info, resolves it again (options objects, features, defaults) and freezes it | the pool build |
 
-Each problem is recorded as a `Linker::Problem`:
+`Linker#descriptor_of(node)` answers the descriptor drafted for an AST node; the validator
+reads descriptors through it.
+
+The drafting happens in `build_file` even though the file may still fail: a duplicate
+symbol is reported by the symbol table with protoc's message, and the draft only remembers
+it (`link` would refuse it). A file with errors is never linked or frozen.
+
+Each problem is recorded as a `Linker::Problem`, a frozen object made with keywords:
 
 ```ruby
-Problem = Struct.new(:severity, :node, :location, :message, :import)
+Problem.new(severity: :error, node: field, location: :number, message: "...")
 ```
 
 `node` is the AST node and `location` the position kind protoc reports the error at
-(`:name`, `:number`, ...), or `:import` with `import` naming the file. Positions are only
+(`:name`, `:number`, ...), or `:import` with `import` naming the file; `error?` tells
+errors from warnings. Positions are only
 looked up when `Run` turns problems into diagnostics (section 17). That separation lets the
 linker and validator report errors "against the field's number" exactly where protoc does,
 without carrying positions around.
 
 ### Checks in `build_file`
 
-These need only the AST and the symbol table, so they run before resolution, in protoc's
-order: "is already defined" (in the same scope, in another file, or as a package), the enum
+These need only the AST, the symbol table and the drafted structure, so they run before
+resolution, in protoc's order: "is already defined" (in the same scope, in another file, or as a package), the enum
 value C++ scoping note ("enum values are siblings of their type, not children of it"),
 positive field and extension numbers, the 536870911 maximum, extension and reserved ranges
 that are empty, overlap each other or contain fields, reserved names used or repeated,
@@ -422,7 +435,9 @@ enums. Range overlap and "uses reserved number" checks also feed `hint`, which d
 
 `cross_link_field` resolves the extendee ("is not a message type", "does not declare N as
 an extension number"), then the type name, deciding message or enum when the parser could
-not ("is not a type", "is not an enum type", enum default exists in the enum). It then
+not ("is not a type", "is not an enum type", enum default exists in the enum). What a name
+resolved to goes straight onto the drafted field (`Draft::File#__resolve_type`); the draft's
+own `link` then leaves the field alone instead of resolving the name a second time. It then
 records `[holder, number]` and reports "Field number N has already been used in \"X\" by
 field \"y\". Next available field number is K." (as protoc does, including the next
 available number computation). An extension number used by another file in the pool is a
@@ -437,19 +452,19 @@ empty oneofs.
 ### Why the compiler has its own symbol table
 
 `Schema::Resolver` (WS1) implements protoc's lookup over built `Schema::File`s. The linker
-cannot use it directly: it resolves names in the file being compiled before any descriptor
-exists, and it must produce protoc's failure messages, which need a pool-wide view ("seems
-to be defined in ..., which is not imported"). So `Compiler::SymbolTable` implements the
-same rule over two sources: `local`, the AST nodes of the file being linked, registered as
-they are built, and the pool's descriptors.
+cannot use it directly: it resolves names in the file being compiled while that file is
+still a draft whose names are unresolved, and it must produce protoc's failure messages,
+which need a pool-wide view ("seems to be defined in ..., which is not imported"). So
+`Compiler::SymbolTable` implements the same rule over two sources: `local`, the file being
+linked, whose symbols are registered as they are drafted, and the pool's descriptors.
 
-```ruby
-Symbol = Struct.new(:kind, :full_name, :file_name, :object)
-```
-
-`kind` is `:message`, `:enum`, `:enum_value`, `:field`, `:oneof`, `:service`, `:method` or
-`:package`. `object` is an AST node for local symbols and a `Schema` descriptor otherwise;
-`Symbol#local?` tells which. Package names are symbols too: `add_package` registers
+A `SymbolTable::Symbol` is a frozen object with `kind`, `full_name`, `file_name`, `object`
+and `local?`. `kind` is `:message`, `:enum`, `:enum_value`, `:field`, `:oneof`, `:service`,
+`:method` or `:package`. `object` is the `Schema` descriptor either way: drafted, for the
+file being linked, built, for the pool's. Reading a local symbol and a pool symbol is the
+same code; the checks that once read an AST node for local symbols (`extension_number?`,
+the enum values of an enum default) and a descriptor for the others now read descriptors
+only. Package names are symbols too: `add_package` registers
 `a.b.c`, `a.b` and `a` (as protoc does), which is how a message named `a` clashes with
 package `a.b`.
 
@@ -522,24 +537,27 @@ unused." warnings (as protoc does, for named files only).
 
 ### Agreement with `Schema::Resolver`
 
-The `Schema::Builder` later resolves the same names again through `Schema::Resolver`, but
-by then they all have a leading dot. To make sure the two implementations of the rule
-agree, `test/compiler/resolver_test.rb` writes WS1's resolver cases as `.proto` sources,
-compiles them, and asserts `Schema::Resolver.resolve(written_name, ...)` returns the same
+The compiler records what it resolved on the draft, so `Schema::Resolver` is not run over
+compiled files; it resolves names for drafts nobody resolved, those of the DSL and
+`File.from_proto`. To make sure the two implementations of the rule agree,
+`test/compiler/resolver_test.rb` writes WS1's resolver cases as `.proto` sources, compiles them, and asserts `Schema::Resolver.resolve(written_name, ...)` returns the same
 descriptor the compiler picked.
 
 ## 9. What the parser and linker synthesise
 
 protoc's descriptors contain things nobody wrote. All of them are produced in the same
-place protoc produces them, so their order and source locations match.
+place protoc produces them, so their order and source locations match. The naming rules
+are the draft API's (`Schema::Draft.map_entry_name`, `.synthetic_oneof_names`,
+`.group_field_name`, `Schema.json_name`): the parser expands its tree with them, and the DSL
+and hand-written drafts get the same expansion from `map`, `optional:` and `group`.
 
 ### Map entries (parser, as protoc does)
 
 `map<string, int32> stock = 3;` becomes a repeated field of type `StockEntry` plus a nested
 message, in `Parser#generate_map_entry`:
 
-- the name is `map_entry_name`: the field name in CamelCase (underscores dropped, the next
-  letter upcased) plus `Entry`;
+- the name is `Schema::Draft.map_entry_name`: the field name in CamelCase (underscores
+  dropped, the next letter upcased) plus `Entry`;
 - the entry gets `options.known[:map_entry] = true`, `key = 1` and `value = 2`, both
   `LABEL_OPTIONAL`;
 - the entry is appended to the enclosing message's `nested_type` at the point the field is
@@ -555,23 +573,23 @@ by hand, and "Expanded map entry type X conflicts with an existing nested messag
 ### Synthetic oneofs (parser, as protoc does)
 
 For every proto3 `optional` field, `Parser#generate_synthetic_oneofs` appends a oneof after
-the real ones, named `_` plus the field name. If that name collides with a field or oneof,
-`X` is prepended until it does not: a field `__foo` next to a oneof `_foo` gets `X_foo`
+the real ones, named by `Schema::Draft.synthetic_oneof_names`: `_` plus the field name, and
+if that name collides with a field or oneof, `X` is prepended until it does not: a field `__foo` next to a oneof `_foo` gets `X_foo`
 (this is `parser_unittest.cc`'s case). `oneof_index` points at it and `proto3_optional` is
 set. `Schema::Oneof#synthetic?` is true for these, and `Field#real_oneof` skips them.
 
 ### Groups (parser, as protoc does)
 
 `optional group Result = 1 { ... }` creates a nested message `Result` and a field named
-`result` (the name lower-cased with `downcase(:ascii)`) of type `TYPE_GROUP` whose
+`result` (`Schema::Draft.group_field_name`: the name lower-cased) of type `TYPE_GROUP` whose
 `type_name` is `Result`. The nested message's source locations are built from the field's
 recorder, as protoc does. Group names must start with a capital letter.
 
-### json_name (linker, as protoc does)
+### json_name (the draft, as protoc does)
 
-`Linker#field_hash` always writes `json_name`: the explicit one if given, otherwise
-`Schema::Builder.json_name(name)` (underscores dropped, the letter after each upcased:
-`price_cents` becomes `priceCents`). protoc's `CopyTo` writes it for every field too.
+A field drafted without an explicit `json_name` gets `Schema.json_name(name)` (underscores
+dropped, the letter after each upcased: `price_cents` becomes `priceCents`), and `to_proto`
+writes `json_name` for every field, as protoc's `CopyTo` does.
 
 ### Default values (parser and linker, as protoc does)
 
@@ -581,7 +599,7 @@ the user wrote. The parser builds it in `parse_default_assignment`:
 | Type | Stored as |
 |---|---|
 | integers | the parsed number, sign included (`0x10` becomes `"16"`), range-checked for the type |
-| `float`, `double` | `Compiler.simple_dtoa` at parse time, then `simple_ftoa` (float) or `simple_dtoa` (double) again in `Linker#default_text`; `inf`, `-inf`, `nan` spelled out |
+| `float`, `double` | `Compiler.simple_dtoa` at parse time, then `simple_ftoa` (float) or `simple_dtoa` (double) again in `Linker#default_text` as the field is drafted; `inf`, `-inf`, `nan` spelled out |
 | `bool` | `"true"` or `"false"` |
 | `string` | the decoded string |
 | `bytes` | `Compiler.c_escape` of the decoded bytes (absl's `CEscape`: `\n`, `\"`, octal for the rest) |
@@ -595,7 +613,8 @@ the raw token text, and `cross_link_field` validates it once the type is known.
 
 ### The example after linking
 
-`compile(["shop.proto"], sources: ...).last.to_h`:
+`compile(["shop.proto"], sources: ...).last.to_h`, which is `to_proto.to_h`: the built file
+translated to protoc's shape, as a Hash for reading:
 
 ```ruby
 {name: "shop.proto",
@@ -634,11 +653,9 @@ everywhere, and proto2's `syntax` would be omitted entirely (as protoc does).
 ## 10. Option interpretation
 
 Every `option` statement and `[...]` field option is still an `AST::Option` when linking
-starts. `build_file` queues every element that has options as a `Linker::Pending`:
-
-```ruby
-Pending = Struct.new(:node, :kind, :name_scope, :element_name, :path, :options, :result)
-```
+starts. `build_file` queues every element that has options as a `Linker::Pending`, a frozen
+object with `node`, `kind`, `name_scope`, `path` and `options` (the node's uninterpreted
+options).
 
 `kind` picks the options message (`Linker::OPTIONS_TYPES`: `:file` is
 `google.protobuf.FileOptions`, `:field` is `google.protobuf.FieldOptions`, and so on).
@@ -651,7 +668,7 @@ option java_package = "x.y";
 message M { int32 a = 1 [deprecated = true]; }
 ```
 
-the pending list is:
+the pending list, as `[kind, name_scope, path, option names]`, is:
 
 ```ruby
 [[:field, "M.a", [4, 0, 2, 0, 8], ["deprecated"]],
@@ -684,9 +701,9 @@ edition 2024).", "is an atomic type, not a message.", "is a repeated message. Re
 message options must be initialized using an aggregate value.", "is not a field or
 extension of message", and the "is resolved to" variant of the first-component error.
 
-### Entries, not hashes
+### Entries, then values
 
-The interpreter does not write into a hash directly. Each option becomes an **entry**
+The interpreter does not build the options value as it goes. Each option becomes an **entry**
 `[Schema::Field, value]`, with intermediate message fields wrapped around it: `(limits).max
 = 10` becomes `[limits_field, [[max_field, 10]]]`. Entries for one element accumulate in a
 list. This mimics how protoc works: it serialises every interpreted option into the options
@@ -698,10 +715,12 @@ carry over:
   gives "Option \"(lim)\" was already set." (because the aggregate sets all of `(lim)`
   after a sub-field was set). The opposite order is allowed, and the sub-field is merged
   into the aggregate.
-- `OptionInterpreter#fold` turns the entries into the options hash with parse-merge
-  semantics: repeated fields append, singular message fields merge, scalars take the last
-  value. Known fields go under their name as a Symbol, extensions under
-  `:__extensions` by full name.
+- `OptionInterpreter#fold` turns the entries into a `Schema::MessageValue` with
+  parse-merge semantics: repeated fields append, singular message fields merge, scalars
+  take the last value. Known fields go under their name as a Symbol, extensions under their
+  `Schema::Field`, which for an extension declared in the same file is the drafted
+  descriptor that ends up in the frozen file. The linker sets the value on the draft as
+  that element's options (`Draft::File#set_options`).
 
 ### Values
 
@@ -770,20 +789,18 @@ What the parser stored for `Order`'s options:
 What the descriptor ends up with:
 
 ```ruby
-{deprecated: true,
- __extensions: {"acme.limits" => {tags: ["a", "b"], max: 10}}}
+order.options
+# => #<Protostar::Schema::MessageOptions deprecated: true, (acme.limits): #<Protostar::Schema::MessageValue tags: ["a", "b"], max: 10>>
+order.options.deprecated?                # => true
+order.options.extension("acme.limits")   # => #<Protostar::Schema::MessageValue tags: ["a", "b"], max: 10>
 ```
 
-and `Schema::Message#options` wraps it:
-
-```ruby
-#<Protostar::Schema::Options {deprecated: true, __extensions: {"acme.limits" => {tags: ["a", "b"], max: 10}}}>
-order.options.extensions  # => {"acme.limits" => {tags: ["a", "b"], max: 10}}
-order.options[:deprecated] # => true
-```
+Known options come first in statement order, then custom options in statement order, as
+the two passes interpret them. `docs/schema-api.md` describes the options objects.
 
 `default` and `json_name` are not options at all: the parser stores them in the field
-directly (`default_value: "1"`, `json_name: "q"`), as protoc's does.
+directly, as protoc's does, and `order.field("qty").to_h` is
+`{name: "qty", number: 1, label: :LABEL_OPTIONAL, type: :TYPE_INT32, default_value: "1", json_name: "q"}`.
 
 ## 11. Aggregate option values: `TextFormat`
 
@@ -805,9 +822,9 @@ It handles:
 - duplicate singular fields ("Non-repeated field \"x\" is specified multiple times.") and
   two members of one oneof;
 - `google.protobuf.Any` written as `[type.googleapis.com/pkg.Msg] { ... }`: the inner
-  message is parsed against `pkg.Msg`, folded, and encoded to wire bytes by the private
-  `Compiler::WireEncoder`, then stored as `{type_url:, value:}` (as protoc does, since
-  that is what serialising the Any would contain).
+  message is parsed against `pkg.Msg`, folded, and encoded to wire bytes with
+  `MessageValue#encode`, then stored as the Any's `type_url` and `value` (as protoc does,
+  since that is what serialising the Any would contain).
 
 Errors are wrapped by the interpreter as "Error while parsing option value for \"x\": ...".
 
@@ -822,20 +839,28 @@ fields `[retention = RETENTION_SOURCE]`, `targets`, `feature_support` and
 `edition_defaults`. When compiling it, the options messages needed to interpret its options
 do not exist yet in any pool.
 
-The interpreter solves this by reading option types from built `Schema::Message`s, and
-building the file being compiled once without options:
+The interpreter solves this by reading option types from `Schema::Message`s, and for the
+file being compiled those are its own drafted descriptors. Before interpreting, the linker
+links the draft (every name is already resolved onto it) and resolves it once with no
+options, which gives every descriptor its structural features (`packed?` needs them when an
+`Any` in an aggregate is encoded):
 
 ```ruby
-def run(pending)
-  @local = Schema::Builder.build(@linker.structural_hash, pool: @pool)
+def interpret_options
+  ...
+  @draft.resolve(@pool)
+  @interpreter = OptionInterpreter.new(self, @pool, @options_fallback)
+  options = @interpreter.run(@pending) { |features| check_features(features) }
+  options.each { |node, value| @draft.set_options(descriptor_of(node), value) }
   ...
 ```
 
-`Linker#structural_hash` is `descriptor_hash` with every options hash empty. It is fully
-linked, so `@local` holds real `Schema::Message`s for every message in the file. Whenever a
-symbol lookup lands on a local AST node, `OptionInterpreter#schema_of` swaps it for the
-corresponding descriptor in `@local`. This works the same for descriptor.proto's own
-options and for a file that declares a custom option and uses it in the same file.
+Since local symbols hold drafted descriptors, a lookup that lands in the file being
+compiled already answers with the descriptor the interpreter needs
+(`OptionInterpreter#schema_of` is `symbol.object`). This works the same for
+descriptor.proto's own options and for a file that declares a custom option and uses it
+in the same file, and the extension descriptor the options are keyed by is the one the
+frozen file will hold.
 
 `options_type(name)` decides which `FileOptions` (say) to interpret against, the way protoc
 chooses:
@@ -851,7 +876,8 @@ imports descriptor.proto still has its option interpreted, against the built-in 
 compiling that built-in copy goes through the same pipeline, which in turn finds its
 options messages locally (case 1), so there is no recursion.
 
-The result for one of descriptor.proto's own fields, compiled with `retain_options: true`:
+The result for one of descriptor.proto's own fields, compiled with `retain_options: true`,
+as `field.to_h` (field number order, the way `to_proto` writes it):
 
 ```ruby
 {name: "field_presence",
@@ -863,70 +889,54 @@ The result for one of descriptor.proto's own fields, compiled with `retain_optio
  options:
   {retention: :RETENTION_RUNTIME,
    targets: [:TARGET_TYPE_FIELD, :TARGET_TYPE_FILE],
-   feature_support: {edition_introduced: :EDITION_2023},
    edition_defaults:
     [{edition: :EDITION_LEGACY, value: "EXPLICIT"},
      {edition: :EDITION_PROTO3, value: "IMPLICIT"},
-     {edition: :EDITION_2023, value: "EXPLICIT"}]}}
+     {edition: :EDITION_2023, value: "EXPLICIT"}],
+   feature_support: {edition_introduced: :EDITION_2023}}}
 ```
 
-The cost is that each compiled file is built by `Schema::Builder` twice (structural, then
-final), and three times when `compile` returns the stripped copy (section 18).
+and as the options object (statement order):
+
+```ruby
+#<Protostar::Schema::FieldOptions retention: :RETENTION_RUNTIME, targets: [:TARGET_TYPE_FIELD, :TARGET_TYPE_FILE],
+  feature_support: #<Protostar::Schema::MessageValue edition_introduced: :EDITION_2023>,
+  edition_defaults: [#<Protostar::Schema::MessageValue edition: :EDITION_LEGACY, value: "EXPLICIT">, ...]>
+```
+
+The cost is one extra feature resolution of the draft, not a second build: until this
+workstream the file was built from a hash twice (a structural build without options, then
+the final one), and three times when `compile` returned the stripped copy (section 18).
 
 One rule follows protoc here: a file may not use a feature extension it defines itself
 ("Feature \"...\" can't be used in the same file it's defined in.").
 
-## 13. The descriptor hash and `Schema::Builder`
+## 13. Drafts, the Schema objects and the translation to protoc's shape
 
-### The hash
+### Drafting
 
-`Linker#descriptor_hash(options)` writes what protoc's `FileDescriptor::CopyTo` writes, in
-`FileDescriptorProto` field order. It is the hand-off format between the compiler and
-everything else: `Schema::Builder` builds from it, `Schema::File#to_h` returns it, the
-corpus tests compare it, and the emitters read it.
+The linker builds its result through `Schema::File.draft` (described in full in
+`docs/schema-api.md`). Each draft call creates the real descriptor at once; the draft only
+keeps what it needs to go on describing. A draft is finished in three calls:
 
-| Level | Keys (as `Schema::Builder` accepts them) |
-|---|---|
-| file | `name package dependency public_dependency weak_dependency option_dependency message_type enum_type service extension options source_code_info syntax edition` |
-| message | `name field extension nested_type enum_type extension_range oneof_decl options reserved_range reserved_name visibility` |
-| field | `name number label type type_name extendee default_value oneof_index json_name options proto3_optional` |
-| oneof | `name options` |
-| enum | `name value options reserved_range reserved_name visibility` |
-| enum value | `name number options` |
-| service | `name method options` |
-| method | `name input_type output_type options client_streaming server_streaming` |
-| extension range | `start end options` |
-| reserved range | `start end` |
-
-Conventions: enum-typed fields are Symbols (`:LABEL_OPTIONAL`, `:TYPE_MESSAGE`,
-`:EDITION_2023`); names in `type_name`, `extendee`, `input_type`, `output_type` are fully
-qualified with a leading dot; empty lists and unset fields are absent; `syntax` is absent
-for proto2. Options hashes hold known fields by name, custom options under `:__extensions`
-(`{"full.name" => value}`, nested message values with their own `:__extensions`), and
-uninterpretable bytes under `:__unknown_fields` (only from decoding, never from the
-compiler).
-
-### `Schema::Builder.build(hash, pool:)`
-
-The builder (WS1, `lib/protostar/schema/builder.rb`) turns the hash into linked descriptor
-objects:
-
-1. `build_file`: check keys, look up each dependency in the pool, create `File`,
-   `Message`, `Field`, `Oneof`, `Enum`, `EnumValue`, `Service`, `Method`, `ExtensionRange`
-   objects and register every full name;
-2. `link_fields`, `link_methods`: resolve names through `Schema::Resolver` (they all have a
-   leading dot by now) and connect fields to their message and enum types;
-3. `resolve_features`: compute every descriptor's resolved `Features` (section 14);
-4. `parse_defaults`: turn `default_value` text into Ruby values (`Field#default`);
-5. `deep_freeze` then `Ractor.make_shareable`.
+1. `link(pool)`: finds the dependencies in the pool, completes the lookup tables
+   (`fields_by_number`, `fields_by_name`, `extension_ranges`, `all_messages`, ...) and
+   resolves the names nobody resolved yet through `Schema::Resolver` (for compiled files,
+   none: `cross_link` resolved them onto the draft);
+2. `resolve(pool)`: builds each descriptor's options object (`Schema::FieldOptions` and
+   so on) from what it was given, resolves features (section 14) and parses defaults
+   (`Field#default`); it may run again after options change, which is what the compiler
+   does (section 12);
+3. `freeze!`: `Freezer.deep_freeze` then `Ractor.make_shareable`, and returns the
+   `Schema::File` the draft was building all along.
 
 The last step has a story: `Ractor.make_shareable` on a graph with back references (every
 field points at its message, which points at all its fields) went quadratic, 1.4 s for
 `unittest.proto`. Freezing everything first and then calling `make_shareable` lets it
 confirm the graph in one pass, under 4 ms.
 
-The builder checks shape, not semantics (duplicate numbers and the like are the compiler's
-job). If it raises on a hash the linker produced, that is a compiler bug; `build_schema`
+A draft checks shape, not semantics (duplicate numbers and the like are the compiler's
+job). If it raises on what the linker drafted, that is a compiler bug; `build_schema`
 turns it into a position-less error rather than crashing.
 
 ### The `Schema` objects
@@ -944,10 +954,28 @@ item.nested_messages.map { |m| [m.name, m.map_entry?] }      # => [["StockEntry"
 Ractor.shareable?(file)                                      # => true
 ```
 
-Note the shift from the hash's protobuf enums (`:TYPE_INT64`, `:LABEL_OPTIONAL`) to Ruby
-symbols (`:int64`, `:optional`) on the objects, and the derived answers (`presence?`,
-`map?`, `real_oneof`) that the codec and emitters use. `to_h` goes back to the protoc
-spelling.
+The objects speak Ruby (`:int64`, `:optional`, `:local`), carry derived answers
+(`presence?`, `map?`, `real_oneof`, `packed?`) that the codec and emitters use, and hold
+options as objects with readers (`options.deprecated?`, `options.extension(...)`).
+
+### The translation to protoc's shape
+
+`lib/protostar/schema/proto.rb` is the one place that knows protoc's shape:
+
+- `File#to_proto` builds the `FileDescriptorProto` message of the bootstrap classes,
+  as protoc's `FileDescriptor::CopyTo` writes it: `type_name`, `extendee`, `input_type`
+  and `output_type` fully qualified with a leading dot, the declared label and type
+  (`LABEL_OPTIONAL` and `TYPE_MESSAGE` for an editions `LEGACY_REQUIRED` or `DELIMITED`
+  field), `json_name` on every field, no `syntax` for proto2, options messages with custom
+  options as extension bytes. Every descriptor and `Options` has its own `to_proto`.
+- `File#serialize` is `to_proto.encode`, except that `source_code_info`, thousands of
+  locations on a large file, is written straight to bytes and put in its place among the
+  fields. The bytes are protoc's: the 107 `.binpb` goldens are reproduced byte for byte.
+- `File.from_proto(message_or_bytes, pool:)` reads a `FileDescriptorProto` into a draft,
+  links it, and only then decodes the options messages, so a file's options can use the
+  extensions the file itself declares, in one pass.
+- `to_h` on any descriptor is `to_proto.to_h`: protoc's shape as a Hash, for reading. It
+  shows no custom options, which are bytes in `to_proto`.
 
 ## 14. Editions and feature resolution
 
@@ -962,9 +990,11 @@ The work is split three ways.
 **Parsing and interpretation.** `features` is an ordinary field of every options message
 (`FileOptions.features` is a `FeatureSet`), so `option features.field_presence = IMPLICIT;`
 is interpreted like any other option. Custom features such as `(pb.cpp).string_type` are
-extensions of `FeatureSet` and go under `:__extensions` inside `features`.
+extensions of `FeatureSet`, keyed by their extension descriptor inside the `features`
+value.
 
-**Resolution, in `Schema::Builder#resolve_features`** (as protoc's `FeatureResolver` does):
+**Resolution, in `Schema::Draft::Resolution`** (as protoc's `FeatureResolver` does), run by
+the draft's `resolve`:
 
 - Defaults come from `Schema::Features.defaults(edition)`, which picks, per feature, the
   last `[edition, value]` pair in `Features::DEFAULTS` at or before the file's edition.
@@ -978,8 +1008,11 @@ extensions of `FeatureSet` and go under `:__extensions` inside `features`.
   `repeated_field_encoding`, proto3 `optional` means `EXPLICIT`.
 - Then `PostProcessFieldFeatures`: a field with `LEGACY_REQUIRED` presence reports
   `label == :required`, and a message field with `DELIMITED` encoding reports
-  `type == :group`, unless it is or sits in a map entry. `to_h` still writes
-  `LABEL_OPTIONAL` and `TYPE_MESSAGE` (as protoc's `CopyTo` does).
+  `type == :group`, unless it is or sits in a map entry. `Field#declared_label` and
+  `#declared_type` keep what was declared, and `to_proto` still writes `LABEL_OPTIONAL` and
+  `TYPE_MESSAGE` (as protoc's `CopyTo` does).
+- Each descriptor's options object is bound to its resolved features: `options.features`
+  is `descriptor.features`, and the declared `FeatureSet` is `options[:features]`.
 
 `Features::DEFAULTS` is a transcription of the `edition_defaults` annotations in
 descriptor.proto, with line citations, not something computed from the file at compile
@@ -1001,7 +1034,7 @@ message Node {
 }
 ```
 
-The hash keeps protoc's spelling (`label: :LABEL_OPTIONAL`, `type: :TYPE_MESSAGE`, the
+`to_proto` keeps protoc's spelling (`label: :LABEL_OPTIONAL`, `type: :TYPE_MESSAGE`, the
 features as options, `syntax: "editions"`, `edition: :EDITION_2023`). The `Schema::Field`s
 carry the resolved meaning:
 
@@ -1040,8 +1073,12 @@ defaults are not resolved, since nothing in Ruby needs them (a WS1 decision).
 ## 15. The validator
 
 `Compiler::Validator` holds the checks protoc runs after a file's options are interpreted.
-They read the built `Schema::File` (for resolved features, types and options) and report
-against AST positions. `validate` runs, in protoc's order and only while there are no
+They read the built `Schema::File` (for resolved features, types and options), reaching
+each element's descriptor through `Linker#descriptor_of(node)`, and report against AST
+positions. Options are read through their readers (`field.options.jstype`,
+`range.options.declaration`, `enum.options.allow_alias?`), and the checks over option values
+(`targets`, feature lifetimes) walk `MessageValue`s, custom options by their extension
+descriptor. `validate` runs, in protoc's order and only while there are no
 errors:
 
 1. `validate_options`, per element in protoc's `VisitDescriptors` order
@@ -1104,10 +1141,15 @@ class Location
 end
 ```
 
+Once linking is done, `Location#to_schema` turns each into a frozen
+`Schema::SourceInfo::Location` (comments read as UTF-8), which is what the built file
+keeps.
+
 Spans are 0-based `[start_line, start_col, end_line, end_col]`, with `end_line` omitted
 when it equals `start_line` (`end_at` only appends the line when it differs).
 
-The locations for the running example:
+The locations for the running example, as `file.to_proto.source_code_info.location`
+gives them (each `to_h`):
 
 ```ruby
 {span: [0, 0, 8, 1]}
@@ -1222,8 +1264,10 @@ location (`[4, 1, 2, 0, 8]`) even though nothing in them is an option, and `json
 gets two locations with the same path `[4, 1, 2, 0, 10]`, one for the whole assignment and
 one for the value.
 
-`Linker#locations` holds the rewritten list; `build_schema` passes it into the hash as
-`source_code_info` when `source_info: true`.
+(The "before" list leaves out the locations of the option name parts, deeper than these.)
+
+`Linker#locations` holds the rewritten list; with `source_info: true`, `build_schema` gives
+it to the draft as the file's `SourceInfo`.
 
 ## 17. Diagnostics and error recovery
 
@@ -1234,7 +1278,7 @@ Errors pass through three shapes:
 | Shape | Where | Position |
 |---|---|---|
 | `[line, column, message]` | `Lexer`, `Parser#errors`, `#warnings` | 0-based |
-| `Linker::Problem(severity, node, location, message, import)` | `Linker`, `OptionInterpreter`, `Validator` | AST node + position kind |
+| `Linker::Problem` (`severity`, `node`, `location`, `message`, `import`) | `Linker`, `OptionInterpreter`, `Validator` | AST node + position kind |
 | `Compiler::Diagnostic(file, line, column, message, severity, path:)` | `Run#report` | 1-based, nil when protoc prints none |
 
 `Run#load` resolves each problem's position with `problem.node.position(problem.location)`
@@ -1353,16 +1397,19 @@ used to validate later files) but are not written into descriptor sets or genera
 
 - the **pool** (`compiler.pool`) gets the full file, as protoc's pool does, so files compiled
   later are validated against complete declarations (extension declarations, for example);
-- `compile` **returns** `Compiler#output_file(f)`: the file's hash run through
-  `Retention.strip` and rebuilt by `Schema::Builder` into a private output pool, linked
-  against the stripped copies of its imports. That is what protoc's `--descriptor_set_out`
-  writes. `retain_options: true` returns the pool's files instead.
+- `compile` **returns** `Compiler#output_file(f)`: a copy of the file without
+  source-retention options, built into a private output pool and linked against the
+  stripped copies of its imports. That is what protoc's `--descriptor_set_out` writes.
+  `retain_options: true` returns the pool's files instead.
 
-`Retention.strip(hash, FileDescriptorProto_type, extension_lookup)` is
-`compiler/retention.cc` (as protoc does): it walks the hash with the descriptor types of
-`FileDescriptorProto`, drops every option field (known or extension) whose field has
-`retention: :RETENTION_SOURCE`, drops options messages left empty, and drops source
-locations under anything removed.
+`Retention.strip(file, output_pool, options_type)` is `compiler/retention.cc` (as protoc
+does): it walks each descriptor's options with the type of its options message, drops
+every option field (known or extension) whose declaration has
+`options.retention == :RETENTION_SOURCE`, drops options messages left empty by that, and
+drops the source locations under anything removed, computing each descriptor's source path
+on the way. `Schema::Draft.copy(file, pool:, source_info:) { |descriptor| options }` then
+rebuilds the file into the output pool with the stripped options; custom options are
+re-keyed to the output pool's copies of their extensions.
 
 ```proto
 extend google.protobuf.MessageOptions {
@@ -1374,9 +1421,9 @@ message M { option (src_only) = "x"; option (kept) = "y"; }
 
 ```ruby
 compiler.compile(["r.proto"], ...).last.find_message("r.M").options
-# => #<Protostar::Schema::Options {__extensions: {"r.kept" => "y"}}>
+# => #<Protostar::Schema::MessageOptions (r.kept): "y">
 compiler.compile(["r.proto"], ..., retain_options: true).last.find_message("r.M").options
-# => #<Protostar::Schema::Options {__extensions: {"r.src_only" => "x", "r.kept" => "y"}}>
+# => #<Protostar::Schema::MessageOptions (r.src_only): "x", (r.kept): "y">
 ```
 
 With `retain_options: true` the returned file is the pool's own object
@@ -1395,10 +1442,17 @@ The emitters under `lib/protostar/compiler/emitters/` consume `Schema::File`s (u
 | `Emitters::Grpc` | grpc's `_services_pb.rb` |
 | `Emitters::DescriptorSet` | `--descriptor_set_out` bytes |
 
-The native emitter works from `file.to_h`, the same descriptor hash, and turns it back into
-DSL calls, re-folding map entries, synthetic oneofs and groups into sugar (`m.map`,
-`proto3_optional: true`, `m.group`) wherever the sugar rebuilds the identical descriptor,
-and falling back to explicit calls where it would not. Leading comments from source info
+The native emitter reads the Schema objects and turns them back into DSL calls, re-folding
+map entries, synthetic oneofs and groups into sugar (`m.map`, `proto3_optional: true`,
+`m.group`) wherever the sugar rebuilds the identical descriptor, and falling back to
+explicit calls where it would not. "Identical" is asked of the descriptors, with the
+draft's naming rules: an entry is `map` sugar when it is named `map_entry_name(field)`,
+has exactly `key = 1` and `value = 2` with derived json names and no options beyond the
+field's `features`, and `map_entry: true` as its only option. Options are written as
+keywords (`deprecated: true`), custom ones under `extensions:` by full name; a custom
+option whose extension the file reaches only through `import option` is written as
+unknown bytes, as protoc's own Ruby generator embeds it, since the generated file does not
+load its option-only imports. Leading comments from source info
 become `#` comments. For the running example:
 
 ```ruby
@@ -1422,16 +1476,19 @@ module Shop
 end
 ```
 
-At load time, `Protostar::DSL.file` rebuilds the same descriptor hash (synthesising the map
-entry and the `_price_cents` oneof again, the way the parser does) and hands it to
-`Schema::Builder.build`. The compiler is therefore not needed at runtime: generated files
-carry the descriptor as Ruby, and `test/emitters/ruby_corpus_test.rb` checks for every
-corpus file that loading the generated Ruby gives back exactly the compiler's descriptor,
-custom options included.
+At load time, `Protostar::DSL.file` drives the draft API: its builders are adapters
+(`m.map :stock, 3, :string, :int32` is `draft.map("stock", 3, key: :string, value: :int32)`),
+so the map entry and the `_price_cents` oneof are synthesised again by the draft, with the
+parser's rules, and the file is resolved and frozen into the generated pool. The compiler
+is therefore not needed at runtime: generated files carry the descriptor as Ruby, and
+`test/emitters/ruby_corpus_test.rb` checks for every corpus file that loading the generated
+Ruby serializes to exactly the compiler's bytes, custom options included.
 
-The descriptor set emitter encodes descriptor hashes with `Schema::Proto::HashCodec`, which
-is driven by the descriptors of `descriptor.proto` itself, so custom options of any type
-encode correctly.
+The other emitters read Schema objects too. The Google-format emitter embeds
+`file.serialize(source_info: false, default_json_names: false)`, protoc's bytes without the
+json names a `.proto` did not spell out; the descriptor set emitter writes `serialize`; RBS
+and gRPC read descriptors and option readers (`file.options.ruby_package`,
+`descriptor.options.deprecated?`).
 
 ## 20. How it is verified against protoc
 
@@ -1440,28 +1497,33 @@ committed under `test/corpus/`.
 
 | Check | Test | What is compared | Needs |
 |---|---|---|---|
-| Tier A, descriptors | `test/compiler/corpus_test.rb` | for each of the 107 `.proto` files in `test/corpus/protobuf` (17,999 lines), compiled with the corpus include roots, every file of the result (the file and its transitive imports, 237 files in all) against the `.json` golden protoc 36.2 wrote with `--include_imports`; same file order; `Ractor.shareable?`; diagnostics equal to protoc's (only the 6 generic-services warnings) | nothing |
-| Custom options | `test/compiler/custom_options_test.rb` | every options message of every corpus file against the `.binpb` golden, decoded by the `google-protobuf` gem with a pool built from the golden and compared as JSON; plus targeted assertions on `unittest_custom_options.proto` that run without the gem | oracle gem for the sweep |
+| Tier A, descriptors | `test/compiler/corpus_test.rb` | for each of the 107 `.proto` files in `test/corpus/protobuf` (17,999 lines), compiled with the corpus include roots, every file of the result (the file and its transitive imports, 237 files in all), translated by `to_proto`, against the `.json` golden protoc 36.2 wrote with `--include_imports`, read by protostar's own JSON parser into the same descriptor.proto classes; same file order; `Ractor.shareable?`; diagnostics equal to protoc's (only the 6 generic-services warnings) | nothing |
+| Custom options | `test/compiler/custom_options_test.rb` | every options message of every corpus file: the bytes `to_proto` writes for it and the `.binpb` golden's, both decoded by the `google-protobuf` gem with a pool built from the golden and compared as JSON; plus targeted assertions on `unittest_custom_options.proto` that run without the gem | oracle gem for the sweep |
 | Tier B, source info | `test/compiler/source_info_test.rb` | `source_code_info` of every corpus file, location for location (path, span, comments), against the `.binpb` golden decoded by the gem | oracle gem |
 | Bytes | `test/emitters/descriptor_set_test.rb` | `DescriptorSet` output with `--include_imports --include_source_info` against the `.binpb` golden, byte for byte, for all 107 | nothing |
 | Parser | `test/compiler/parser_cases_test.rb` | the 239 inline cases of protoc's `parser_unittest.cc` (90 parse-to, 83 parse errors, 16 early-exit errors, 48 validation errors, 2 warnings) plus 28 `SourceInfoTest` cases, extracted by `script/extract_parser_cases.rb` into `test/corpus/parser_cases/cases.json` | nothing |
 | Validation | `test/compiler/validation_test.rb` | 116 snippets, one or more per rule, each with protoc 36.2's recorded output (`script/record_validation_cases.rb`); one pinned deviation | nothing |
 | Resolver | `test/compiler/resolver_test.rb` | the compiler and `Schema::Resolver` agree on WS1's lookup cases | nothing |
+| Round trip | `test/schema/golden_round_trip_test.rb`, `test/bootstrap/descriptor_set_test.rb` | every `.binpb` file through `File.from_proto` and back through `serialize`, byte for byte, and through `to_proto` against the golden JSON | nothing |
 | Units | `lexer_test.rb`, `parser_test.rb`, `facade_test.rb` | tokens, positions, literals and lexer errors; parser details; include path order, bundled includes, pool reuse, diagnostics format | nothing |
 
 Two things about the goldens. The `.json` files cannot hold custom options, because protoc's
-JSON printer drops extensions it cannot name, so tier A compares with `:__extensions`
-stripped from our side (`CompilerSupport.strip_extensions`) and the custom options test
-covers what that hides. And the `.json` files were printed by google-protobuf 4.31, whose
-descriptor.proto predates `FeatureSupport.removal_error`; `GoldenHash` handles that.
+JSON printer drops extensions it cannot name. Neither does `to_proto.to_h`: in `to_proto`
+custom options are extension bytes, which the bootstrap classes keep as unknown fields and
+`to_h` leaves out, so the comparison needs no stripping, and the custom options test and
+the byte-for-byte tests cover what it cannot see. And the `.json` files were printed by
+google-protobuf 4.31, which wrote editions it had no name for (`EDITION_2026`) as numbers;
+protostar's JSON parser names them from today's descriptor.proto. (`GoldenHash` used to
+convert the JSON by hand, reading descriptor.proto's metadata from its own golden; it is now
+three lines over `FileDescriptorSet.decode_json`.)
 
 The byte-for-byte descriptor set test is worth noting: since the `.binpb` goldens contain
 both custom options and source info, it checks tier B and custom options in the default
 suite, without the oracle gem, just less legibly when it fails.
 
-Today's run of the compiler tests: 759 runs, 3,040 assertions, 214 skips without the oracle;
-with `BUNDLE_WITH=oracle PROTOSTAR_ORACLE=1`, 759 runs, 127,486 assertions, 0 skips, in
-21 s.
+Today's run of the compiler tests: 759 runs, 3,040 assertions, 214 skips without the oracle,
+in 6.8 s; with `BUNDLE_WITH=oracle PROTOSTAR_ORACLE=1`, 759 runs, 127,486 assertions, 0
+skips, in 17.7 s (21 s before the compiler drafted directly).
 
 The claim "this is a port of protoc" is verified by behaviour, not by reading side by side:
 the vendored corpus contains `parser_unittest.cc` but not `parser.cc`, `tokenizer.cc` or
@@ -1471,22 +1533,31 @@ code names in its comments.
 ## 21. Performance
 
 Measured on Ruby 3.4.1, arm64 macOS (Apple Silicon), interpreter only (this Ruby has no
-YJIT), best of 5 or 10 runs. `unittest.proto` is 65,682 bytes, 2,731 lines.
+YJIT), best of 10 runs (3 for the corpus), with `bench/compiler_bench.rb`. `unittest.proto`
+is 65,682 bytes, 2,731 lines. "Before" is the same bench on the commit before WS14 (the
+descriptor hash and `Schema::Builder`), run on the same machine the same day; the
+"doc" column is what this section said then, measured with other scripts.
 
-| What | Time |
-|---|---|
-| Lexing `unittest.proto` (all tokens, no parsing) | 15.2 ms |
-| Parsing it (lexing, AST, source locations) | 25.4 ms |
-| Linking it, imports already in the pool (`Linker#link`, which includes option interpretation and two `Schema::Builder` builds) | 37.1 ms |
-| Validating it (`Validator#validate`) | 7.3 ms |
-| One `Schema::Builder.build` of its hash, for scale | 12.4 ms |
-| `compile` of `unittest.proto` alone, imports pooled, built-in descriptor.proto ready (parse, link, validate, stripped copy) | 92 ms |
-| `compile` of `unittest.proto` on a fresh `Compiler` (its imports and the built-in descriptor.proto compiled too) | 129 ms |
-| the same, `retain_options: true` (no stripped copies) | 103 ms |
-| the same, `source_info: true` | 202 ms |
-| `descriptor.proto` on a fresh `Compiler` | 28 ms |
-| The whole corpus: 107 files, a fresh `Compiler` each, 237 file compiles | 5.0 s |
-| The whole corpus with `source_info: true` | 6.4 s |
+| What | Doc | Before | Now |
+|---|---|---|---|
+| Lexing `unittest.proto` (all tokens, no parsing) | 15.2 ms | 15.6 ms | 15.3 ms |
+| Parsing it (lexing, AST, source locations) | 25.4 ms | 27.7 ms | 26.2 ms |
+| Linking it, imports already in the pool (`Linker#link`: drafting, option interpretation, resolve and freeze) | 37.1 ms | 42.4 ms | 31.3 ms |
+| Validating it (`Validator#validate`) | 7.3 ms | 9.0 ms | 8.7 ms |
+| Building it from its serialized `FileDescriptorProto` (before: hash decode and `Schema::Builder`; now: `File.from_proto`) | | 23.5 ms | 19.5 ms |
+| `compile` of `unittest.proto` alone, imports pooled, built-in descriptor.proto ready (parse, link, validate, stripped copy) | 92 ms | 104.9 ms | 85.3 ms |
+| `compile` of `unittest.proto` on a fresh `Compiler` (its imports and the built-in descriptor.proto compiled too) | 129 ms | 136.6 ms | 114.0 ms |
+| the same, `retain_options: true` (no stripped copies) | 103 ms | 118.2 ms | 96.2 ms |
+| the same, `source_info: true` | 202 ms | 211.4 ms | 144.8 ms |
+| `descriptor.proto` on a fresh `Compiler` | 28 ms | 30.4 ms | 26.6 ms |
+| Native Ruby emitted for `unittest.proto` and its 3 imports | | 12.4 ms | 11.0 ms |
+| That Ruby loaded through the DSL into a fresh pool | | 18.9 ms | 20.5 ms |
+| `add_serialized_file` of `unittest.proto` and its 3 imports | | 33.2 ms | 20.7 ms |
+| `to_proto` of `unittest.proto` with source info | | 49.8 ms | 32.1 ms |
+| `serialize` of it with source info | | 34.9 ms | 21.8 ms |
+| `serialize` of it without source info | | 9.9 ms | 9.6 ms |
+| The whole corpus: 107 files, a fresh `Compiler` each, 237 file compiles | 5.0 s | 5.10 s | 3.95 s |
+| The whole corpus with `source_info: true` | 6.4 s | 6.48 s | 4.65 s |
 
 For comparison, protoc 36.2 compiles `unittest.proto` to a descriptor set in about 20 ms
 wall time, process start included.
@@ -1495,14 +1566,24 @@ Where the time goes:
 
 - The lexer is a byte-at-a-time loop with table lookups, about 60% of parse time. It
   allocates a `Token` per token plus a `dup` for `previous`.
-- Each file goes through `Schema::Builder` two or three times: the structural build for
-  option types, the final build, and the stripped rebuild for the returned copy. The
-  stripped copy costs about 25 ms of the 129 ms cold compile.
-- A fresh `Compiler` compiles the bundled descriptor.proto once (about 28 ms) the first
+- Each file is drafted once. Option interpretation reads the draft (resolved once without
+  options, about 2 ms on `unittest.proto`) where it used to build the whole file from a
+  hash first; names resolved by `cross_link` are not resolved again. That and the hashes
+  no longer built and checked key by key are the 11 ms gained in linking.
+- `compile` still returns a source-retention-stripped copy, now made by `Draft.copy` from
+  the Schema objects rather than by stripping a hash and building it again.
+- A fresh `Compiler` compiles the bundled descriptor.proto once (about 27 ms) the first
   time a file needs an options message it does not import. The result is memoised on the
   `Compiler` instance, not per process.
-- `source_info: true` costs about 70 ms on `unittest.proto`: thousands of `Location`
-  objects are built, frozen, made shareable, filtered by retention and rebuilt in the copy.
+- `source_info: true` costs about 30 ms on `unittest.proto` (70 ms before): the 5,850
+  locations become frozen `Schema::SourceInfo::Location`s once, instead of being turned
+  into hashes, built, filtered as hashes and built again in the copy.
+- Loading generated Ruby is 8% slower than before (18.9 to 20.5 ms for four files): every
+  descriptor now has an options object bound to its features (interned when empty), and
+  the DSL's adapters add a call per element. It is the one row that lost ground.
+- `serialize` builds the `FileDescriptorProto` message tree and encodes it, except for
+  `source_code_info`, which it writes straight to bytes: encoding 5,850 small `Location`
+  messages through the generic encoder took longer than the whole file did before.
 - Building is cheap relative to what it once was: `Ractor.make_shareable` alone used to take
   1.4 s for this file before the deep-freeze-first change.
 
@@ -1513,9 +1594,8 @@ These numbers are fine for a code generator run at build time. Nothing in the ru
 
 From the WS2 report, still true:
 
-- **Cross-file extension number clash.** protoc warns and accepts a second extension of the
-  same extendee and number from another file; `Schema::Pool#add` raises, so it is reported as
-  an error. Pinned in `validation_test.rb` (`DEVIATIONS`).
+- **Cross-file extension number clash.** Fixed in WS13: `Schema::Pool#add` warns and keeps
+  the first, as protoc does, and the linker reports protoc's warning.
 - **Several unused imports** are reported in import order; protoc iterates a hash set, so
   its order is unspecified.
 - **Missing `import option` files**: protoc 36.2 aborts with a CHECK failure when writing
@@ -1541,6 +1621,12 @@ Things to know when changing the code:
 - The pool is shared across `compile` calls and never forgets; recompiling a changed file
   needs a new pool.
 - `compile` returns copies, not pool members, unless `retain_options: true`.
+- The compiler's parser expands maps, groups and proto3 `optional` itself, because
+  protoc's parser output is a tested contract (section 5); the naming rules it uses are the
+  draft API's. A change to them is a change in `Schema::Draft`, and the parser follows.
+- Custom options are keyed by extension descriptor. Code that copies a file into another
+  pool must re-key them (`Draft.copy` does, through `Options.build`), or the copy's options
+  point into the old pool.
 - Diagnostics use virtual names; `Diagnostic#path` has the disk path.
 - Feature defaults are transcribed in `Schema::Features::DEFAULTS`. A new edition means
   editing that table (and `Linker::MAXIMUM_EDITION`), not only updating the bundled
@@ -1552,21 +1638,27 @@ Things to know when changing the code:
 
 | File | Lines | Contents |
 |---|---|---|
-| `lib/protostar/compiler.rb` | 267 | `Compiler` facade, `Diagnostic`, `Error`, include path resolution, built-in descriptor.proto, `output_file`, `simple_dtoa`, `simple_ftoa`, `c_escape` |
-| `lib/protostar/compiler/lexer.rb` | 630 | `Lexer`, `Lexer::Token`, `Lexer::CommentCollector`, literal parsing |
-| `lib/protostar/compiler/parser.rb` | 1,717 | `Parser`, source path constants, map entry and synthetic oneof synthesis, recovery |
-| `lib/protostar/compiler/ast.rb` | 319 | `AST::*` nodes |
-| `lib/protostar/compiler/source_info.rb` | 149 | `SourceInfo::Location`, `Recorder`, `rewrite_option_paths` |
-| `lib/protostar/compiler/run.rb` | 156 | `Run`: loading, cycles, reporting |
-| `lib/protostar/compiler/symbol_table.rb` | 202 | `SymbolTable`, `SymbolTable::Symbol` |
-| `lib/protostar/compiler/linker.rb` | 915 | `Linker`, `Problem`, `Pending`, descriptor hash |
-| `lib/protostar/compiler/option_interpreter.rb` | 371 | `OptionInterpreter` |
-| `lib/protostar/compiler/text_format.rb` | 426 | `TextFormat` (aggregates), `WireEncoder` (Any) |
-| `lib/protostar/compiler/validator.rb` | 961 | `Validator` and the CLI checks |
-| `lib/protostar/compiler/retention.rb` | 89 | `Retention.strip` |
+| `lib/protostar/compiler.rb` | 261 | `Compiler` facade, `Diagnostic`, `Error`, include path resolution, built-in descriptor.proto, `output_file`, `simple_dtoa`, `simple_ftoa`, `c_escape` |
+| `lib/protostar/compiler/lexer.rb` | 659 | `Lexer`, `Lexer::Token`, `Lexer::CommentCollector`, literal parsing |
+| `lib/protostar/compiler/parser.rb` | 1,696 | `Parser`, source path constants, map entry and synthetic oneof expansion, recovery |
+| `lib/protostar/compiler/ast.rb` | 193 | `AST::*` nodes |
+| `lib/protostar/compiler/source_info.rb` | 146 | `SourceInfo::Location`, `Recorder`, `rewrite_option_paths` |
+| `lib/protostar/compiler/run.rb` | 155 | `Run`: loading, cycles, reporting |
+| `lib/protostar/compiler/symbol_table.rb` | 223 | `SymbolTable`, `SymbolTable::Symbol` |
+| `lib/protostar/compiler/linker.rb` | 883 | `Linker`, `Problem`, `Pending`, drafting the file |
+| `lib/protostar/compiler/option_interpreter.rb` | 363 | `OptionInterpreter` |
+| `lib/protostar/compiler/text_format.rb` | 340 | `TextFormat` (aggregates) |
+| `lib/protostar/compiler/validator.rb` | 943 | `Validator` and the CLI checks |
+| `lib/protostar/compiler/retention.rb` | 104 | `Retention.strip` |
 | `lib/protostar/compiler/include/` | | bundled `google/protobuf/*.proto` (14 files) and LICENSE |
-| `lib/protostar/schema/builder.rb` | 516 | `Schema::Builder`: hash to frozen descriptors, feature resolution |
+| `lib/protostar/schema/draft.rb` | 809 | `Schema::File.draft`, the draft classes, the naming rules |
+| `lib/protostar/schema/draft/resolution.rb` | 171 | `Draft::Resolution`: options objects, feature resolution, defaults |
+| `lib/protostar/schema/draft/copy.rb` | 88 | `Draft.copy`: a built file rebuilt for another pool |
+| `lib/protostar/schema/options.rb` | 337 | `MessageValue`, `Options` and its nine subclasses |
+| `lib/protostar/schema/proto.rb` | 728 | the translation to and from protoc's shape: `to_proto`, `serialize`, `from_proto`, the option value codec |
 | `lib/protostar/schema/resolver.rb` | 118 | `Schema::Resolver`: the same scoping rule over built files |
-| `lib/protostar/schema/features.rb` | 158 | `Schema::Features`, `EDITIONS`, `DEFAULTS` |
+| `lib/protostar/schema/features.rb` | 152 | `Schema::Features`, `EDITIONS`, `DEFAULTS` |
+| `lib/protostar/dsl.rb` | 351 | `Protostar::DSL`, adapters onto the draft API |
 | `lib/protostar/compiler/emitters.rb`, `emitters/*.rb` | | naming, printing, the five emitters |
 | `script/extract_parser_cases.rb`, `script/record_validation_cases.rb` | | regenerate the recorded protoc expectations |
+| `test/support/ast_hash.rb`, `test/support/golden_hash.rb` | | the parser's pre-link `FileDescriptorProto` for the parser tests; golden JSON read into the bootstrap classes |
