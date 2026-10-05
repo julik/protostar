@@ -81,7 +81,6 @@ module Google
         check_frozen
         k = convert_key(key)
         @hash[k] = convert_value(value)
-        value
       end
 
       def has_key?(key)

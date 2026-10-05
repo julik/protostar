@@ -1142,6 +1142,7 @@ Google::Protobuf::Any.decode_json('{"@type": "type.googleapis.com/nope.Nope", "f
 ---
 Google::Protobuf::Any.encode_json(Google::Protobuf::Any.new(type_url: "type.googleapis.com/nope.Nope", value: "x"))
 ---
+#~ an empty Any encodes to {} as the conformance suite requires; the C gem raises ParseError
 Google::Protobuf::Any.encode_json(Google::Protobuf::Any.new)
 ---
 BasicTest::TimeMessage.new.to_json

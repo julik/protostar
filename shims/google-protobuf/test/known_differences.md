@@ -19,3 +19,4 @@ Not ported, as implementation-specific: `gc_test.rb`, `memory_test.rb`, `stress.
 - Maps iterate and encode in insertion order (upb uses its hash order).
 - Error messages from JSON parsing are protostar's (the class, `ParseError`, is the same).
 - JSON writes and reads extensions of the top-level message only.
+- An empty `Any` encodes to `{}` and `{}` decodes to an empty `Any`, as the conformance suite requires; the C gem raises `ParseError` on encode.
