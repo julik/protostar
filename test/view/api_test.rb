@@ -17,10 +17,10 @@ class ViewApiTest < Minitest::Test
   end
 
   def test_view_class
-    assert_same @all::View, @all.view_class
-    assert_instance_of @all::View, @view
-    assert_operator @all::View, :<, Protostar::View
-    assert_same @all, @all::View.message_class
+    assert_instance_of @all.view_class, @view
+    assert_operator @all.view_class, :<, Protostar::View
+    assert_same @all, @all.view_class.message_class
+    refute @all.const_defined?(:View, false)
     assert_same @all.descriptor, @view.descriptor
     assert_equal "proto2_unittest.TestAllTypes", @view.descriptor.full_name
   end
@@ -117,6 +117,10 @@ class ViewApiTest < Minitest::Test
     frozen = @view.to_message(frozen: true)
     assert Ractor.shareable?(frozen)
     assert_equal @view, @message
+    assert_equal @message, @view
+    assert @message == @view
+    refute @all.new(optional_int32: 6) == @view
+    refute @message.optional_nested_message == @view
     assert_equal @view, @all.view(@bytes)
     refute_equal @view, @all.view(@all.new(optional_int32: 6).encode)
     refute_equal @view, @message.optional_nested_message
@@ -157,7 +161,7 @@ class ViewApiTest < Minitest::Test
     refute Ractor.shareable?(@all.view(@bytes.dup).freeze_index), "the buffer is not frozen"
   end
 
-  def test_a_nested_type_called_view_keeps_the_constant
+  def test_a_nested_type_called_view_is_an_ordinary_message
     file = Protostar::Compiler.new.compile(["v.proto"], sources: {"v.proto" => <<~PROTO}).last
       syntax = "proto3";
       package v;
@@ -167,12 +171,13 @@ class ViewApiTest < Minitest::Test
     namespace = Module.new
     Protostar::Types.define(file, name: namespace, registry: Protostar::Types::Registry.new)
     outer = namespace::Outer
-    refute_operator outer::View, :<, Protostar::View
+    assert_operator outer::View, :<, Protostar::Message
     assert_equal "v.Outer.View", outer::View.descriptor.full_name
     assert_operator outer.view_class, :<, Protostar::View
     view = outer.view(outer.new(inner: {x: 4}, name: "n").encode)
     assert_equal 4, view.inner.x
-    assert_operator namespace::Plain::View, :<, Protostar::View
+    assert_instance_of outer::View.view_class, view.inner
+    refute namespace::Plain.const_defined?(:View, false)
   end
 
   def test_fields_named_like_view_methods
@@ -186,6 +191,6 @@ class ViewApiTest < Minitest::Test
     assert_equal [1, 2, 3, 4, 5], %i[encode to_message hash __f0 class].map { |name| view[name] }
     assert_kind_of String, view.encode
     assert_kind_of Protostar::Message, view.to_message
-    assert_equal odd::View, view.class
+    assert_equal odd.view_class, view.class
   end
 end

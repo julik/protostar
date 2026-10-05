@@ -62,15 +62,14 @@ module Protostar
 
       # A packed run of a closed enum: numbers without a name become unknown fields
       def packed_closed_enum(c, pos, limit, ix, u, number, names)
-        old = c.limit
-        c.limit = limit
         c.pos = pos
+        old = c.push_limit(limit - pos)
         while c.pos < limit
           start = c.pos
           n = c.read_int32
           (ix[u] ||= []) << number << Wire::VARINT << start << c.pos unless names.key?(n)
         end
-        c.limit = old
+        c.pop_limit(old)
       end
 
       # @return [Boolean] whether a map entry's value is a closed enum's
@@ -145,9 +144,10 @@ module Protostar
             if b < 0
               out << varint_value(kind, a, info)
             else
-              c ||= Cursor.new(buf, 0)
-              c.limit = stop = a + b
+              c ||= Wire::Reader.new(buf, 0, buf.bytesize)
               c.pos = a
+              old = c.push_limit(b)
+              stop = a + b
               while c.pos < stop
                 if enum
                   n = c.read_int32
@@ -160,6 +160,7 @@ module Protostar
                   out << varint_value(kind, c.read_varint, info)
                 end
               end
+              c.pop_limit(old)
             end
             k += 2
           end

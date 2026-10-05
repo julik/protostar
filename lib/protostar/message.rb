@@ -199,6 +199,7 @@ module Protostar
     # Same class and same field values. Unknown fields are ignored, and NaN
     # equals NaN in float and double fields, as protoc's MessageDifferencer has it.
     def ==(other)
+      return other == self if other.is_a?(View)
       return true if equal?(other)
       return false unless other.instance_of?(self.class)
       mine = @values

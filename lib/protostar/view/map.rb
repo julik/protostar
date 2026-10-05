@@ -22,8 +22,7 @@ module Protostar
       #   flat Array of its segments' offsets and lengths.
       # @api private
       def self.entry(buf, offset, length, info, depth)
-        c = Cursor.new(buf, offset + length)
-        c.pos = offset
+        c = Wire::Reader.new(buf, offset, offset + length)
         key_info = info.key
         value_info = info.value
         key = nil

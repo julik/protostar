@@ -13,9 +13,8 @@ module Protostar
   #   view.encode.equal?(bytes)          # => true
   #   view.to_message                    # the mutable message, decoded eagerly
   #
-  # Every message class has a view class, `Person::View` (or
-  # `Person.view_class` when the message has a nested type called View),
-  # with the same readers as the message: scalars, enums, `has_`, `which_`,
+  # Every message class has a view class, `Person.view_class`, with the
+  # same readers as the message: scalars, enums, `has_`, `which_`,
   # repeated fields as {Repeated}, maps as {Map}. Views are frozen; writers
   # raise FrozenError. A view reads the buffer it was given for as long as
   # it lives, so that buffer must not change underneath it.
@@ -61,7 +60,7 @@ module Protostar
         buf = if bytes.is_a?(String)
           bytes
         elsif defined?(IO::Buffer) && bytes.is_a?(IO::Buffer)
-          IOSource.new(bytes)
+          Wire::IOSource.new(bytes)
         else
           raise ::TypeError, "expected a String or IO::Buffer, got #{bytes.class}"
         end
@@ -145,8 +144,7 @@ module Protostar
       buf = @buf
       depth = @depth
       __each_segment do |offset, length|
-        c = Cursor.new(buf, offset + length)
-        c.pos = offset
+        c = Wire::Reader.new(buf, offset, offset + length)
         msg.__decode_fields(c, depth, 0, frozen)
       end
       msg.freeze if frozen
@@ -294,7 +292,6 @@ module Protostar
   end
 end
 
-require_relative "view/source"
 require_relative "view/scan"
 require_relative "view/repeated"
 require_relative "view/map"

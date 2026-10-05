@@ -22,7 +22,7 @@ class ViewRactorTest < Minitest::Test
   end
 
   def test_view_classes_are_shareable
-    assert Ractor.shareable?(@all::View)
+    assert Ractor.shareable?(@all.view_class)
     assert Ractor.shareable?(Protostar::View::Repeated::EMPTY)
     assert Ractor.shareable?(Protostar::View::Map::EMPTY)
   end

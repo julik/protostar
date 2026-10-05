@@ -61,6 +61,7 @@ class ViewParityTest < Minitest::Test
     assert_equal ViewSupport.plain(decoded.__to_h), ViewSupport.plain(view.to_h), "to_h differs for #{name}"
     assert_equal decoded, view.to_message, "to_message differs for #{name}"
     assert_equal view, decoded, "view == message fails for #{name}"
+    assert_equal decoded, view, "message == view fails for #{name}"
     assert_equal decoded.unknown_fields, view.unknown_fields, "unknown fields differ for #{name}"
     assert_nested_unknown_fields(decoded, view)
     frozen = klass.view(bytes.dup.freeze).freeze_index

@@ -30,7 +30,6 @@ module Protostar
         view.__define(klass, fields)
         view.class_eval(source(fields, oneofs, reserved), "(protostar view #{klass.descriptor.full_name})", 1)
         klass.instance_variable_set(:@__view_class, view)
-        klass.const_set(:View, view) unless view_constant_taken?(klass.descriptor)
         view
       end
 
@@ -38,11 +37,6 @@ module Protostar
       # message keeps for itself, so that views and messages have the same readers
       def reserved
         (View.public_instance_methods + Message.public_instance_methods + %i[initialize]).to_h { |m| [m, true] }
-      end
-
-      # A nested type that would become the class's View constant keeps it
-      def view_constant_taken?(descriptor)
-        (descriptor.nested_messages + descriptor.nested_enums).any? { |d| Enum.constant_name(d.name) == "View" }
       end
 
       def source(fields, oneofs, reserved)
@@ -121,7 +115,7 @@ module Protostar
                 tag = (tag & 0x7F) | (b << 7)
                 pos += 2
               else
-                c ||= Protostar::View::Cursor.new(buf, limit)
+                c ||= Protostar::Wire::Reader.new(buf, pos, limit)
                 c.pos = pos
                 tag = c.read_varint
                 pos = c.pos
@@ -129,7 +123,7 @@ module Protostar
               #{branches.empty? ? "if false" : "case tag"}
               #{branches}
               else
-                c ||= Protostar::View::Cursor.new(buf, limit)
+                c ||= Protostar::Wire::Reader.new(buf, pos, limit)
                 c.pos = pos
                 Protostar::View::Scan.other(c, tag, at, ix, #{3 * n}, depth)
                 pos = c.pos
@@ -174,7 +168,7 @@ module Protostar
             #{var} = (#{var} & 0x7F) | (b << 7)
             pos += 2
           else
-            c ||= Protostar::View::Cursor.new(buf, limit)
+            c ||= Protostar::Wire::Reader.new(buf, pos, limit)
             c.pos = pos
             #{var} = c.read_varint
             pos = c.pos
@@ -213,7 +207,7 @@ module Protostar
 
       def group_branch(info, n)
         <<~RUBY
-          c ||= Protostar::View::Cursor.new(buf, limit)
+          c ||= Protostar::Wire::Reader.new(buf, pos, limit)
           c.pos = pos
           len = Protostar::View::Scan.group_end(c, #{info.number}, depth) - pos
           #{store_segment(info, n, "pos")}pos = c.pos
@@ -235,7 +229,7 @@ module Protostar
           out << "raise Protostar::DecodeError.new(\"packed #{info.descriptor.type} length \#{len} is not a multiple of #{fixed[0]}\", offset: pos) " \
             "unless (len % #{fixed[0]}).zero?\n"
         elsif info.closed_enum
-          out << "c ||= Protostar::View::Cursor.new(buf, limit)\n"
+          out << "c ||= Protostar::Wire::Reader.new(buf, pos, limit)\n"
           out << "Protostar::View::Scan.packed_closed_enum(c, pos, pos + len, ix, #{3 * n}, #{info.number}, self.class.__fields[#{i}].enum_names)\n"
         else
           out << "Protostar::View::Scan.check_varints(buf, pos, pos + len)\n"

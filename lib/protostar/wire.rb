@@ -72,5 +72,6 @@ module Protostar
   end
 end
 
+require_relative "wire/io_source"
 require_relative "wire/reader"
 require_relative "wire/writer"
