@@ -59,7 +59,7 @@ module Protostar
         linkers.each do |linker|
           file = linker.file
           options = file.options
-          if options[:cc_generic_services] || options[:java_generic_services] || options[:py_generic_services]
+          if options.cc_generic_services? || options.java_generic_services? || options.py_generic_services?
             run.report(file.name, nil, "Generic services (cc_generic_services, java_generic_services, and " \
               "py_generic_services) are deprecated in favor of using plugins that generate code specific to your " \
               "particular RPC system. Additional code generator options may be required to enable generic services " \
@@ -130,7 +130,7 @@ module Protostar
       end
 
       def check_target(field, value, target, label, run)
-        targets = Array(field.options[:targets])
+        targets = field.options.targets
         unless targets.empty? || targets.include?(target)
           run.report(@ast.name, nil, "Option #{field.full_name} cannot be set on an entity of type `#{label}`.")
         end
@@ -176,7 +176,7 @@ module Protostar
       end
 
       def lite?(file)
-        file && file.options[:optimize_for] == :LITE_RUNTIME
+        file && file.options.optimize_for == :LITE_RUNTIME
       end
 
       def validate_file
@@ -184,7 +184,7 @@ module Protostar
           if @file.features.field_presence == :LEGACY_REQUIRED
             error(@ast, :editions, "Required presence can't be specified by default.")
           end
-          if @file.options[:java_string_check_utf8]
+          if @file.options.java_string_check_utf8?
             error(@ast, :editions, "File option java_string_check_utf8 is not allowed under editions. Use the " \
               "(pb.java).utf8_validation feature to control this behavior.")
           end
@@ -239,7 +239,7 @@ module Protostar
       end
 
       def validate_message(node, message)
-        unless message.options[:deprecated_legacy_json_field_conflicts]
+        unless message.options.deprecated_legacy_json_field_conflicts?
           json_name_uniqueness(node, message, false)
           json_name_uniqueness(node, message, true)
         end
@@ -281,10 +281,10 @@ module Protostar
           if range.range.end + 1 > max + 1
             error(node, :number, "Extension numbers cannot be greater than #{max}.")
           end
-          declarations = range.options[:declaration] || []
+          declarations = range.options.declaration
           next if declarations.empty?
           range_node = node.extension_range[i]
-          if range.options[:verification] == :UNVERIFIED
+          if range.options.verification == :UNVERIFIED
             error(range_node, :extendee, "Cannot mark the extension range as UNVERIFIED when it has extension(s) " \
               "declared.")
             break
@@ -334,10 +334,10 @@ module Protostar
 
       def validate_field(node, field)
         if @cli
-          problem = feature_support_problem(field.options[:feature_support], field.full_name)
+          problem = feature_support_problem(field.options.feature_support, field.full_name)
           if problem.nil? && field.type == :enum
             field.enum_type.values.each do |value|
-              problem = enum_value_support_problem(field.options[:feature_support], value, field.full_name)
+              problem = enum_value_support_problem(field.options.feature_support, value, field.full_name)
               break if problem
             end
           end
@@ -349,15 +349,15 @@ module Protostar
           error(node, :type, "ctype option is not allowed under edition 2024 and beyond. Use the feature " \
             "string_type = VIEW|CORD|STRING|... instead.")
         end
-        if options[:lazy] || options[:unverified_lazy]
+        if options.lazy? || options.unverified_lazy?
           if field.type != :message
             error(node, :type, "[lazy = true] can only be specified for submessage fields.")
           end
-          if options[:unverified_lazy] && field.extension?
+          if options.unverified_lazy? && field.extension?
             error(node, :type, "Extensions cannot be marked as unverified_lazy.")
           end
         end
-        if options[:packed] && !field.packable?
+        if options.packed? && !field.packable?
           error(node, :type, "[packed = true] can only be specified for repeated primitive fields.")
         end
         holder = field.extension? ? field.extendee : field.containing_message
@@ -493,7 +493,7 @@ module Protostar
       end
 
       def jstype(node, field)
-        jstype = field.options[:jstype]
+        jstype = field.options.jstype
         return if jstype.nil? || jstype == :JS_NORMAL
         if INT64_TYPES.include?(field.type)
           return if jstype == :JS_STRING || jstype == :JS_NUMBER
@@ -509,14 +509,14 @@ module Protostar
         return if extendee.file.name == "google/protobuf/descriptor.proto"
         range = extendee.extension_range_descriptors.find { |r| r.range.cover?(field.number) }
         return if range.nil? || !range.options.declared?
-        declarations = range.options[:declaration] || []
+        declarations = range.options.declaration
         declaration = declarations.find { |d| d[:number] == field.number }
         if declaration&.[](:reserved)
           error(node, :extendee, "Cannot use number #{field.number} for extension field #{field.full_name}, as it " \
             "is reserved in the extension declarations for message #{extendee.full_name}.")
         elsif declaration
           check_declaration(node, field, declaration)
-        elsif !declarations.empty? || range.options[:verification] == :DECLARATION
+        elsif !declarations.empty? || range.options.verification == :DECLARATION
           error(node, :extendee, "Missing extension declaration for field #{field.full_name} with number " \
             "#{field.number} in extendee message #{extendee.full_name}. An extension range must declare for all " \
             "extension fields if its verification state is DECLARATION or there's any declaration in the range " \
@@ -554,7 +554,7 @@ module Protostar
         if enum.open? && !enum.values.empty? && enum.values.first.number != 0
           error(node.value[0], :number, "The first enum value must be zero for open enums.")
         end
-        return if enum.options[:allow_alias]
+        return if enum.options.allow_alias?
         used = {}
         numbers = enum.values.map(&:number)
         enum.values.each_with_index do |value, i|
@@ -581,7 +581,7 @@ module Protostar
             text = "Enum name #{value.name} has the same name as #{other.name} if you ignore case and strip out the " \
               "enum name prefix (if any). (If you are using allow_alias, please assign the same number to each enum " \
               "value name.)"
-            if enum.options[:deprecated_legacy_json_field_conflicts] && @linker.edition == :EDITION_PROTO2
+            if enum.options.deprecated_legacy_json_field_conflicts? && @linker.edition == :EDITION_PROTO2
               warning(node.value[i], :name, text)
             else
               error(node.value[i], :name, text)
@@ -626,13 +626,13 @@ module Protostar
 
       def validate_enum_value(node, value)
         return unless @cli
-        problem = feature_support_problem(value.options[:feature_support], value.full_name)
+        problem = feature_support_problem(value.options.feature_support, value.full_name)
         error(node, :option_name, problem) if problem
       end
 
       def validate_service(node)
         return unless lite?(@file)
-        return unless @file.options[:cc_generic_services] || @file.options[:java_generic_services]
+        return unless @file.options.cc_generic_services? || @file.options.java_generic_services?
         error(node, :name, "Files with optimize_for = LITE_RUNTIME cannot define services unless you set both " \
           "options cc_generic_services and java_generic_services to false.")
       end
@@ -672,7 +672,7 @@ module Protostar
       end
 
       def enum_value_support_problem(parent, value, field_name)
-        own = value.options[:feature_support]
+        own = value.options.feature_support
         return nil if own.nil? || parent.nil?
         support = parent.merge(own)
         problem = feature_support_problem(support, value.full_name)
@@ -912,10 +912,10 @@ module Protostar
           if field.type == :enum
             (field.repeated? ? v : [v]).each do |name|
               enum_value = field.enum_type.value(name.is_a?(Symbol) ? name.to_s : name)
-              single_lifetime(edition, enum_value.full_name, enum_value.options[:feature_support], node) if enum_value
+              single_lifetime(edition, enum_value.full_name, enum_value.options.feature_support, node) if enum_value
             end
           end
-          single_lifetime(edition, field.full_name, field.options[:feature_support], node)
+          single_lifetime(edition, field.full_name, field.options.feature_support, node)
         end
       end
 

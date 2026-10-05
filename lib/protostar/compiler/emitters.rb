@@ -72,8 +72,7 @@ module Protostar
         def module_path(file, namespace = nil)
           return namespace.split("::") if namespace
           convert = true
-          if file.options.key?(:ruby_package)
-            package = file.options[:ruby_package]
+          if (package = file.options.ruby_package)
             convert = false if package.include?("::")
           else
             package = file.package
@@ -96,8 +95,7 @@ module Protostar
         # protoc's check on `ruby_package`
         # @raise [Emitters::Error]
         def check_ruby_package(file)
-          return unless file.options.key?(:ruby_package)
-          file.options[:ruby_package].each_char do |c|
+          file.options.ruby_package&.each_char do |c|
             next unless BANNED_RUBY_PACKAGE.include?(c)
             raise Emitters::Error, "Invalid character in ruby_package option: character '#{c}' is not allowed " \
               "because it could enable code injection."

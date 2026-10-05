@@ -55,7 +55,7 @@ module Protostar
 
       # @return [Boolean]
       def allow_alias?
-        options[:allow_alias] == true
+        options.allow_alias?
       end
 
       # @return [Boolean] unknown numbers go to unknown fields (proto2, editions

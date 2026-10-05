@@ -1026,5 +1026,11 @@ module Protostar
         end
       end
     end
+
+    class Options
+      # What a descriptor answers before its options are resolved: an empty
+      # instance of its options class
+      UNRESOLVED = Draft::Resolution::OPTIONS.transform_values { |klass| klass.new.freeze }.freeze
+    end
   end
 end

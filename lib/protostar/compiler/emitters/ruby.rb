@@ -7,8 +7,6 @@ module Protostar
       # describing the file, then constants named as protoc's Ruby generator
       # names them.
       class Ruby
-        TYPES = Schema::Field::TYPES
-        LABELS = {LABEL_REPEATED: :repeated, LABEL_REQUIRED: :required}.freeze
         # source_code_info path components (descriptor.proto field numbers)
         FILE_MESSAGE = 4
         FILE_ENUM = 5
@@ -82,14 +80,13 @@ module Protostar
         private
 
         def emit_file(file)
-          h = file.to_h
           args = [Literal.string(file.name)]
           args << "package: #{Literal.string(file.package)}" unless file.package.empty?
-          if h[:edition]
-            args << "syntax: :editions" unless h[:syntax] == "editions"
-            args << "edition: #{h[:edition].inspect}"
-          elsif h[:syntax]
-            args << "syntax: #{h[:syntax].to_sym.inspect}"
+          if file.edition
+            args << "syntax: :editions" unless file.proto_syntax == "editions"
+            args << "edition: #{file.edition.inspect}"
+          elsif file.proto_syntax
+            args << "syntax: #{file.proto_syntax.to_sym.inspect}"
           end
           deps = file.dependencies
           args << ["dependencies: ", deps] unless deps.empty?
@@ -97,14 +94,12 @@ module Protostar
             args << ["#{key}: ", list.map { |i| deps[i] }] unless list.empty?
           end
           args << ["option_dependencies: ", file.option_dependencies] unless file.option_dependencies.empty?
-          args.concat(option_args(h[:options]))
+          args.concat(option_args(file.options))
           body = +""
-          h.fetch(:message_type, []).each_with_index do |m, i|
-            message(body, 1, "f", file.messages[i], m, [FILE_MESSAGE, i])
-          end
-          h.fetch(:enum_type, []).each_with_index { |e, i| enum(body, 1, "f", e, [FILE_ENUM, i]) }
-          extensions(body, 1, "f", h.fetch(:extension, []), [FILE_EXTENSION])
-          h.fetch(:service, []).each_with_index { |s, i| service(body, 1, "f", s, [FILE_SERVICE, i]) }
+          file.messages.each_with_index { |m, i| message(body, 1, "f", m, [FILE_MESSAGE, i]) }
+          file.enums.each_with_index { |e, i| enum(body, 1, "f", e, [FILE_ENUM, i]) }
+          extensions(body, 1, "f", file.extensions, [FILE_EXTENSION])
+          file.services.each_with_index { |s, i| service(body, 1, "f", s, [FILE_SERVICE, i]) }
           if body.empty?
             @out << call("Protostar::DSL.file", args, 0) << "\n"
           else
@@ -112,37 +107,35 @@ module Protostar
           end
         end
 
-        def message(out, depth, var, desc, h, path)
+        def message(out, depth, var, desc, path)
           comment(out, depth, path)
-          args = [Literal.string(h[:name])]
-          args << "visibility: #{h[:visibility].inspect}" if h[:visibility]
-          args.concat(option_args(h[:options]))
+          args = [Literal.string(desc.name)]
+          args << "visibility: #{desc.visibility.inspect}" if desc.visibility
+          args.concat(option_args(desc.options))
           head = call("#{var}.message", args, depth)
           body = +""
-          message_body(body, depth + 1, desc, h, path)
+          message_body(body, depth + 1, desc, path)
           out << ind(depth) << head << (body.empty? ? "\n" : " do |m|\n#{body}#{ind(depth)}end\n")
         end
 
-        def message_body(out, depth, desc, h, path)
-          fields = h.fetch(:field, [])
-          nested = h.fetch(:nested_type, [])
-          oneofs = h.fetch(:oneof_decl, [])
-          owned = owned_nested(desc, fields, nested)
+        def message_body(out, depth, desc, path)
+          fields = desc.fields
+          nested = desc.nested_messages
+          oneofs = desc.oneofs
+          owned = owned_nested(desc, fields)
           canonical = canonical_oneofs?(fields, oneofs)
           unless canonical
             oneofs.each do |o|
-              out << ind(depth) << call("m.oneof", [o[:name].to_sym.inspect] + option_args(o[:options]), depth) << "\n"
+              out << ind(depth) << call("m.oneof", [o.name.to_sym.inspect] + option_args(o.options), depth) << "\n"
             end
           end
-          items = field_items(fields, oneofs, canonical)
-          order = []
+          items = field_items(fields, canonical)
           emitted = {}
           flush = lambda do |limit|
             nested.each_index do |j|
               next if j >= limit || emitted[j] || owned.value?(j)
               emitted[j] = true
-              order << j
-              message(out, depth, "m", desc.nested_messages[j], nested[j], path + [MESSAGE_NESTED, j])
+              message(out, depth, "m", nested[j], path + [MESSAGE_NESTED, j])
             end
           end
           items.each do |oneof_index, indexes|
@@ -151,36 +144,33 @@ module Protostar
             if oneof_index
               comment(out, depth, path + [MESSAGE_ONEOF, oneof_index])
               o = oneofs[oneof_index]
-              out << ind(depth) << call("m.oneof", [o[:name].to_sym.inspect] + option_args(o[:options]), depth)
+              out << ind(depth) << call("m.oneof", [o.name.to_sym.inspect] + option_args(o.options), depth)
               out << " do |o|\n"
-              indexes.each { |i| field(out, depth + 1, "o", desc, fields[i], nested, owned[i], path + [MESSAGE_FIELD, i], false) }
+              indexes.each { |i| field(out, depth + 1, "o", desc, fields[i], owned[i], path + [MESSAGE_FIELD, i], false) }
               out << ind(depth) << "end\n"
             else
-              indexes.each { |i| field(out, depth, "m", desc, fields[i], nested, owned[i], path + [MESSAGE_FIELD, i], !canonical) }
+              indexes.each { |i| field(out, depth, "m", desc, fields[i], owned[i], path + [MESSAGE_FIELD, i], !canonical) }
             end
-            owned_here.each do |j|
-              emitted[j] = true
-              order << j
-            end
+            owned_here.each { |j| emitted[j] = true }
           end
           flush.call(nested.size)
-          h.fetch(:enum_type, []).each_with_index { |e, i| enum(out, depth, "m", e, path + [MESSAGE_ENUM, i]) }
-          extensions(out, depth, "m", h.fetch(:extension, []), path + [MESSAGE_EXTENSION])
-          h.fetch(:extension_range, []).each do |r|
-            out << ind(depth) << call("m.extensions", [range(r[:start], r[:end] - 1)] + option_args(r[:options]), depth) << "\n"
+          desc.nested_enums.each_with_index { |e, i| enum(out, depth, "m", e, path + [MESSAGE_ENUM, i]) }
+          extensions(out, depth, "m", desc.extensions, path + [MESSAGE_EXTENSION])
+          desc.extension_range_descriptors.each do |r|
+            out << ind(depth) << call("m.extensions", [range(r.start, r.end)] + option_args(r.options), depth) << "\n"
           end
-          reserved = h.fetch(:reserved_range, []).map { |r| range(r[:start], r[:end] - 1) }
-          reserved.concat(h.fetch(:reserved_name, []).map { |n| Literal.string(n) })
+          reserved = desc.reserved_ranges.map { |r| range(r.begin, r.end) }
+          reserved.concat(desc.reserved_names.map { |n| Literal.string(n) })
           out << ind(depth) << call("m.reserved", reserved, depth) << "\n" unless reserved.empty?
         end
 
         # Fields grouped for emission: [oneof index or nil, [field indexes]]
-        def field_items(fields, oneofs, canonical)
+        def field_items(fields, canonical)
           return fields.each_index.map { |i| [nil, [i]] } unless canonical
           items = []
           fields.each_with_index do |f, i|
-            o = f[:oneof_index]
-            if o && !f[:proto3_optional]
+            o = f.oneof&.index
+            if o && !f.proto3_optional?
               if items.last && items.last[0] == o
                 items.last[1] << i
               else
@@ -202,122 +192,134 @@ module Protostar
           real = []
           synthetic = []
           fields.each_with_index do |f, i|
-            next unless (o = f[:oneof_index])
-            if f[:proto3_optional]
+            next unless (o = f.oneof&.index)
+            if f.proto3_optional?
               synthetic << [o, f]
             else
               return false if real.include?(o) && real.last != o
-              return false if real.include?(o) && fields[i - 1][:oneof_index] != o
+              return false if real.include?(o) && fields[i - 1].oneof&.index != o
               real << o unless real.include?(o)
             end
           end
           return false unless real == (0...real.size).to_a
           return false unless synthetic.map(&:first) == (real.size...oneofs.size).to_a
-          names = {}
-          fields.each { |f| names[f[:name]] = true }
-          oneofs.first(real.size).each { |o| names[o[:name]] = true }
-          synthetic.all? do |o, f|
-            name = f[:name].start_with?("_") ? f[:name] : "_#{f[:name]}"
-            name = "X#{name}" while names.key?(name)
-            names[name] = true
-            oneofs[o] == {name: name}
+          taken = fields.map(&:name) + oneofs.first(real.size).map(&:name)
+          names = Schema::Draft.synthetic_oneof_names(synthetic.map { |_, f| f.name }, taken)
+          synthetic.zip(names).all? do |(o, _), name|
+            oneofs[o].name == name && !oneofs[o].options.declared?
           end
         end
 
         # Nested types written through `map` or `group`: field index to nested index
-        def owned_nested(desc, fields, nested)
+        def owned_nested(desc, fields)
           owned = {}
           fields.each_with_index do |f, i|
-            next unless f[:type_name]&.start_with?(".#{desc.full_name}.")
-            j = nested.index { |n| f[:type_name] == ".#{desc.full_name}.#{n[:name]}" }
-            next unless j
-            owned[i] = j if map_sugar(f, nested[j]) || group_sugar?(f, nested[j])
+            nested = f.message_type
+            next unless nested && nested.containing_message.equal?(desc) && nested.file.equal?(desc.file)
+            owned[i] = nested.index if map_sugar(f, nested) || group_sugar?(f, nested)
           end
           # the sugar appends its nested type when called, so the order must agree
           return {} unless owned.values == owned.values.sort
           owned
         end
 
+        # [key type, value type, value type name] when `m.map` makes exactly this entry
         def map_sugar(f, entry)
-          return nil unless f[:label] == :LABEL_REPEATED && entry[:options] == {map_entry: true}
-          return nil if f.key?(:default_value) || f.key?(:oneof_index) || f[:proto3_optional]
-          key, value = entry[:field]
-          return nil unless key && value && entry[:field].size == 2
-          value_type = TYPES.fetch(value[:type])
-          expected = DSL.map_entry_hash(f[:name], TYPES.fetch(key[:type]), value_type, value[:type_name], f[:options])
-          return nil unless expected == entry
-          [TYPES.fetch(key[:type]), value_type, value[:type_name]]
+          return nil unless f.declared_label == :repeated && entry.name == Schema::Draft.map_entry_name(f.name)
+          return nil if f.raw_default || f.oneof || f.proto3_optional?
+          return nil unless only?(entry.options, map_entry: true)
+          return nil unless entry.nested_messages.empty? && entry.nested_enums.empty? && entry.extensions.empty? &&
+            entry.extension_range_descriptors.empty? && entry.oneofs.empty? && entry.reserved_ranges.empty? &&
+            entry.reserved_names.empty? && entry.visibility.nil?
+          key, value = entry.fields
+          return nil unless entry.fields.size == 2 && entry_field?(key, "key", 1) && entry_field?(value, "value", 2)
+          return nil if key.type_name
+          features = f.options.declared? ? f.options[:features] : nil
+          [key, value].each do |kv|
+            if features
+              return nil unless only?(kv.options, features: features)
+            elsif kv.options.declared?
+              return nil
+            end
+          end
+          [key.declared_type, value.declared_type, value.type_name && ".#{value.type_name}"]
+        end
+
+        def entry_field?(field, name, number)
+          field.name == name && field.number == number && field.declared_label == :optional &&
+            field.json_name == name && field.raw_default.nil? && field.oneof.nil? && !field.proto3_optional?
+        end
+
+        # Options declared with exactly these fields, no custom or unknown ones
+        def only?(options, **fields)
+          options.declared? && options.fields == fields && options.extensions.empty? && options.unknown_fields.empty?
         end
 
         def group_sugar?(f, nested)
-          f[:type] == :TYPE_GROUP && f[:name] == nested[:name].downcase && !f[:proto3_optional] &&
-            !f.key?(:default_value)
+          f.declared_type == :group && f.name == Schema::Draft.group_field_name(nested.name) &&
+            !f.proto3_optional? && f.raw_default.nil?
         end
 
-        def field(out, depth, var, desc, f, nested, owned, path, explicit_oneof)
+        def field(out, depth, var, desc, f, owned, path, explicit_oneof)
           comment(out, depth, path)
-          if owned && (sugar = map_sugar(f, nested[owned]))
+          nested = owned && desc.nested_messages[owned]
+          if nested && (sugar = map_sugar(f, nested))
             key_type, value_type, value_type_name = sugar
-            args = [f[:name].to_sym.inspect, f[:number].to_s, key_type.inspect, value_type.inspect]
+            args = [f.name.to_sym.inspect, f.number.to_s, key_type.inspect, value_type.inspect]
             args << Literal.string(value_type_name) if value_type_name
-            args << "json_name: #{Literal.string(f[:json_name])}" if custom_json_name?(f)
-            args.concat(option_args(f[:options]))
+            args << "json_name: #{Literal.string(f.json_name)}" if custom_json_name?(f)
+            args.concat(option_args(f.options))
             out << ind(depth) << call("#{var}.map", args, depth) << "\n"
             return
           end
-          if owned
-            group = nested[owned]
-            args = [Literal.string(group[:name]), f[:number].to_s]
-            args << "label: #{LABELS[f[:label]].inspect}" if LABELS[f[:label]]
-            args << "json_name: #{Literal.string(f[:json_name])}" if custom_json_name?(f)
-            args << "oneof: #{oneof_name(desc, f).inspect}" if f.key?(:oneof_index) && explicit_oneof
-            args.concat(option_args(f[:options]))
-            args << ["message_options: ", group[:options]] if group.key?(:options)
+          if nested
+            args = [Literal.string(nested.name), f.number.to_s]
+            args << "label: #{f.declared_label.inspect}" unless f.declared_label == :optional
+            args << "json_name: #{Literal.string(f.json_name)}" if custom_json_name?(f)
+            args << "oneof: #{f.oneof.name.to_sym.inspect}" if f.oneof && explicit_oneof
+            args.concat(option_args(f.options))
+            args << ["message_options: ", dsl_hash(nested.options)] if nested.options.declared?
             body = +""
-            message_body(body, depth + 1, desc.nested_messages[owned], group, path_for_nested(desc, owned, path))
+            message_body(body, depth + 1, nested, path_for_nested(owned, path))
             head = call("#{var}.group", args, depth)
             out << ind(depth) << head << (body.empty? ? "\n" : " do |m|\n#{body}#{ind(depth)}end\n")
             return
           end
           args = field_args(f)
-          args << "proto3_optional: true" if f[:proto3_optional]
-          args << "oneof: #{oneof_name(desc, f).inspect}" if f.key?(:oneof_index) && explicit_oneof
-          args.concat(option_args(f[:options]))
+          args << "proto3_optional: true" if f.proto3_optional?
+          args << "oneof: #{f.oneof.name.to_sym.inspect}" if f.oneof && explicit_oneof
+          args.concat(option_args(f.options))
           out << ind(depth) << call("#{var}.field", args, depth) << "\n"
         end
 
-        def path_for_nested(desc, index, field_path)
+        def path_for_nested(index, field_path)
           field_path[0...-2] + [MESSAGE_NESTED, index]
         end
 
-        def oneof_name(desc, f)
-          desc.oneofs[f[:oneof_index]].name.to_sym
-        end
-
         def field_args(f)
-          args = [f[:name].to_sym.inspect, f[:number].to_s, TYPES.fetch(f[:type]).inspect]
-          args << Literal.string(f[:type_name]) if f[:type_name]
-          args << "label: #{LABELS[f[:label]].inspect}" if LABELS[f[:label]]
-          args << "default: #{Literal.string(f[:default_value])}" if f.key?(:default_value)
-          args << "json_name: #{Literal.string(f[:json_name])}" if custom_json_name?(f)
+          args = [f.name.to_sym.inspect, f.number.to_s, f.declared_type.inspect]
+          args << Literal.string(".#{f.type_name}") if f.type_name
+          args << "label: #{f.declared_label.inspect}" unless f.declared_label == :optional
+          args << "default: #{Literal.string(f.raw_default)}" if f.raw_default
+          args << "json_name: #{Literal.string(f.json_name)}" if custom_json_name?(f)
           args
         end
 
         def custom_json_name?(f)
-          f.key?(:json_name) && f[:json_name] != Schema.json_name(f[:name])
+          f.json_name != Schema.json_name(f.name)
         end
 
         def extensions(out, depth, var, list, path)
           i = 0
           while i < list.size
-            extendee = list[i][:extendee]
-            out << ind(depth) << "#{var}.extend #{Literal.string(extendee)} do |e|\n"
-            while i < list.size && list[i][:extendee] == extendee
+            extendee = list[i].extendee
+            out << ind(depth) << "#{var}.extend #{Literal.string(".#{extendee.full_name}")} do |e|\n"
+            while i < list.size && list[i].extendee.equal?(extendee)
               f = list[i]
               comment(out, depth + 1, path + [i])
               args = field_args(f)
-              args << "proto3_optional: true" if f[:proto3_optional]
-              args.concat(option_args(f[:options]))
+              args << "proto3_optional: true" if f.proto3_optional?
+              args.concat(option_args(f.options))
               out << ind(depth + 1) << call("e.field", args, depth + 1) << "\n"
               i += 1
             end
@@ -325,40 +327,39 @@ module Protostar
           end
         end
 
-        def enum(out, depth, var, h, path)
+        def enum(out, depth, var, desc, path)
           comment(out, depth, path)
-          args = [Literal.string(h[:name])]
-          args << "visibility: #{h[:visibility].inspect}" if h[:visibility]
-          args.concat(option_args(h[:options]))
+          args = [Literal.string(desc.name)]
+          args << "visibility: #{desc.visibility.inspect}" if desc.visibility
+          args.concat(option_args(desc.options))
           out << ind(depth) << call("#{var}.enum", args, depth) << " do |e|\n"
-          h.fetch(:value, []).each_with_index do |v, i|
+          desc.values.each_with_index do |v, i|
             comment(out, depth + 1, path + [ENUM_VALUE, i])
-            args = [v[:name].to_sym.inspect, v[:number].to_s] + option_args(v[:options])
+            args = [v.name.to_sym.inspect, v.number.to_s] + option_args(v.options)
             out << ind(depth + 1) << call("e.value", args, depth + 1) << "\n"
           end
-          reserved = h.fetch(:reserved_range, []).map { |r| range(r[:start], r[:end]) }
-          reserved.concat(h.fetch(:reserved_name, []).map { |n| Literal.string(n) })
+          reserved = desc.reserved_ranges.map { |r| range(r.begin, r.end) }
+          reserved.concat(desc.reserved_names.map { |n| Literal.string(n) })
           out << ind(depth + 1) << call("e.reserved", reserved, depth + 1) << "\n" unless reserved.empty?
           out << ind(depth) << "end\n"
         end
 
-        def service(out, depth, var, h, path)
+        def service(out, depth, var, desc, path)
           comment(out, depth, path)
-          args = [Literal.string(h[:name])] + option_args(h[:options])
-          methods = h.fetch(:method, [])
+          args = [Literal.string(desc.name)] + option_args(desc.options)
           head = call("#{var}.service", args, depth)
-          if methods.empty?
+          if desc.rpcs.empty?
             out << ind(depth) << head << "\n"
             return
           end
           out << ind(depth) << head << " do |s|\n"
-          methods.each_with_index do |m, i|
+          desc.rpcs.each_with_index do |m, i|
             comment(out, depth + 1, path + [SERVICE_METHOD, i])
-            name = /\A[A-Za-z_][A-Za-z0-9_]*\z/.match?(m[:name]) ? m[:name].to_sym.inspect : Literal.string(m[:name])
-            args = [name, Literal.string(m[:input_type]), Literal.string(m[:output_type])]
-            args << "client_streaming: true" if m[:client_streaming]
-            args << "server_streaming: true" if m[:server_streaming]
-            args.concat(option_args(m[:options]))
+            name = /\A[A-Za-z_][A-Za-z0-9_]*\z/.match?(m.name) ? m.name.to_sym.inspect : Literal.string(m.name)
+            args = [name, Literal.string(".#{m.input_type.full_name}"), Literal.string(".#{m.output_type.full_name}")]
+            args << "client_streaming: true" if m.client_streaming?
+            args << "server_streaming: true" if m.server_streaming?
+            args.concat(option_args(m.options))
             out << ind(depth + 1) << call("s.rpc", args, depth + 1) << "\n"
           end
           out << ind(depth) << "end\n"
@@ -368,13 +369,46 @@ module Protostar
         # under `options:` when that cannot be said with keywords. Each is a
         # `[prefix, value]` pair, rendered by {#call}.
         def option_args(options)
-          return [] if options.nil?
-          if options.empty? || options.key?(:__unknown_fields) || options.key?(:options)
-            return [["options: ", options]]
+          return [] unless options.declared?
+          h = dsl_hash(options)
+          if h.empty? || h.key?(:__unknown_fields) || h.key?(:options)
+            return [["options: ", h]]
           end
-          options.map do |key, value|
+          h.map do |key, value|
             (key == :__extensions) ? ["extensions: ", value] : ["#{key}: ", value]
           end
+        end
+
+        # An options message (or a message inside one) as the DSL spells it
+        # verbatim: fields by name, `__extensions` by full name, and
+        # `__unknown_fields` as `[number, wire_type, bytes]`
+        def dsl_hash(value)
+          h = value.fields.transform_values { |v| dsl_value(v) }
+          unless value.extensions.empty?
+            h[:__extensions] = value.extensions.to_h { |f, v| [f.full_name, dsl_value(v)] }
+          end
+          h[:__unknown_fields] = unknown_triples(value.unknown_fields) unless value.unknown_fields.empty?
+          h
+        end
+
+        def dsl_value(value)
+          case value
+          when Schema::MessageValue then dsl_hash(value)
+          when Array then value.map { |v| dsl_value(v) }
+          else value
+          end
+        end
+
+        def unknown_triples(bytes)
+          r = Wire::Reader.new(bytes)
+          out = []
+          until r.eof?
+            number, wire_type = r.read_tag
+            start = r.pos
+            r.skip_field(number, wire_type)
+            out << [number, wire_type, bytes.byteslice(start, r.pos - start)]
+          end
+          out
         end
 
         # A call on one line when it fits. Otherwise the top-level call puts

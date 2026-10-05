@@ -86,12 +86,12 @@ module Protostar
 
       # @return [Boolean] a synthesized `map<K, V>` entry type
       def map_entry?
-        options[:map_entry] == true
+        options.map_entry?
       end
 
       # @return [Boolean]
       def message_set_wire_format?
-        options[:message_set_wire_format] == true
+        options.message_set_wire_format?
       end
 
       # @return [Hash] the DescriptorProto hash

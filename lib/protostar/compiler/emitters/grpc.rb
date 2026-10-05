@@ -87,8 +87,7 @@ module Protostar
 
         # The package in dotted form, `ruby_package`'s `::` turned into dots
         def ruby_package(file)
-          return file.package unless file.options.key?(:ruby_package)
-          file.options[:ruby_package].gsub("::", ".")
+          file.options.ruby_package&.gsub("::", ".") || file.package
         end
 
         # std::getline splitting: no trailing empty piece
@@ -117,7 +116,7 @@ module Protostar
         def type_of(message)
           name = message.full_name
           file = message.file
-          if file.options.key?(:ruby_package)
+          if file.options.ruby_package
             name = name.delete_prefix(file.package) if name.start_with?(file.package)
             name = name.delete_prefix(".")
             name = "#{ruby_package(file)}.#{name}"

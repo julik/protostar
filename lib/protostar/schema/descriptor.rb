@@ -15,7 +15,7 @@ module Protostar
 
       # @return [Options] declared options; once resolved, also the resolved {Options#features}
       def options
-        @options || Options::EMPTY
+        @options || Options::UNRESOLVED.fetch(self.class)
       end
 
       # Sets attributes that only become known while linking. The Builder is the
