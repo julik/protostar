@@ -98,6 +98,7 @@ module Protostar
         @file = file
         @known = known
         @types = {}
+        @reserved = Message::Accessors.reserved
       end
 
       def define
@@ -121,7 +122,7 @@ module Protostar
         end
         oneofs = oneof_slots.map { |o, slots| [o.name.to_sym, slots] }
         klass.__define(descriptor: descriptor, fields: fields, oneofs: oneofs)
-        Message::Accessors.install(klass, fields, oneofs)
+        Message::Accessors.install(klass, fields, oneofs, @reserved)
         Codec::DecodeGenerator.install(klass, fields)
         Codec::EncodeGenerator.install(klass, fields)
       end

@@ -19,8 +19,9 @@ module Protostar
       # @param klass [Class]
       # @param fields [Array<FieldInfo>]
       # @param oneofs [Array<Array(Symbol, Array<Integer>)>] real oneofs: name and member slots
-      def install(klass, fields, oneofs)
-        taken = reserved
+      # @param reserved [Hash{Symbol => true}] from {reserved}, computed once for many classes
+      def install(klass, fields, oneofs, reserved = self.reserved)
+        taken = reserved.dup
         src = +""
         fields.each do |info|
           name = info.name
