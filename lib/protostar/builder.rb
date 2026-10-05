@@ -185,7 +185,7 @@ module Protostar
     # @param attributes [Array<Symbol>] read from `value` (or from each element) with {#extract!}
     # @return [self]
     def set!(name, value = NONE, *attributes, &block)
-      __set(__field(name), value, attributes, block)
+      __set(__field(name), value, attributes, &block)
       self
     end
 
@@ -255,25 +255,26 @@ module Protostar
       raise __error(nil, "#{self.class::CLASSES[@k].descriptor.full_name} has no field #{name.to_s.inspect}")
     end
 
-    # Everything a field method or set! can be given
-    def __set(info, value, attributes, block)
-      if block
+    # Everything a field method or set! can be given. The block is only
+    # yielded to, never made into a Proc, which would cost an object per call.
+    def __set(info, value, attributes)
+      if block_given?
         unless info.message? && !info.map
           raise __error(info, "is not a message field, it cannot take a block")
         end
         if info.repeated
           raise __error(info, "needs a collection to go with the block") if NONE.equal?(value)
-          __each(info, value, block)
+          __each(info, value) { |e| yield e }
         else
           __mark(info)
-          NONE.equal?(value) ? __nested(info) { block.call } : __nested(info) { block.call(value) }
+          NONE.equal?(value) ? __nested(info) { yield } : __nested(info) { yield value }
         end
       elsif NONE.equal?(value)
         raise __error(info, "needs a value or a block")
       elsif !attributes.empty?
         raise __error(info, "is not a message field, it cannot extract attributes") unless info.message? && !info.map
         if info.repeated
-          __each(info, value, proc { |e| extract!(e, *attributes) })
+          __each(info, value) { |e| extract!(e, *attributes) }
         else
           __mark(info)
           __nested(info) { extract!(value, *attributes) }
@@ -345,11 +346,11 @@ module Protostar
       end
     end
 
-    def __each(info, collection, block)
+    def __each(info, collection)
       raise __error(info, "needs a collection (something with #each), got #{collection.class}") unless collection.respond_to?(:each)
       i = 0
       collection.each do |e|
-        __nested(info, i) { block.call(e) }
+        __nested(info, i) { yield e }
         i += 1
       end
     end

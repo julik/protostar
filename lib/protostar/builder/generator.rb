@@ -62,7 +62,7 @@ module Protostar
         src = "def #{name}(value = NONE, &block)\ncase @k\n"
         entries.each do |i, f|
           c = "F#{i}_#{f.index}"
-          src << "when #{i} then (block || NONE.equal?(value)) ? __set(#{c}, value, EMPTY, block) : __put(#{c}, value)\n"
+          src << "when #{i} then (block_given? || NONE.equal?(value)) ? __set(#{c}, value, EMPTY, &block) : __put(#{c}, value)\n"
         end
         src << "else __no_field(#{name.inspect})\nend\nself\nend\n"
       end
