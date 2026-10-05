@@ -23,7 +23,7 @@ module Protostar
       attr_reader :descriptor
 
       # @api private
-      attr_reader :__fields, :__by_number, :__by_name, :__encode_order, :__template, :__oneofs, :__required
+      attr_reader :__fields, :__by_number, :__by_name, :__template, :__oneofs, :__required
 
       # @param bytes [String, IO::Buffer] never mutated
       # @param recursion_limit [Integer] how deep messages may nest
@@ -71,11 +71,10 @@ module Protostar
         @__fields = fields
         @__by_number = fields.to_h { |f| [f.number, f] }
         @__by_name = fields.each_with_object({}) { |f, h| h[f.name] = h[f.symbol] = f }
-        @__encode_order = fields.sort_by(&:number)
         @__template = fields.map { |f| (f.presence || f.repeated || f.map) ? nil : f.default }
         @__oneofs = oneofs
         @__required = fields.select(&:required)
-        [@__fields, @__by_number, @__by_name, @__encode_order, @__template, @__oneofs, @__required].each do |o|
+        [@__fields, @__by_number, @__by_name, @__template, @__oneofs, @__required].each do |o|
           Ractor.make_shareable(o)
         end
         self

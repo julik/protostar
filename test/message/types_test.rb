@@ -121,7 +121,7 @@ class TypesTest < Minitest::Test
     set = CodecFixtures.load("google/protobuf/unittest.proto")
     klass = set["proto2_unittest.TestAllTypes"]
     assert Ractor.shareable?(klass)
-    %i[__fields __by_number __by_name __encode_order __template __oneofs __required].each do |table|
+    %i[__fields __by_number __by_name __template __oneofs __required].each do |table|
       assert Ractor.shareable?(klass.public_send(table)), "#{table} is not shareable"
     end
   end
