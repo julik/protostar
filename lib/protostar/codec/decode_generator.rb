@@ -41,7 +41,7 @@ module Protostar
                 pos += 2
               else
                 r.pos = pos
-                tag = r.read_varint
+                tag = r.read_tag_varint
                 pos = r.pos
               end
               #{branches.empty? ? "if false" : "case tag"}
