@@ -35,5 +35,4 @@ class GoldenHashTest < Minitest::Test
   end
 
   private
-
 end
