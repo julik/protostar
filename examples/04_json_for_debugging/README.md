@@ -68,8 +68,8 @@ require "json"
 require_relative "customer_pb"
 ```
 
-The well-known types live under `Protostar::Google::Protobuf`. `Timestamp.from_time`
-makes one from a Ruby `Time`.
+A Timestamp field takes a Ruby `Time` and builds the Timestamp from it. The class
+itself is `Protostar::Timestamp` (`Protostar::Timestamp.from_time(t)` does the same).
 
 ```ruby
 # examples/04_json_for_debugging/run.rb
@@ -80,7 +80,7 @@ customer = Crm::Customer.new(
   lifetime_spend_cents: 9_007_199_254_740_993,
   avatar_digest: "\x9f\x86\xd0\x81".b,
   tags: ["early-adopter", "tea"],
-  signed_up_at: Protostar::Google::Protobuf::Timestamp.from_time(Time.utc(2024, 3, 1, 9, 30))
+  signed_up_at: Time.utc(2024, 3, 1, 9, 30)
 )
 ```
 
@@ -91,11 +91,11 @@ customer = Crm::Customer.new(
 puts customer.to_json
 ```
 
-The output is compact. For your eyes, run it through the json gem.
+The output is compact. For your eyes, hand the message to the json gem's pretty printer.
 
 ```ruby
 # examples/04_json_for_debugging/run.rb
-puts JSON.pretty_generate(JSON.parse(customer.to_json))
+puts JSON.pretty_generate(customer)
 ```
 
 Two options matter. `emit_defaults: true` writes fields that hold their default

@@ -156,10 +156,13 @@ module Protostar
       io
     end
 
+    # @param state [::JSON::State, nil] what the stdlib generator passes; its
+    #   indentation is honoured, so `JSON.pretty_generate(message)` is indented
     # @param options [Hash] see {JSON.encode}
     # @return [String] the message as proto3 JSON
-    def to_json(_state = nil, **options)
-      JSON.encode(self, **options)
+    def to_json(state = nil, **options)
+      json = JSON.encode(self, **options)
+      state.respond_to?(:object_nl) ? JSON.layout(json, state) : json
     end
 
     # @param options [Hash] see {Text.print}

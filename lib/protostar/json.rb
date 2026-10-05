@@ -37,7 +37,55 @@ module Protostar
       rescue Protostar::TypeError => e
         raise ParseError, e.message
       end
+
+      # Lays compact JSON out as the stdlib generator would with `state`
+      # (indent, space, newlines, current depth). Tokens are copied as they
+      # are, so numbers keep the spelling the encoder gave them.
+      # @param json [String] compact JSON, as {encode} writes it
+      # @param state [::JSON::State]
+      # @return [String]
+      # @api private
+      def layout(json, state)
+        indent = state.indent
+        object_nl = state.object_nl
+        array_nl = state.array_nl
+        colon = "#{state.space_before}:#{state.space}"
+        return json if indent.empty? && object_nl.empty? && array_nl.empty? && colon == ":"
+        depth = state.depth
+        open = []
+        out = +""
+        tokens = json.scan(LAYOUT_TOKENS)
+        i = 0
+        while i < tokens.size
+          t = tokens[i]
+          case t
+          when "{", "["
+            close = (t == "{") ? "}" : "]"
+            if tokens[i + 1] == close
+              out << t << close
+              i += 1
+            else
+              nl = (t == "{") ? object_nl : array_nl
+              open << nl
+              depth += 1
+              out << t << nl << indent * depth
+            end
+          when "}", "]"
+            depth -= 1
+            nl = open.pop
+            out << nl << indent * depth unless nl.empty?
+            out << t
+          when "," then out << "," << open.last << indent * depth
+          when ":" then out << colon
+          else out << t
+          end
+          i += 1
+        end
+        out
+      end
     end
+
+    LAYOUT_TOKENS = /"(?:[^"\\]|\\.)*"|[{}\[\],:]|[^{}\[\],:"]+/m
   end
 end
 
