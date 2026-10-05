@@ -28,11 +28,6 @@ module Protostar
       def synthetic?
         @synthetic
       end
-
-      # @return [Hash] the OneofDescriptorProto hash
-      def to_h
-        options_to_h({name: @name})
-      end
     end
   end
 end

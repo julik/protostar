@@ -30,13 +30,6 @@ module Protostar
         "#<#{self.class.name} #{full_name}>"
       end
       alias_method :to_s, :inspect
-
-      private
-
-      def options_to_h(h)
-        h[:options] = @options.__legacy_h if @options&.declared?
-        h
-      end
     end
   end
 end

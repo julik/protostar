@@ -26,7 +26,7 @@ module Protostar
           @available = available.to_h { |f| [f.name, f] }
           ordered(files).each do |file|
             w.write_tag(1, Wire::LENGTH_DELIMITED)
-            w.write_bytes(file.serialize(pool: @pool, source_info: @include_source_info))
+            w.write_bytes(file.serialize(source_info: @include_source_info))
           end
           out
         end

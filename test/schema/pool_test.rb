@@ -10,7 +10,7 @@ class PoolTest < Minitest::Test
   end
 
   def build(hash)
-    S::Builder.build(hash, pool: @pool)
+    SchemaFixtures.from_proto(hash, @pool)
   end
 
   def test_lookups

@@ -32,11 +32,6 @@ module Protostar
       def end
         @range.end
       end
-
-      # @return [Hash] the ExtensionRange hash (with an exclusive `end`, as in descriptor.proto)
-      def to_h
-        options_to_h({start: @range.begin, end: @range.end + 1})
-      end
     end
   end
 end

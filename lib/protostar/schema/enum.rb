@@ -68,17 +68,6 @@ module Protostar
       def open?
         !closed?
       end
-
-      # @return [Hash] the EnumDescriptorProto hash
-      def to_h
-        h = {name: @name}
-        h[:value] = @values.map(&:to_h) unless @values.empty?
-        options_to_h(h)
-        h[:reserved_range] = @reserved_ranges.map { |r| {start: r.begin, end: r.end} } unless @reserved_ranges.empty?
-        h[:reserved_name] = @reserved_names unless @reserved_names.empty?
-        h[:visibility] = @visibility if @visibility
-        h
-      end
     end
 
     # A value of an enum. Its {#full_name} lives in the enum's enclosing scope,
@@ -101,11 +90,6 @@ module Protostar
       # @return [File]
       def file
         @enum.file
-      end
-
-      # @return [Hash] the EnumValueDescriptorProto hash
-      def to_h
-        options_to_h({name: @name, number: @number})
       end
     end
   end

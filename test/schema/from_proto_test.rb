@@ -2,24 +2,17 @@
 
 require "test_helper"
 
-class BuilderTest < Minitest::Test
+# Schema::File.from_proto on hand-written FileDescriptorProtos: what it
+# derives, normalises and refuses
+class FromProtoTest < Minitest::Test
   S = Protostar::Schema
 
   def build(hash, pool = S::Pool.new)
-    S::Builder.build(hash, pool: pool)
+    SchemaFixtures.from_proto(hash, pool)
   end
 
   def field(name, number, type, **rest)
     {name: name, number: number, label: :LABEL_OPTIONAL, type: type, **rest}
-  end
-
-  def test_json_name_rule
-    assert_equal "fooBar", S::Builder.json_name("foo_bar")
-    assert_equal "fooBar", S::Builder.json_name("foo__bar")
-    assert_equal "FooBar", S::Builder.json_name("_foo_bar")
-    assert_equal "foo1", S::Builder.json_name("foo_1")
-    assert_equal "fooBAR", S::Builder.json_name("foo_BAR")
-    assert_equal "foo", S::Builder.json_name("foo_")
   end
 
   def test_computes_missing_json_names_and_keeps_declared_ones
@@ -40,7 +33,7 @@ class BuilderTest < Minitest::Test
     assert_equal :EDITION_2026, file.to_h[:edition]
   end
 
-  def test_names_without_leading_dot_are_normalised_in_to_h
+  def test_names_without_leading_dot_are_normalised_in_to_proto
     file = build(name: "n.proto", package: "p", message_type: [
       {name: "A"},
       {name: "B", field: [{name: "a", number: 1, label: :LABEL_OPTIONAL, type_name: "A"}]}
@@ -92,18 +85,8 @@ class BuilderTest < Minitest::Test
     assert_includes error.message, "\"missing.proto\" is not in the pool"
   end
 
-  def test_malformed_hashes
+  def test_malformed_descriptors
     {
-      "not a hash" => "a.proto",
-      "no name" => {package: "x"},
-      "unknown file key" => {name: "a.proto", bogus: 1},
-      "unknown message key" => {name: "a.proto", message_type: [{name: "M", fields: []}]},
-      "string keys" => {"name" => "a.proto"},
-      "name not a string" => {name: :a},
-      "repeated not an array" => {name: "a.proto", message_type: {name: "M"}},
-      "field without number" => {name: "a.proto", message_type: [{name: "M", field: [{name: "f", type: :TYPE_INT32}]}]},
-      "unknown type" => {name: "a.proto", message_type: [{name: "M", field: [field("f", 1, :TYPE_INT128)]}]},
-      "unknown label" => {name: "a.proto", message_type: [{name: "M", field: [field("f", 1, :TYPE_INT32, label: :LABEL_MAYBE)]}]},
       "message without type_name" => {name: "a.proto", message_type: [{name: "M", field: [field("f", 1, :TYPE_MESSAGE)]}]},
       "scalar with type_name" => {name: "a.proto", message_type: [{name: "M", field: [field("f", 1, :TYPE_INT32, type_name: ".M")]}]},
       "bad oneof index" => {name: "a.proto", message_type: [{name: "M", field: [field("f", 1, :TYPE_INT32, oneof_index: 3)]}]},
@@ -113,11 +96,7 @@ class BuilderTest < Minitest::Test
       "unknown syntax" => {name: "a.proto", syntax: "proto4"},
       "editions without edition" => {name: "a.proto", syntax: "editions"},
       "proto3 with edition" => {name: "a.proto", syntax: "proto3", edition: :EDITION_2023},
-      "unknown edition" => {name: "a.proto", syntax: "editions", edition: :EDITION_3000},
-      "duplicate symbol" => {name: "a.proto", message_type: [{name: "M"}, {name: "M"}]},
-      "options not a hash" => {name: "a.proto", options: [1]},
-      "range without end" => {name: "a.proto", message_type: [{name: "M", extension_range: [{start: 1}]}]},
-      "object in options" => {name: "a.proto", options: {java_package: Object.new}}
+      "duplicate symbol" => {name: "a.proto", message_type: [{name: "M"}, {name: "M"}]}
     }.each do |what, hash|
       assert_raises(S::Error, what) { build(hash) }
     end
@@ -152,10 +131,9 @@ class BuilderTest < Minitest::Test
     assert_equal hash, file.to_h
     assert_equal [1..2, 10..10], file.find_message("M").reserved_ranges
     assert_equal [5..9], file.find_enum("E").reserved_ranges, "enum reserved ranges are inclusive"
-    assert_equal :VISIBILITY_EXPORT, file.find_message("M").visibility
   end
 
-  def test_label_and_type_are_never_missing_from_to_h
+  def test_label_and_type_are_never_missing_from_to_proto
     file = build(name: "l.proto", message_type: [{name: "M", field: [{name: "f", number: 1, type: :TYPE_INT32}]}])
     f = file.find_message("M").field(1)
     assert_equal :optional, f.label

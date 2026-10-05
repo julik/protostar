@@ -30,17 +30,6 @@ module Protostar
           @leading_detached_comments = Freezer.call(leading_detached_comments)
           freeze
         end
-
-        # @return [Hash]
-        def to_h
-          h = {}
-          h[:path] = @path unless @path.empty?
-          h[:span] = @span unless @span.empty?
-          h[:leading_comments] = @leading_comments if @leading_comments
-          h[:trailing_comments] = @trailing_comments if @trailing_comments
-          h[:leading_detached_comments] = @leading_detached_comments unless @leading_detached_comments.empty?
-          h
-        end
       end
 
       # @return [Array<Location>]
@@ -58,11 +47,6 @@ module Protostar
       # @return [Location, nil] the first location recorded for the path
       def location(path)
         @by_path[path]
-      end
-
-      # @return [Hash]
-      def to_h
-        @locations.empty? ? {} : {location: @locations.map(&:to_h)}
       end
     end
   end

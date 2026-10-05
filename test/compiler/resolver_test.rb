@@ -60,9 +60,9 @@ class CompilerResolverTest < Minitest::Test
       "searched first in name resolution. Consider using a leading '.'(i.e., \".Bar.Baz\") to start from the " \
       "outermost scope."], messages
     error = assert_raises(S::ResolveError) do
-      S::Builder.build({name: "x.proto", message_type: [{name: "Bar", nested_type: [{name: "Baz"}]},
+      SchemaFixtures.from_proto({name: "x.proto", message_type: [{name: "Bar", nested_type: [{name: "Baz"}]},
         {name: "Foo", nested_type: [{name: "Bar"}], field: [{name: "baz", number: 1, type_name: "Bar.Baz"}]}]},
-        pool: S::Pool.new)
+        S::Pool.new)
     end
     assert_includes error.message, "\"Bar.Baz\" is resolved to \"Foo.Bar.Baz\""
   end

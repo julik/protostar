@@ -60,7 +60,7 @@ module Protostar
       end
       pool = Schema::Pool.new
       # protoc has already warned about extension numbers used twice
-      request.proto_file.each { |proto| pool.add(Schema::Builder.from_proto(proto, pool: pool), warn: false) }
+      request.proto_file.each { |proto| pool.add(Schema::File.from_proto(proto, pool: pool), warn: false) }
       files = request.file_to_generate.map do |name|
         pool.file(name) || raise(Protostar::Error, "#{name} is not among the request's proto files")
       end

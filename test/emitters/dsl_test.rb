@@ -15,7 +15,8 @@ class DslTest < Minitest::Test
 
   def compiled(name, source)
     @compiler.compile([name], sources: {name => source}).each do |f|
-      @pool.add(Protostar::Schema::Builder.build(f.to_h, pool: @pool)) unless @pool.include?(f.name) || f.name == name
+      next if @pool.include?(f.name) || f.name == name
+      @pool.add(Protostar::Schema::File.from_proto(f.serialize(source_info: false), pool: @pool))
     end.last
   end
 

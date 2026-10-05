@@ -32,7 +32,7 @@ module Protostar
             file.dependencies.each { |dep| p.print("require '#{Naming.require_name(dep)}'\n") }
             p.print("\n")
           end
-          p.print("\ndescriptor_data = \"#{GoogleRuby.ruby_escape(GoogleRuby.serialized(file, @pool))}\"\n\n" \
+          p.print("\ndescriptor_data = \"#{GoogleRuby.ruby_escape(GoogleRuby.serialized(file))}\"\n\n" \
             "pool = ::Google::Protobuf::DescriptorPool.generated_pool\npool.add_serialized_file(descriptor_data)\n\n")
           modules = Naming.module_path(file)
           modules.each do |m|
@@ -53,27 +53,8 @@ module Protostar
         # one. Whether it was set is not kept, so a `json_name` equal to the
         # derived one is taken as not set.
         # @return [String] binary
-        def self.serialized(file, pool = nil)
-          hash = without_json_names(file.to_h)
-          hash.delete(:source_code_info)
-          Schema::Proto::HashCodec.encode(Schema::Proto.schema(:FileDescriptorProto), hash, file.extension_finder(pool))
-        end
-
-        def self.without_json_names(hash)
-          out = hash.dup
-          %i[message_type nested_type].each do |key|
-            out[key] = out[key].map { |m| without_json_names(m) } if out[key]
-          end
-          %i[field extension].each do |key|
-            next unless out[key]
-            out[key] = out[key].map do |f|
-              next f unless f[:json_name] == Schema.json_name(f[:name])
-              f = f.dup
-              f.delete(:json_name)
-              f
-            end
-          end
-          out
+        def self.serialized(file)
+          file.serialize(source_info: false, default_json_names: false)
         end
 
         PRINTABLE = (0x20..0x7E)

@@ -7,7 +7,7 @@
 #
 # The request is a Marshal dump of `{targets: [file names], files: [file
 # names], namespaces: {file name => module path}}`. The answer has, per file
-# name, `to_h` of the file in the generated pool, the source the native
+# name, the file in the generated pool serialized without source info, the source the native
 # emitter writes for it again, and the constants that are missing or wrong.
 dir, request_path = ARGV
 $LOAD_PATH.unshift(File.expand_path("../../lib", __dir__), dir)
@@ -43,7 +43,7 @@ request[:files].each do |name|
   end
   file.all_messages.each { |m| check.call(m) unless m.map_entry? }
   file.all_enums.each { |e| check.call(e) }
-  answer[:files][name] = {to_h: file.to_h, source: emitter.file(file), wrong_constants: wrong,
+  answer[:files][name] = {bytes: file.serialize(source_info: false), source: emitter.file(file), wrong_constants: wrong,
                           shareable: Ractor.shareable?(file)}
 end
 $stdout.binmode

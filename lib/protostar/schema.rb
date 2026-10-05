@@ -2,8 +2,9 @@
 
 module Protostar
   # The descriptor model: an immutable, Ractor-shareable graph of files,
-  # messages, fields, enums and services, built from a descriptor hash shaped
-  # like `FileDescriptorProto#to_h` and turned back into one with `#to_h`.
+  # messages, fields, enums and services. {File.draft} builds one;
+  # {File#to_proto} and {File.from_proto} translate to and from protoc's
+  # `FileDescriptorProto`.
   module Schema
     # Raised for malformed descriptor hashes, missing dependencies and pool clashes
     class Error < Protostar::Error; end
@@ -60,4 +61,3 @@ require_relative "schema/resolver"
 require_relative "schema/pool"
 require_relative "schema/default_value"
 require_relative "schema/draft"
-require_relative "schema/builder"

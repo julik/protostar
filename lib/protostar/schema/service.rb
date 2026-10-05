@@ -33,13 +33,6 @@ module Protostar
       def rpc(name)
         @rpcs_by_name[name.to_s]
       end
-
-      # @return [Hash] the ServiceDescriptorProto hash
-      def to_h
-        h = {name: @name}
-        h[:method] = @rpcs.map(&:to_h) unless @rpcs.empty?
-        options_to_h(h)
-      end
     end
 
     # One RPC of a {Service}
@@ -80,15 +73,6 @@ module Protostar
       # @return [Boolean]
       def server_streaming?
         @server_streaming
-      end
-
-      # @return [Hash] the MethodDescriptorProto hash
-      def to_h
-        h = {name: @name, input_type: ".#{@input_type.full_name}", output_type: ".#{@output_type.full_name}"}
-        options_to_h(h)
-        h[:client_streaming] = true if @client_streaming
-        h[:server_streaming] = true if @server_streaming
-        h
       end
     end
   end

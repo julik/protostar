@@ -7,10 +7,21 @@ require "test_helper"
 # rebuild the same descriptors
 class RubyEmitterTest < Minitest::Test
   Emitters = Protostar::Compiler::Emitters
-  Builder = Protostar::Schema::Builder
+  # A file from a FileDescriptorProto hash; file options may carry
+  # `__unknown_fields` as [number, wire type, bytes]
+  def build(hash)
+    unknown = hash.dig(:options, :__unknown_fields)
+    hash = hash.merge(options: hash[:options].except(:__unknown_fields)) if unknown
+    proto = Protostar::Schema::Proto.types::FileDescriptorProto.new(hash)
+    if unknown
+      bytes = proto.options.encode + Protostar::Schema::MessageValue.unknown_bytes(unknown)
+      proto.options = proto.options.class.decode(bytes)
+    end
+    Protostar::Schema::File.from_proto(proto, pool: Protostar::Schema::Pool.new)
+  end
 
   def round_trip(hash)
-    built = Builder.build(hash, pool: Protostar::Schema::Pool.new)
+    built = build(hash)
     source = Emitters::Ruby.new.definition(built)
     pool = Protostar::Schema::Pool.new
     saved = Protostar.generated_pool
@@ -20,7 +31,7 @@ class RubyEmitterTest < Minitest::Test
     ensure
       Protostar.instance_variable_set(:@generated_pool, saved)
     end
-    assert_equal built.to_h, pool.file(built.name).to_h, source
+    assert_equal built.serialize, pool.file(built.name).serialize, source
     source
   end
 

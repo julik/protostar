@@ -129,40 +129,6 @@ module Protostar
         end
       end
 
-      # The descriptor-hash spelling WS1 to WS13 passed around: fields by
-      # name, `:__extensions` by full name, `:__unknown_fields` as triples
-      # @api private
-      def __legacy_h
-        h = @fields.transform_values { |v| MessageValue.legacy(v) }
-        unless @extensions.empty?
-          h[:__extensions] = @extensions.to_h { |f, v| [f.full_name, MessageValue.legacy(v)] }
-        end
-        h[:__unknown_fields] = MessageValue.triples(@unknown_fields) unless @unknown_fields.empty?
-        h
-      end
-
-      # @api private
-      def self.legacy(value)
-        case value
-        when MessageValue then value.__legacy_h
-        when Array then value.map { |v| legacy(v) }
-        else value
-        end
-      end
-
-      # @api private
-      def self.triples(bytes)
-        r = Wire::Reader.new(bytes)
-        out = []
-        until r.eof?
-          number, wire_type = r.read_tag
-          start = r.pos
-          r.skip_field(number, wire_type)
-          out << [number, wire_type, bytes.byteslice(start, r.pos - start)]
-        end
-        out
-      end
-
       def inspect
         parts = @fields.map { |k, v| "#{k}: #{v.inspect}" }
         @extensions.each { |f, v| parts << "(#{f.full_name}): #{v.inspect}" }

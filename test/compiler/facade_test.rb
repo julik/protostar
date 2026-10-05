@@ -150,6 +150,6 @@ class CompilerFacadeTest < Minitest::Test
   def test_compiled_descriptor_proto_matches_its_golden
     file = C.new.compile(["google/protobuf/descriptor.proto"]).last
     expected = GoldenHash.load(Corpus.golden("google/protobuf/descriptor.proto", :json)).last
-    assert_equal expected, CompilerSupport.strip_extensions(file.to_h)
+    assert_equal expected, file.to_proto.to_h
   end
 end

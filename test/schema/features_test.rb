@@ -52,9 +52,9 @@ class FeaturesTest < Minitest::Test
 
   def test_files_resolve_as_their_syntax
     pool = S::Pool.new
-    proto2 = SchemaFixtures.add(pool, {name: "p2.proto"})
-    proto3 = SchemaFixtures.add(pool, {name: "p3.proto", syntax: "proto3"})
-    e2024 = SchemaFixtures.add(pool, {name: "e.proto", syntax: "editions", edition: :EDITION_2024})
+    proto2 = SchemaFixtures.add(pool, "p2.proto")
+    proto3 = SchemaFixtures.add(pool, "p3.proto", syntax: :proto3)
+    e2024 = SchemaFixtures.add(pool, "e.proto", edition: :EDITION_2024)
     assert_equal F.defaults(:EDITION_PROTO2), proto2.features
     assert_equal F.defaults(:EDITION_PROTO3), proto3.features
     assert_equal F.defaults(:EDITION_2024), e2024.features

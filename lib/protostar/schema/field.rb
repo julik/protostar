@@ -190,20 +190,6 @@ module Protostar
       def utf8_validation?
         @type == :string && @features.utf8_validation == :VERIFY
       end
-
-      # @return [Hash] the FieldDescriptorProto hash
-      def to_h
-        h = {name: @name, number: @number, label: PROTO_LABELS.fetch(@declared_label),
-             type: PROTO_TYPES.fetch(@declared_type)}
-        h[:type_name] = ".#{@type_name}" if @type_name
-        h[:extendee] = ".#{@extendee.full_name}" if @extension
-        h[:default_value] = @raw_default if @raw_default
-        h[:oneof_index] = @oneof.index if @oneof
-        h[:json_name] = @json_name
-        options_to_h(h)
-        h[:proto3_optional] = true if @proto3_optional
-        h
-      end
     end
   end
 end

@@ -5,13 +5,6 @@ require "forwardable"
 module Google
   module Protobuf
     module Internal
-      # A descriptor hash without the json_names a .proto would not have
-      # spelled out, as upb's to_proto gives them
-      # @api private
-      def self.without_json_names(hash)
-        Protostar::Compiler::Emitters::GoogleRuby.without_json_names(hash)
-      end
-
       # What every descriptor wrapper shares: a {Protostar::Schema} descriptor
       # and the DescriptorPool it belongs to. Methods the gem does not have are
       # passed to the schema descriptor, because protostar's runtime reads
@@ -65,22 +58,18 @@ module Google
         def options_message(type)
           require "google/protobuf/descriptor_pb"
           options = @__schema.options
-          hash = options.declared? ? options.__legacy_h : {}
-          bytes = Protostar::Schema::Proto::HashCodec.encode(
-            Protostar::Schema::Proto.schema(type), hash, @__schema.file.extension_finder(@descriptor_pool.__schema_pool)
-          )
+          bytes = options.declared? ? options.to_proto.encode : ""
           message = Google::Protobuf.const_get(type).decode(bytes)
           message.clear_features if message.respond_to?(:clear_features)
           message.freeze
         end
 
-        # The descriptor as a google.protobuf.*Proto message of the generated pool
-        def proto_message(type, hash)
+        # The descriptor as a google.protobuf.*Proto message of the generated
+        # pool, with json_names only where a .proto would have spelled them
+        # out, as upb's to_proto gives them
+        def proto_message(type, proto)
           require "google/protobuf/descriptor_pb"
-          bytes = Protostar::Schema::Proto::HashCodec.encode(
-            Protostar::Schema::Proto.schema(type), hash, @__schema.file.extension_finder(@descriptor_pool.__schema_pool)
-          )
-          Google::Protobuf.const_get(type).decode(bytes)
+          Google::Protobuf.const_get(type).decode(proto.encode)
         end
       end
     end
@@ -151,7 +140,7 @@ module Google
 
       # @return [Google::Protobuf::DescriptorProto]
       def to_proto
-        @to_proto ||= proto_message(:DescriptorProto, Internal.without_json_names(@__schema.to_h))
+        @to_proto ||= proto_message(:DescriptorProto, @__schema.to_proto(default_json_names: false))
       end
 
       # @api private
@@ -299,7 +288,7 @@ module Google
 
       # @return [Google::Protobuf::FieldDescriptorProto]
       def to_proto
-        @to_proto ||= proto_message(:FieldDescriptorProto, Internal.without_json_names({field: [@__schema.to_h]})[:field][0])
+        @to_proto ||= proto_message(:FieldDescriptorProto, @__schema.to_proto(default_json_names: false))
       end
 
       # @api private
@@ -360,7 +349,7 @@ module Google
 
       # @return [Google::Protobuf::OneofDescriptorProto]
       def to_proto
-        @to_proto ||= proto_message(:OneofDescriptorProto, @__schema.to_h)
+        @to_proto ||= proto_message(:OneofDescriptorProto, @__schema.to_proto)
       end
     end
 
@@ -417,7 +406,7 @@ module Google
 
       # @return [Google::Protobuf::EnumDescriptorProto]
       def to_proto
-        @to_proto ||= proto_message(:EnumDescriptorProto, @__schema.to_h)
+        @to_proto ||= proto_message(:EnumDescriptorProto, @__schema.to_proto)
       end
 
       # @api private
@@ -501,7 +490,7 @@ module Google
 
       # @return [Google::Protobuf::ServiceDescriptorProto]
       def to_proto
-        @to_proto ||= proto_message(:ServiceDescriptorProto, @__schema.to_h)
+        @to_proto ||= proto_message(:ServiceDescriptorProto, @__schema.to_proto)
       end
     end
 
@@ -538,7 +527,7 @@ module Google
 
       # @return [Google::Protobuf::MethodDescriptorProto]
       def to_proto
-        @to_proto ||= proto_message(:MethodDescriptorProto, @__schema.to_h)
+        @to_proto ||= proto_message(:MethodDescriptorProto, @__schema.to_proto)
       end
     end
 
@@ -560,7 +549,7 @@ module Google
         @to_proto ||= begin
           require "google/protobuf/descriptor_pb"
           Google::Protobuf::FileDescriptorProto.decode(
-            Protostar::Compiler::Emitters::GoogleRuby.serialized(@__schema, @descriptor_pool.__schema_pool)
+            Protostar::Compiler::Emitters::GoogleRuby.serialized(@__schema)
           )
         end
       end

@@ -24,19 +24,6 @@ module CompilerSupport
     Protostar::Compiler.new(include_paths: Corpus::INCLUDE_ROOTS)
   end
 
-  # A descriptor hash without the `:__extensions` and `:__unknown_fields`
-  # keys, which protoc's JSON (and so the goldens) cannot carry
-  def self.strip_extensions(value)
-    case value
-    when Hash
-      value.each_with_object({}) do |(k, v), out|
-        out[k] = strip_extensions(v) unless k == :__extensions || k == :__unknown_fields
-      end
-    when Array then value.map { |v| strip_extensions(v) }
-    else value
-    end
-  end
-
   # Diagnostics formatted the way protoc's parser tests print them: 0-based
   # `line:column: message`, `-1:0:` where there is no position
   def self.zero_based(diagnostics)

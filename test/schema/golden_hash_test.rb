@@ -23,7 +23,7 @@ class GoldenHashTest < Minitest::Test
   end
 
   def test_rejects_keys_descriptor_proto_does_not_have
-    assert_raises(ArgumentError) { GoldenHash.convert({"bogus" => 1}, "google.protobuf.FileDescriptorProto") }
+    assert_raises(Protostar::Error) { GoldenHash.convert({"bogus" => 1}, "google.protobuf.FileDescriptorProto") }
   end
 
   def test_matches_google_protobuf_to_h_for_every_golden
@@ -33,6 +33,4 @@ class GoldenHashTest < Minitest::Test
       assert_equal Oracle.file_hashes(binpb), GoldenHash.load(json), json
     end
   end
-
-  private
 end

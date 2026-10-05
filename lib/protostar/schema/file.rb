@@ -124,25 +124,6 @@ module Protostar
         @symbols[full_name]
       end
 
-      # @return [Hash] the FileDescriptorProto hash
-      def to_h
-        h = {name: @name}
-        h[:package] = @package unless @package.empty?
-        h[:dependency] = @dependencies unless @dependencies.empty?
-        h[:public_dependency] = @public_dependencies unless @public_dependencies.empty?
-        h[:weak_dependency] = @weak_dependencies unless @weak_dependencies.empty?
-        h[:option_dependency] = @option_dependencies unless @option_dependencies.empty?
-        h[:message_type] = @messages.map(&:to_h) unless @messages.empty?
-        h[:enum_type] = @enums.map(&:to_h) unless @enums.empty?
-        h[:service] = @services.map(&:to_h) unless @services.empty?
-        h[:extension] = @extensions.map(&:to_h) unless @extensions.empty?
-        options_to_h(h)
-        h[:source_code_info] = @source_info.to_h if @source_info
-        h[:syntax] = @proto_syntax if @proto_syntax
-        h[:edition] = @edition if @edition
-        h
-      end
-
       def inspect
         "#<#{self.class.name} #{@name}>"
       end

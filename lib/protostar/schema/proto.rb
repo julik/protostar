@@ -14,26 +14,28 @@ module Protostar
     # @param pool [Schema::Pool]
     # @return [Array<Schema::File>]
     def load_descriptor_set(bytes, pool:)
-      Schema::Proto.each_file(bytes).map { |file_bytes| Schema::Proto.load_file(file_bytes, pool) }
+      Schema::Proto.each_file(bytes).map { |file_bytes| pool.add_serialized_file(file_bytes) }
     end
   end
 
   Pool = Schema::Pool
 
   module Schema
-    # Descriptors as descriptor.proto messages and bytes. Hashes are written
-    # and read by a codec driven by {Schema} descriptors, so custom options
-    # of any type are encoded from `:__extensions` and decoded back into it;
-    # the bootstrap's message classes are used only at the edges.
-    # @api private
+    # The one place that knows protoc's shape. {File#to_proto} writes a
+    # file as the `FileDescriptorProto` message of the bootstrap classes
+    # (`Protostar::Google::Protobuf`), as protoc's `FileDescriptor::CopyTo`
+    # would; {File.from_proto} reads one back into a draft. Custom options
+    # exist as extension bytes inside options messages only here: written by
+    # {MessageValue#encode}, read by {MessageValue.decode}.
     module Proto
-      # The descriptor.proto message types the bootstrap defines
+      # @return [Module] `Protostar::Google::Protobuf`, descriptor.proto's message classes
       def self.types
         require "protostar/google/protobuf/descriptor_pb"
         ::Protostar::Google::Protobuf
       end
 
-      # @return [Schema::Message] descriptor.proto's own descriptor of a message
+      # @param name [Symbol, String] a descriptor.proto message, e.g. :FieldOptions
+      # @return [Schema::Message] its descriptor, as the bootstrap defines it
       def self.schema(name)
         types.const_get(name).descriptor
       end
@@ -54,108 +56,302 @@ module Protostar
         files
       end
 
-      # Decodes, builds and adds one serialized FileDescriptorProto
-      def self.load_file(bytes, pool)
-        name = HashCodec.decode(schema(:FileDescriptorProto), bytes, nil, keep_unknown: false)[:name]
-        existing = pool.file(name)
-        return existing if existing
-        pool.add(build(bytes, pool))
-      end
-
-      # Decodes a serialized FileDescriptorProto into a hash and builds it. A
-      # first pass leaves the file's own extensions unknown; when its options
-      # need them, a structural build of the file supplies them for a second.
-      def self.build(bytes, pool)
-        type = schema(:FileDescriptorProto)
-        lookup = ->(extendee, number) { pool.find_extension(extendee, number) }
-        hash = HashCodec.decode(type, bytes, lookup, keep_unknown: false)
-        own = HashCodec.unknown?(hash) ? own_extensions(hash, pool) : {}
-        unless own.empty?
-          lookup = ->(extendee, number) { pool.find_extension(extendee, number) || own[[extendee, number]] }
-          hash = HashCodec.decode(type, bytes, lookup, keep_unknown: false)
-        end
-        Builder.build(hash, pool: pool)
-      end
-
-      # The extensions a file defines, from a build of its first-pass hash
-      # (options it cannot read yet are kept as unknown fields there)
-      def self.own_extensions(hash, pool)
-        first = Builder.build(hash, pool: pool)
-        first.all_extensions.to_h { |e| [[e.extendee.full_name, e.number], e] }
-      end
-
-      # Encodes and decodes descriptor-shaped hashes by {Schema::Message}:
-      # known fields by name, extensions under `:__extensions` by full
-      # name, unknown fields under `:__unknown_fields` as `[number, wire_type,
-      # bytes]` with the bytes that followed the tag. Map fields are Arrays of
-      # `{key:, value:}` entries, enums Symbols (Integers when unnamed).
-      module HashCodec
+      # Descriptors as descriptor.proto messages
+      # @api private
+      module Writer
         module_function
 
-        # @param type [Schema::Message]
-        # @param hash [Hash]
-        # @param extension [#call] full name to the extension's {Schema::Field}
-        # @return [String] binary, fields in number order, unknown fields last
-        def encode(type, hash, extension)
-          entries = []
-          unknown = nil
-          hash.each do |key, value|
-            case key
-            when :__extensions
-              value.each do |name, v|
-                field = extension.call(name) || raise(Error, "extension #{name} of #{type.full_name} is not known")
-                entries << [field, v]
-              end
-            when :__unknown_fields then unknown = value
-            else
-              field = type.fields_by_name[key.to_s] || raise(Error, "#{type.full_name} has no field #{key}")
-              entries << [field, value]
+        def file(file, source_info:, json_names:)
+          attrs = {name: file.name}
+          attrs[:package] = file.package unless file.package.empty?
+          attrs[:dependency] = file.dependencies unless file.dependencies.empty?
+          attrs[:public_dependency] = file.public_dependencies unless file.public_dependencies.empty?
+          attrs[:weak_dependency] = file.weak_dependencies unless file.weak_dependencies.empty?
+          attrs[:option_dependency] = file.option_dependencies unless file.option_dependencies.empty?
+          list(attrs, :message_type, file.messages) { |m| message(m, json_names) }
+          list(attrs, :enum_type, file.enums) { |e| enum(e) }
+          list(attrs, :service, file.services) { |s| service(s) }
+          list(attrs, :extension, file.extensions) { |f| field(f, json_names) }
+          options(attrs, file)
+          attrs[:source_code_info] = source_code_info(file.source_info) if source_info && file.source_info
+          attrs[:syntax] = file.proto_syntax if file.proto_syntax
+          attrs[:edition] = file.edition if file.edition
+          Proto.types::FileDescriptorProto.new(**attrs)
+        end
+
+        def message(message, json_names)
+          t = Proto.types
+          attrs = {name: message.name}
+          list(attrs, :field, message.fields) { |f| field(f, json_names) }
+          list(attrs, :extension, message.extensions) { |f| field(f, json_names) }
+          list(attrs, :nested_type, message.nested_messages) { |m| message(m, json_names) }
+          list(attrs, :enum_type, message.nested_enums) { |e| enum(e) }
+          list(attrs, :extension_range, message.extension_range_descriptors) do |r|
+            range = {start: r.start, end: r.end + 1}
+            options(range, r)
+            t::DescriptorProto::ExtensionRange.new(**range)
+          end
+          list(attrs, :oneof_decl, message.oneofs) { |o| oneof(o) }
+          options(attrs, message)
+          list(attrs, :reserved_range, message.reserved_ranges) do |r|
+            t::DescriptorProto::ReservedRange.new(start: r.begin, end: r.end + 1)
+          end
+          attrs[:reserved_name] = message.reserved_names unless message.reserved_names.empty?
+          attrs[:visibility] = Proto.visibility(message.visibility) if message.visibility
+          t::DescriptorProto.new(**attrs)
+        end
+
+        def field(field, json_names)
+          attrs = {name: field.name, number: field.number, label: Field::PROTO_LABELS.fetch(field.declared_label),
+                   type: Field::PROTO_TYPES.fetch(field.declared_type)}
+          attrs[:type_name] = ".#{field.type_name}" if field.type_name
+          attrs[:extendee] = ".#{field.extendee.full_name}" if field.extension?
+          attrs[:default_value] = field.raw_default if field.raw_default
+          attrs[:oneof_index] = field.oneof.index if field.oneof
+          attrs[:json_name] = field.json_name if json_names || field.json_name != Schema.json_name(field.name)
+          options(attrs, field)
+          attrs[:proto3_optional] = true if field.proto3_optional?
+          Proto.types::FieldDescriptorProto.new(**attrs)
+        end
+
+        def oneof(oneof)
+          attrs = {name: oneof.name}
+          options(attrs, oneof)
+          Proto.types::OneofDescriptorProto.new(**attrs)
+        end
+
+        def enum(enum)
+          t = Proto.types
+          attrs = {name: enum.name}
+          list(attrs, :value, enum.values) { |v| enum_value(v) }
+          options(attrs, enum)
+          list(attrs, :reserved_range, enum.reserved_ranges) do |r|
+            t::EnumDescriptorProto::EnumReservedRange.new(start: r.begin, end: r.end)
+          end
+          attrs[:reserved_name] = enum.reserved_names unless enum.reserved_names.empty?
+          attrs[:visibility] = Proto.visibility(enum.visibility) if enum.visibility
+          t::EnumDescriptorProto.new(**attrs)
+        end
+
+        def enum_value(value)
+          attrs = {name: value.name, number: value.number}
+          options(attrs, value)
+          Proto.types::EnumValueDescriptorProto.new(**attrs)
+        end
+
+        def service(service)
+          attrs = {name: service.name}
+          list(attrs, :method, service.rpcs) { |m| method(m) }
+          options(attrs, service)
+          Proto.types::ServiceDescriptorProto.new(**attrs)
+        end
+
+        def method(method)
+          attrs = {name: method.name, input_type: ".#{method.input_type.full_name}",
+                   output_type: ".#{method.output_type.full_name}"}
+          options(attrs, method)
+          attrs[:client_streaming] = true if method.client_streaming?
+          attrs[:server_streaming] = true if method.server_streaming?
+          Proto.types::MethodDescriptorProto.new(**attrs)
+        end
+
+        def source_code_info(info)
+          location = Proto.types::SourceCodeInfo::Location
+          locations = info.locations.map do |loc|
+            attrs = {path: loc.path, span: loc.span}
+            attrs[:leading_comments] = loc.leading_comments if loc.leading_comments
+            attrs[:trailing_comments] = loc.trailing_comments if loc.trailing_comments
+            attrs[:leading_detached_comments] = loc.leading_detached_comments unless loc.leading_detached_comments.empty?
+            location.new(**attrs)
+          end
+          Proto.types::SourceCodeInfo.new(location: locations)
+        end
+
+        def options(attrs, descriptor)
+          options = descriptor.options
+          attrs[:options] = options.to_proto if options.declared?
+        end
+
+        def list(attrs, key, items, &block)
+          attrs[key] = items.map(&block) unless items.empty?
+        end
+      end
+
+      # A FileDescriptorProto message read into a draft
+      # @api private
+      class Reader
+        def initialize(proto, pool)
+          @proto = proto
+          @pool = pool
+          @options = []
+        end
+
+        def call
+          p = @proto
+          draft = File.draft(p.name, package: (p.package if p.has_package?), syntax: (p.syntax.to_sym if p.has_syntax?),
+            edition: (p.edition if p.has_edition?), dependencies: p.dependency.to_a,
+            public_dependencies: p.public_dependency.to_a, weak_dependencies: p.weak_dependency.to_a,
+            option_dependencies: p.option_dependency.to_a)
+          record(draft.descriptor, p)
+          draft.source_info = source_info(p.source_code_info) if p.has_source_code_info?
+          p.message_type.each { |m| message(draft, m) }
+          p.enum_type.each { |e| enum(draft, e) }
+          p.extension.each { |f| extension(draft, f) }
+          p.service.each do |s|
+            service = draft.service(s.name)
+            record(service.descriptor, s)
+            s["method"].each do |m|
+              record(service.rpc(m.name, m.input_type, m.output_type, client_streaming: m.client_streaming,
+                server_streaming: m.server_streaming), m)
             end
           end
+          draft.link(@pool)
+          lookup = extension_lookup(draft.descriptor)
+          @options.each do |descriptor, options|
+            draft.set_options(descriptor, MessageValue.decode(options.class.descriptor, options.encode, lookup))
+          end
+          draft.resolve(@pool).freeze!
+        end
+
+        private
+
+        def record(descriptor, proto)
+          @options << [descriptor, proto.options] if proto.has_options?
+        end
+
+        # Extensions from the pool, then those the file defines itself
+        def extension_lookup(file)
+          own = file.all_extensions.to_h { |e| [[e.extendee.full_name, e.number], e] }
+          ->(extendee, number) { @pool.find_extension(extendee, number) || own[[extendee, number]] }
+        end
+
+        def message(scope, proto)
+          visibility = Proto.visibility_symbol(proto.visibility) if proto.has_visibility?
+          draft = scope.message(proto.name, visibility: visibility)
+          record(draft.descriptor, proto)
+          oneofs = proto.oneof_decl.map do |o|
+            oneof = draft.oneof(o.name)
+            record(oneof, o)
+            oneof
+          end
+          proto.field.each { |f| field(draft, f, oneofs) }
+          proto.nested_type.each { |m| message(draft, m) }
+          proto.enum_type.each { |e| enum(draft, e) }
+          proto.extension.each { |f| extension(draft, f) }
+          proto.extension_range.each { |r| record(draft.extension_range(r.start..(r.end - 1)), r) }
+          proto.reserved_range.each { |r| draft.reserved(r.start..(r.end - 1)) }
+          draft.reserved(*proto.reserved_name)
+        end
+
+        def field(scope, proto, oneofs)
+          raise Error, "#{@proto.name}: field #{proto.name} has an extendee" if proto.has_extendee?
+          oneof = oneofs[proto.oneof_index] if proto.has_oneof_index?
+          raise Error, "#{@proto.name}: #{proto.name} has an invalid oneof_index" if proto.has_oneof_index? && !oneof
+          type, type_name, kwargs = field_attributes(proto)
+          record(scope.field(proto.name, proto.number, type, type_name, oneof: oneof, **kwargs), proto)
+        end
+
+        def extension(scope, proto)
+          raise Error, "#{@proto.name}: extension #{proto.name} has no extendee" unless proto.has_extendee?
+          type, type_name, kwargs = field_attributes(proto)
+          record(scope.extension(proto.name, proto.number, type, type_name, extendee: proto.extendee, **kwargs), proto)
+        end
+
+        def field_attributes(proto)
+          type = Field::TYPES.fetch(proto.type) if proto.has_type?
+          type_name = proto.type_name if proto.has_type_name?
+          kwargs = {label: proto.has_label? ? Field::LABELS.fetch(proto.label) : :optional,
+                    default: (proto.default_value if proto.has_default_value?),
+                    json_name: (proto.json_name if proto.has_json_name?), optional: proto.proto3_optional}
+          [type, type_name, kwargs]
+        end
+
+        def enum(scope, proto)
+          visibility = Proto.visibility_symbol(proto.visibility) if proto.has_visibility?
+          draft = scope.enum(proto.name, visibility: visibility)
+          record(draft.descriptor, proto)
+          proto.value.each { |v| record(draft.value(v.name, v.number), v) }
+          proto.reserved_range.each { |r| draft.reserved(r.start..r.end) }
+          draft.reserved(*proto.reserved_name)
+        end
+
+        def source_info(proto)
+          SourceInfo.new(proto.location.map do |loc|
+            SourceInfo::Location.new(path: loc.path.to_a, span: loc.span.to_a,
+              leading_comments: (loc.leading_comments if loc.has_leading_comments?),
+              trailing_comments: (loc.trailing_comments if loc.has_trailing_comments?),
+              leading_detached_comments: loc.leading_detached_comments.to_a)
+          end)
+        end
+      end
+
+      # descriptor.proto's SymbolVisibility for {Message#visibility} and {Enum#visibility}
+      # @api private
+      def self.visibility(symbol)
+        symbol
+      end
+
+      # @api private
+      def self.visibility_symbol(proto)
+        proto
+      end
+
+      # Message values to and from wire bytes, driven by {Schema::Message}s:
+      # fields in number order with extensions among them, unknown fields
+      # last; packed repeated fields per features; MessageSet items for
+      # `message_set_wire_format` types; proto3 zero values left out.
+      # @api private
+      module Codec
+        module_function
+
+        def encode(type, value)
+          entries = []
+          value.fields.each do |name, v|
+            field = type.fields_by_name[name.to_s] || raise(Error, "#{type.full_name} has no field #{name}")
+            entries << [field, v]
+          end
+          value.extensions.each { |field, v| entries << [field, v] }
           out = "".b
           w = Wire::Writer.new(out)
           entries.sort_by! { |f, _| f.number }
-          entries.each do |field, value|
+          entries.each do |field, v|
             if field.extension? && type.message_set_wire_format?
-              write_set_item(w, field, value, extension)
+              write_set_item(w, field, v)
             else
-              write_field(w, field, value, extension)
+              write_field(w, field, v)
             end
           end
-          unknown&.each do |number, wire_type, bytes|
-            w.write_tag(number, wire_type)
-            w.write_raw(bytes)
-          end
+          w.write_raw(value.unknown_fields) unless value.unknown_fields.empty?
           w.flush
           out
         end
 
         # A MessageSet item: group 1 holding type_id 2 and message 3
-        def write_set_item(w, field, value, extension)
+        def write_set_item(w, field, value)
           w.write_tag(1, Wire::START_GROUP)
           w.write_tag(2, Wire::VARINT)
           w.write_varint(field.number)
           w.write_tag(3, Wire::LENGTH_DELIMITED)
-          w.write_bytes(encode(field.message_type, value, extension))
+          w.write_bytes(encode(field.message_type, value))
           w.write_tag(1, Wire::END_GROUP)
         end
 
-        def write_field(w, field, value, extension)
+        def write_field(w, field, value)
           if field.repeated?
             return if value.empty?
             if field.packed?
               body = "".b
               inner = Wire::Writer.new(body)
-              value.each { |v| write_value(inner, field, v, extension) }
+              value.each { |v| write_value(inner, field, v) }
               inner.flush
               w.write_tag(field.number, Wire::LENGTH_DELIMITED)
               w.write_bytes(body)
             else
-              value.each { |v| write_one(w, field, v, extension) }
+              value.each { |v| write_one(w, field, v) }
             end
           else
             return if !field.presence? && zero?(field, value)
-            write_one(w, field, value, extension)
+            write_one(w, field, value)
           end
         end
 
@@ -169,22 +365,22 @@ module Protostar
           end
         end
 
-        def write_one(w, field, value, extension)
+        def write_one(w, field, value)
           case field.type
           when :message
             w.write_tag(field.number, Wire::LENGTH_DELIMITED)
-            w.write_bytes(encode(field.message_type, value, extension))
+            w.write_bytes(encode(field.message_type, value))
           when :group
             w.write_tag(field.number, Wire::START_GROUP)
-            w.write_raw(encode(field.message_type, value, extension))
+            w.write_raw(encode(field.message_type, value))
             w.write_tag(field.number, Wire::END_GROUP)
           else
             w.write_tag(field.number, field.wire_type)
-            write_value(w, field, value, extension)
+            write_value(w, field, value)
           end
         end
 
-        def write_value(w, field, v, _extension)
+        def write_value(w, field, v)
           case field.type
           when :int32, :int64, :uint32, :uint64 then w.write_varint(v)
           when :sint32, :sint64 then w.write_zigzag(v)
@@ -203,34 +399,19 @@ module Protostar
           end
         end
 
-        # @param type [Schema::Message]
-        # @param bytes [String]
-        # @param lookup [#call, nil] (extendee full name, number) to an extension {Schema::Field}
-        # @param keep_unknown [Boolean] keep unknown fields (options messages) or drop them
-        # @return [Hash]
-        def decode(type, bytes, lookup, keep_unknown:)
-          r = Wire::Reader.new(bytes)
-          read(r, type, lookup, keep_unknown, nil)
+        def decode(type, bytes, lookup)
+          read(Wire::Reader.new(bytes), type, lookup)
         end
 
-        # @return [Boolean] whether any options in the hash hold unknown fields
-        def unknown?(value)
-          case value
-          when Hash then value.key?(:__unknown_fields) || value.each_value.any? { |v| unknown?(v) }
-          when Array then value.any? { |v| unknown?(v) }
-          else false
-          end
-        end
-
-        def read(r, type, lookup, keep_unknown, end_group)
-          h = {}
+        def read(r, type, lookup)
+          fields = {}
+          extensions = {}
+          unknown = nil
           chunks = nil
           until r.eof?
-            item_start = r.pos
             number, wire_type = r.read_tag
-            break if end_group && wire_type == Wire::END_GROUP && number == end_group
             if number == 1 && wire_type == Wire::START_GROUP && type.message_set_wire_format?
-              read_set_item(r, h, type, lookup, item_start)
+              unknown = read_set_item(r, extensions, type, lookup, unknown)
               next
             end
             field = type.fields_by_number[number]
@@ -238,13 +419,11 @@ module Protostar
             if field.nil? || !compatible?(field, wire_type)
               start = r.pos
               r.skip_field(number, wire_type)
-              next unless keep_unknown
-              (h[:__unknown_fields] ||= []) << [number, wire_type, raw(r, start)]
+              unknown = (unknown || "".b) << tag_bytes(number, wire_type) << raw(r, start)
               next
             end
-            target = field.extension? ? (h[:__extensions] ||= {}) : h
-            key = field.extension? ? field.full_name : field.name.to_sym
-            nested_keep = keep_unknown || field.name == "options"
+            target = field.extension? ? extensions : fields
+            key = field.extension? ? field : field.name.to_sym
             if field.type == :message || field.type == :group
               body = if field.type == :group
                 start = r.pos
@@ -254,7 +433,7 @@ module Protostar
                 r.read_bytes
               end
               if field.repeated?
-                (target[key] ||= []) << decode(field.message_type, body, lookup, keep_unknown: nested_keep)
+                (target[key] ||= []) << decode(field.message_type, body, lookup)
               else
                 chunks ||= {}
                 (chunks[[target, key, field]] ||= +"".b) << body
@@ -272,15 +451,14 @@ module Protostar
             end
           end
           chunks&.each do |(target, key, field), body|
-            nested_keep = keep_unknown || field.name == "options"
-            target[key] = decode(field.message_type, body, lookup, keep_unknown: nested_keep)
+            target[key] = decode(field.message_type, body, lookup)
           end
-          h
+          MessageValue.new(fields, extensions, unknown || MessageValue::EMPTY_BYTES)
         end
 
         # One MessageSet item; kept whole as an unknown group when its
         # extension is not known
-        def read_set_item(r, h, type, lookup, item_start)
+        def read_set_item(r, extensions, type, lookup, unknown)
           body_start = r.pos
           r.skip_group(1)
           item = Wire::Reader.new(group_body(r, body_start, 1))
@@ -297,18 +475,24 @@ module Protostar
           end
           field = type_id && message && lookup&.call(type.full_name, type_id)
           if field && field.type == :message
-            exts = (h[:__extensions] ||= {})
-            decoded = decode(field.message_type, message, lookup, keep_unknown: true)
-            exts[field.full_name] = decoded
+            extensions[field] = decode(field.message_type, message, lookup)
+            unknown
           else
-            (h[:__unknown_fields] ||= []) << [1, Wire::START_GROUP, raw(r, body_start)]
+            (unknown || "".b) << tag_bytes(1, Wire::START_GROUP) << raw(r, body_start)
           end
-          item_start
         end
 
         def compatible?(field, wire_type)
           return true if wire_type == field.wire_type
           wire_type == Wire::LENGTH_DELIMITED && field.packable?
+        end
+
+        def tag_bytes(number, wire_type)
+          out = "".b
+          w = Wire::Writer.new(out)
+          w.write_tag(number, wire_type)
+          w.flush
+          out
         end
 
         def raw(r, start)
@@ -345,62 +529,121 @@ module Protostar
       end
     end
 
-    class File
-      # This file as a `google.protobuf.FileDescriptorProto` of the bootstrap
-      # classes; custom options are encoded as extension bytes, which the
-      # message keeps as unknown fields.
-      # @param pool [Pool, nil] consulted for extensions the file's imports do not define
-      #   (those of `import option` files)
-      # @return [Protostar::Google::Protobuf::FileDescriptorProto]
-      def to_proto(pool: nil)
-        Proto.types::FileDescriptorProto.decode(serialize(pool: pool))
+    class MessageValue
+      # This value in wire format
+      # @param type [Message] the message type it is a value of
+      # @return [String] binary
+      def encode(type)
+        Proto::Codec.encode(type, self)
       end
 
-      # @param pool [Pool, nil] see {#to_proto}
-      # @param source_info [Boolean] include `source_code_info` when the file has it
-      # @return [String] the serialized FileDescriptorProto, byte for byte what protoc writes
-      def serialize(pool: nil, source_info: true)
-        hash = to_h
-        hash.delete(:source_code_info) unless source_info
-        Proto::HashCodec.encode(Proto.schema(:FileDescriptorProto), hash, extension_finder(pool))
-      end
-
-      # @api private
-      # @return [#call] extension full name to its {Field}, looked up in this
-      #   file, its imports, theirs, and then the pool
-      def extension_finder(pool = nil)
-        files = []
-        queue = [self]
-        seen = {}
-        until queue.empty?
-          f = queue.shift
-          next if seen[f.name]
-          seen[f.name] = true
-          files << f
-          queue.concat(f.dependency_files)
-        end
-        lambda do |name|
-          files.each do |f|
-            found = f.find_extension(name)
-            return found if found
-          end
-          found = pool&.find_symbol(name)
-          found if found.is_a?(Field) && found.extension?
-        end
+      # @param type [Message]
+      # @param bytes [String]
+      # @param extensions [#call, nil] (extendee full name, number) to an extension {Field};
+      #   fields it does not know stay in {#unknown_fields}
+      # @return [MessageValue]
+      def self.decode(type, bytes, extensions = nil)
+        Proto::Codec.decode(type, bytes, extensions)
       end
     end
 
-    class Builder
+    class Options
+      # These options as the descriptor.proto message they are (a
+      # `Protostar::Google::Protobuf::FieldOptions`, say), custom options as
+      # extension bytes the message keeps as unknown fields
+      # @return [Protostar::Message]
+      def to_proto
+        klass = Proto.types.const_get(type_name.delete_prefix("google.protobuf."))
+        klass.decode(encode(klass.descriptor))
+      end
+    end
+
+    class File
+      # This file as a `google.protobuf.FileDescriptorProto` of the bootstrap
+      # classes, as protoc's `FileDescriptor::CopyTo` writes it
+      # @param source_info [Boolean] include `source_code_info` when the file has it
+      # @param default_json_names [Boolean] false leaves out every `json_name` equal to the one
+      #   derived from the field name, as protoc's Ruby generator embeds descriptors
+      # @return [Protostar::Google::Protobuf::FileDescriptorProto]
+      def to_proto(source_info: true, default_json_names: true)
+        Proto::Writer.file(self, source_info: source_info, json_names: default_json_names)
+      end
+
+      # @param (see #to_proto)
+      # @return [String] the serialized FileDescriptorProto, byte for byte what protoc writes
+      def serialize(source_info: true, default_json_names: true)
+        to_proto(source_info: source_info, default_json_names: default_json_names).encode
+      end
+
       # Builds a file from a `google.protobuf.FileDescriptorProto` message (or
       # its bytes), as a plugin receives them. Extension bytes in options are
-      # decoded into `:__extensions` by the extensions the pool (or the file
-      # itself) defines; others stay under `:__unknown_fields`.
-      # @param message [Protostar::Google::Protobuf::FileDescriptorProto, String]
+      # decoded by the extensions the pool (or the file itself) defines;
+      # others stay {Options#unknown_fields}.
+      # @param proto [Protostar::Google::Protobuf::FileDescriptorProto, String]
       # @param pool [Pool] where dependencies and extensions are looked up; the file is not added
       # @return [File]
-      def self.from_proto(message, pool:)
-        bytes = message.is_a?(String) ? message : message.encode
-        Proto.build(bytes, pool)
+      def self.from_proto(proto, pool:)
+        proto = Proto.types::FileDescriptorProto.decode(proto) if proto.is_a?(String)
+        Proto::Reader.new(proto, pool).call
+      end
+    end
+
+    class Message
+      # @param default_json_names [Boolean] see {File#to_proto}
+      # @return [Protostar::Google::Protobuf::DescriptorProto]
+      def to_proto(default_json_names: true)
+        Proto::Writer.message(self, default_json_names)
+      end
+    end
+
+    class Field
+      # @param default_json_names [Boolean] see {File#to_proto}
+      # @return [Protostar::Google::Protobuf::FieldDescriptorProto]
+      def to_proto(default_json_names: true)
+        Proto::Writer.field(self, default_json_names)
+      end
+    end
+
+    class Oneof
+      # @return [Protostar::Google::Protobuf::OneofDescriptorProto]
+      def to_proto
+        Proto::Writer.oneof(self)
+      end
+    end
+
+    class Enum
+      # @return [Protostar::Google::Protobuf::EnumDescriptorProto]
+      def to_proto
+        Proto::Writer.enum(self)
+      end
+    end
+
+    class EnumValue
+      # @return [Protostar::Google::Protobuf::EnumValueDescriptorProto]
+      def to_proto
+        Proto::Writer.enum_value(self)
+      end
+    end
+
+    class Service
+      # @return [Protostar::Google::Protobuf::ServiceDescriptorProto]
+      def to_proto
+        Proto::Writer.service(self)
+      end
+    end
+
+    class Method
+      # @return [Protostar::Google::Protobuf::MethodDescriptorProto]
+      def to_proto
+        Proto::Writer.method(self)
+      end
+    end
+
+    class Descriptor
+      # {#to_proto} as a Hash, for reading; nothing builds from it
+      # @return [Hash]
+      def to_h
+        to_proto.to_h
       end
     end
 
@@ -408,7 +651,8 @@ module Protostar
       # Builds and adds a serialized FileDescriptorProto, unless a file of that name is here
       # @return [File]
       def add_serialized_file(bytes)
-        Proto.load_file(bytes, self)
+        proto = Proto.types::FileDescriptorProto.decode(bytes)
+        file(proto.name) || add(File.from_proto(proto, pool: self))
       end
 
       # @see Protostar.load_descriptor_set
