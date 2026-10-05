@@ -35,6 +35,8 @@ module Protostar
       #   `[type_url] { ... }` (protoc --decode does not; its DebugString does)
       # @param as_utf8 [Boolean] keep valid UTF-8 in strings readable instead of
       #   escaping every byte above 0x7e in octal as protoc does
+      # @param unknown_fields [Boolean] false leaves unknown fields out, as
+      #   protoc's Printer#SetHideUnknownFields does; extensions still print
       # @param registry [Types::Registry] where classes for Any and extensions are found
       # @param pool [Schema::Pool, nil] where extensions are found; by default
       #   the message's file and the files it imports

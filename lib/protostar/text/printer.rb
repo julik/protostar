@@ -37,8 +37,9 @@ module Protostar
           type.containing_message.equal?(info.descriptor.containing_message)
       end
 
-      def initialize(single_line: false, expand_any: true, as_utf8: false, registry: nil, pool: nil)
+      def initialize(single_line: false, expand_any: true, as_utf8: false, unknown_fields: true, registry: nil, pool: nil)
         @single_line = single_line
+        @unknown_fields = unknown_fields
         @expand_any = expand_any
         @as_utf8 = as_utf8
         @registry = registry
@@ -78,7 +79,7 @@ module Protostar
         end
         items.sort_by! { |info, _| info.number }
         items.each { |info, v| field(info, v, out, depth) }
-        unknown_fields(unknown.map { |u| [u.number, u.wire_type, u] }, out, depth)
+        unknown_fields(unknown.map { |u| [u.number, u.wire_type, u] }, out, depth) if @unknown_fields
       end
 
       # Moves the unknown fields that hold extensions into items; returns the rest
