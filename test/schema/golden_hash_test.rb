@@ -30,19 +30,10 @@ class GoldenHashTest < Minitest::Test
     skip "needs PROTOSTAR_ORACLE=1 and the google-protobuf gem" unless Oracle.available?
     Dir[File.join(Corpus::GOLDENS, "**", "*.json")].sort.each do |json|
       binpb = json.sub(/\.json\z/, ".binpb")
-      assert_equal without_removal_error(Oracle.file_hashes(binpb)), GoldenHash.load(json), json
+      assert_equal Oracle.file_hashes(binpb), GoldenHash.load(json), json
     end
   end
 
   private
 
-  # The .json goldens were printed by google-protobuf 4.31, whose descriptor.proto
-  # predates FeatureSupport.removal_error, so the JSON dropped it; the .binpb has it
-  def without_removal_error(value)
-    case value
-    when Hash then value.except(:removal_error).transform_values { |v| without_removal_error(v) }
-    when Array then value.map { |v| without_removal_error(v) }
-    else value
-    end
-  end
 end

@@ -25,9 +25,7 @@ module Protostar
       end
 
       # @return [Array<Method>] declaration order
-      def rpcs
-        @rpcs
-      end
+      attr_reader :rpcs
 
       # @param name [String, Symbol]
       # @return [Method, nil]
