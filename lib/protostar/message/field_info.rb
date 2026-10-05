@@ -80,7 +80,8 @@ module Protostar
       # @param field [Schema::Field]
       # @param index [Integer, nil]
       # @param classes [#call] resolves a Schema::Message or Schema::Enum to its Class or Module
-      def initialize(field, index, classes, siblings: nil)
+      # @param open_enums [Boolean] treat a closed enum as open
+      def initialize(field, index, classes, siblings: nil, open_enums: false)
         @descriptor = field
         @name = field.name
         @symbol = field.name.to_sym
@@ -101,7 +102,7 @@ module Protostar
         @end_tag = Wire.tag_bytes(@number, Wire::END_GROUP) if @kind == GROUP
         if @map
           @key = FieldInfo.new(field.map_key, nil, classes)
-          @value = FieldInfo.new(field.map_value, nil, classes)
+          @value = FieldInfo.new(field.map_value, nil, classes, open_enums: open_enums)
         elsif field.message_type
           @message_class = classes.call(field.message_type)
         end
@@ -109,7 +110,7 @@ module Protostar
           @enum_module = classes.call(field.enum_type)
           @enum_names = @enum_module.__names
           @enum_numbers = @enum_module.__numbers
-          @closed_enum = field.enum_type.closed?
+          @closed_enum = !open_enums && field.enum_type.closed?
         else
           @closed_enum = false
         end

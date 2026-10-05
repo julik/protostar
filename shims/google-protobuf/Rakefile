@@ -1,0 +1,27 @@
+# frozen_string_literal: true
+
+require "rake/testtask"
+
+# Google's ruby/tests keep their own file names (basic.rb, utf8.rb, ...)
+GOOGLE_TESTS = %w[basic basic_proto2 type_errors utf8].map { |n| "test/google/#{n}.rb" }
+
+Rake::TestTask.new(:test) do |t|
+  t.libs << "lib"
+  t.libs << "test"
+  t.test_files = FileList["test/**/*_test.rb"] + GOOGLE_TESTS
+  t.warning = false
+end
+
+desc "Regenerate the well-known types and the test fixtures with protostar's compiler"
+task :generate do
+  ruby "script/generate.rb"
+end
+
+namespace :generate do
+  desc "Fail when a generated file differs from what protostar's compiler writes"
+  task :check do
+    ruby "script/generate.rb", "check"
+  end
+end
+
+task default: :test
