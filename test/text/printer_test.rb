@@ -152,9 +152,12 @@ class TextPrinterTest < Minitest::Test
         value: "\\001"
       }
     TEXT
-    assert_equal expanded, Protostar::Text.print(m, registry: @any_set.registry)
-    plain = Protostar::Text.print(m, registry: @any_set.registry, expand_any: false)
+    assert_equal expanded, Protostar::Text.print(m, registry: @any_set.registry, expand_any: true)
+    plain = Protostar::Text.print(m, registry: @any_set.registry)
     assert_includes plain, %(type_url: "example.com/types/proto2_unittest.TestAny")
+    refute_includes plain, "[example.com", "Any is not expanded unless asked, as in protoc --decode"
+    assert_equal plain, m.to_text(registry: @any_set.registry)
+    assert_equal m, Protostar::Text.parse(test_any, plain, registry: @any_set.registry)
     assert_equal m, Protostar::Text.parse(test_any, expanded, registry: @any_set.registry)
   end
 

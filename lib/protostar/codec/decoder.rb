@@ -10,6 +10,8 @@ module Protostar
       F = Message::FieldInfo
       UTF_8 = Encoding::UTF_8
       BINARY = Encoding::BINARY
+      # unpack directive of a packed run of fixed-width values
+      PACKED = F::FIXED.transform_values { |(_, d)| "#{d}*".freeze }.freeze
 
       module_function
 
@@ -207,11 +209,11 @@ module Protostar
         list = (values[info.index] ||= [])
         kind = info.kind
         if (fixed = F::FIXED[kind])
-          width, directive = fixed
+          width = fixed[0]
           length = r.limit - r.pos
           raise DecodeError.new("packed #{info.descriptor.type} length #{length} is not a multiple of #{width}", offset: r.pos) unless (length % width).zero?
           # one unpack for the whole run instead of a read per element
-          list.concat(r.read_raw(length).unpack("#{directive}*"))
+          list.concat(r.read_raw(length).unpack(PACKED.fetch(kind)))
         elsif kind == F::ENUM
           names = info.enum_names
           closed = info.closed_enum

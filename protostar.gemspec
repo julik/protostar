@@ -19,7 +19,8 @@ Gem::Specification.new do |spec|
   spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/main/CHANGELOG.md"
   spec.metadata["rubygems_mfa_required"] = "true"
 
-  spec.files = Dir["lib/**/*.rb", "lib/protostar/compiler/include/**/*", "exe/*", "LICENSE.txt", "README.md",
+  spec.files = Dir["lib/**/*.rb", "lib/protostar/compiler/include/**/*", "sig/**/*.rbs", "exe/*", "LICENSE.txt",
+    "THIRD_PARTY_NOTICES.md", "README.md",
     "CHANGELOG.md"]
   spec.bindir = "exe"
   spec.executables = Dir["exe/*"].map { |f| File.basename(f) }
@@ -32,4 +33,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "magic_frozen_string_literal"
   spec.add_development_dependency "yard"
   spec.add_development_dependency "benchmark-ips"
+  spec.add_development_dependency "rbs", ">= 3.5"
 end

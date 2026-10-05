@@ -75,6 +75,15 @@ module Protostar
         a.dup.merge!(b)
       end
 
+      # What a field of this type makes of a value that is neither an
+      # instance nor a Hash. The well-known types' mixins override it, so that
+      # a Time can be assigned to a Timestamp field.
+      # @return [Message, nil] nil when the value cannot become one
+      # @api private
+      def __coerce(_value)
+        nil
+      end
+
       # @return [Message] a message with every field unset, bypassing argument parsing
       # @api private
       def __empty
@@ -147,10 +156,13 @@ module Protostar
       io
     end
 
+    # @param state [::JSON::State, nil] what the stdlib generator passes; its
+    #   indentation is honoured, so `JSON.pretty_generate(message)` is indented
     # @param options [Hash] see {JSON.encode}
     # @return [String] the message as proto3 JSON
-    def to_json(_state = nil, **options)
-      JSON.encode(self, **options)
+    def to_json(state = nil, **options)
+      json = JSON.encode(self, **options)
+      state.respond_to?(:object_nl) ? JSON.layout(json, state) : json
     end
 
     # @param options [Hash] see {Text.print}
@@ -315,21 +327,44 @@ module Protostar
     end
 
     def inspect
-      parts = []
-      self.class.__fields.each do |info|
-        v = @values[info.index]
-        next if v.nil?
-        next if (info.repeated || info.map) && v.empty?
-        next if !info.presence && !info.repeated && !info.map && info.zero?(v)
-        parts << "#{info.name}: #{v.inspect}"
-      end
+      parts = __shown.map { |name, v| "#{name}: #{v.inspect}" }
       name = self.class.descriptor.full_name
       parts.empty? ? "#<#{name}>" : "#<#{name} #{parts.join(", ")}>"
     end
     alias_method :to_s, :inspect
 
+    # For `pp`: the fields `inspect` shows, one per line with nested
+    # messages indented when they do not fit on one
     def pretty_print(q)
-      q.text(inspect)
+      Message.__pretty_print(q, self.class.descriptor.full_name, __shown)
+    end
+
+    # @api private
+    def self.__pretty_print(q, name, fields)
+      return q.text("#<#{name}>") if fields.empty?
+      q.group(2, "#<#{name}", ">") do
+        fields.each_with_index do |(field, v), i|
+          q.text(",") if i > 0
+          q.breakable
+          q.text("#{field}: ")
+          q.pp(v)
+        end
+      end
+    end
+
+    # The fields `inspect` shows: set, and not at their zero value
+    # @return [Array<Array(String, Object)>]
+    # @api private
+    def __shown
+      shown = []
+      self.class.__fields.each do |info|
+        v = @values[info.index]
+        next if v.nil?
+        next if (info.repeated || info.map) && v.empty?
+        next if !info.presence && !info.repeated && !info.map && info.zero?(v)
+        shown << [info.name, v]
+      end
+      shown
     end
 
     # @api private

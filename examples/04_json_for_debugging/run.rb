@@ -11,12 +11,12 @@ customer = Crm::Customer.new(
   lifetime_spend_cents: 9_007_199_254_740_993,
   avatar_digest: "\x9f\x86\xd0\x81".b,
   tags: ["early-adopter", "tea"],
-  signed_up_at: Protostar::Google::Protobuf::Timestamp.from_time(Time.utc(2024, 3, 1, 9, 30))
+  signed_up_at: Time.utc(2024, 3, 1, 9, 30)
 )
 
 puts customer.to_json
 
-puts JSON.pretty_generate(JSON.parse(customer.to_json))
+puts JSON.pretty_generate(customer)
 
 puts customer.to_json(emit_defaults: true, preserve_proto_field_names: true)
 

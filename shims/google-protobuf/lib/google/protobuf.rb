@@ -86,6 +86,7 @@ end
 require "google/protobuf/internal/convert"
 require "google/protobuf/descriptors"
 require "google/protobuf/descriptor_pool"
+require "google/protobuf/internal/well_known"
 require "google/protobuf/message"
 require "google/protobuf/repeated_field"
 require "google/protobuf/map"

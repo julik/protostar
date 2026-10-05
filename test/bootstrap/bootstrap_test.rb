@@ -13,7 +13,8 @@ class BootstrapTest < Minitest::Test
   end
 
   def test_every_bootstrap_file_is_committed
-    assert_equal Emitters::BOOTSTRAP.size, Bootstrap.generate.size
+    assert_equal Emitters::BOOTSTRAP.size, Bootstrap.generate.keys.count { |path| path.end_with?(".rb") }
+    assert_equal Emitters::BOOTSTRAP.size, Bootstrap.generate.keys.count { |path| path.end_with?(".rbs") }
     Bootstrap.generate.each_key { |path| assert File.file?(path), path }
   end
 

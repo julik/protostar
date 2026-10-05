@@ -41,7 +41,7 @@ module Protostar
         <<~RUBY
           # frozen_string_literal: true
           def __size(sizes)
-            values = @values
+            #{"values = @values" unless fields.empty?}
             total = 0
             #{fields.map { |f| size_field(f) }.join}
             total += Protostar::Codec::Sizer.unknown(@unknown) if @unknown
@@ -49,7 +49,7 @@ module Protostar
           end
 
           def __write(w, buf, sizes)
-            values = @values
+            #{"values = @values" unless fields.empty?}
             #{fields.map { |f| write_field(f) }.join}
             Protostar::Codec::Encoder.unknown(w, @unknown) if @unknown
             w.flush_if_full
@@ -95,7 +95,7 @@ module Protostar
         body = if f.map
           "total += Protostar::Codec::Sizer.map(#{info(f)}, v, sizes)\n"
         elsif f.packed
-          "run = sizes[v] = Protostar::Codec::Sizer.packed(#{info(f)}, v)\n" \
+          "#{packed_size(f)}sizes[v] = run\n" \
             "total += #{tag_bytes(f, Wire::LENGTH_DELIMITED).size} + #{varint_size("run")} + run\n"
         elsif f.repeated
           repeated_size(f, tag)
@@ -106,14 +106,40 @@ module Protostar
         "# #{f.name}\n#{present(f)}\n#{body}end\n"
       end
 
+      # Statements leaving the payload size of packed run `v` in `run`,
+      # checking each element as {Sizer.packed} does, without a call per element
+      def packed_size(f)
+        check = (f.kind == F::ENUM) ? "" : "Protostar::Codec::Sizer.invalid(#{info(f)}, e) unless #{valid(f, "e")}\n"
+        case f.kind
+        when *VARINT_KINDS, F::SINT32, F::SINT64, F::ENUM
+          "run = 0\n#{each_element("#{check}#{value_size(f, "e", "n")}run += n\n")}"
+        else
+          width = (f.kind == F::BOOL) ? 1 : F::FIXED.fetch(f.kind).first
+          "#{each_element(check)}run = #{width} * v.size\n"
+        end
+      end
+
+      # Statements appending packed run `v`'s payload
+      def packed_write(f)
+        case f.kind
+        when *VARINT_KINDS, F::SINT32, F::SINT64, F::ENUM then each_element(write_value(f, "e"))
+        when F::BOOL then each_element("buf << (e ? 1 : 0)\n")
+        when F::FLOAT then "buf << Protostar::Wire.pack_floats(v)\n"
+        else "v.pack(#{"#{F::FIXED.fetch(f.kind).last}*".inspect}, buffer: buf)\n"
+        end
+      end
+
       def repeated_size(f, tag)
         tag *= 2 if f.kind == F::GROUP
         src = "total += #{tag} * v.size\n"
         src << "k = #{info(f)}.message_class\n" if f.message?
-        src << "v.each do |e|\n"
-        src << "Protostar::Codec::Sizer.invalid(#{info(f)}, e) unless #{valid(f, "e")}\n" unless f.kind == F::ENUM
-        src << value_size(f, "e", "n")
-        src << "total += n\nend\n"
+        check = (f.kind == F::ENUM) ? "" : "Protostar::Codec::Sizer.invalid(#{info(f)}, e) unless #{valid(f, "e")}\n"
+        src << each_element("#{check}#{value_size(f, "e", "n")}total += n\n")
+      end
+
+      # A loop running `body` with each element of `v` in `e`
+      def each_element(body)
+        "v.each do |e|\n#{body}end\n"
       end
 
       # Whether an element of a repeated field can be written; elements may
@@ -131,7 +157,7 @@ module Protostar
       end
 
       def varint_size(var)
-        "((#{var} < 0x80 && #{var} >= 0) ? 1 : Protostar::Wire.varint_size(#{var}))"
+        "(#{var} < 0x80 && #{var} >= 0 ? 1 : (#{var} < 0x4000 && #{var} >= 0 ? 2 : Protostar::Wire.varint_size(#{var})))"
       end
 
       # Statements leaving the size of value `var`, tag excluded, in `out`
@@ -161,10 +187,9 @@ module Protostar
         body = if f.map
           "Protostar::Codec::Encoder.map(#{info(f)}, v, w, sizes)\n"
         elsif f.packed
-          "#{append(tag_bytes(f, Wire::LENGTH_DELIMITED))}#{write_varint("sizes[v]")}" \
-            "Protostar::Codec::Encoder.packed(#{info(f)}, v, w)\n"
+          "#{append(tag_bytes(f, Wire::LENGTH_DELIMITED))}#{write_varint("sizes[v]")}#{packed_write(f)}"
         elsif f.repeated
-          "v.each do |e|\n#{append(tag_bytes(f))}#{write_value(f, "e")}end\n"
+          each_element("#{append(tag_bytes(f))}#{write_value(f, "e")}")
         else
           "#{append(tag_bytes(f))}#{write_value(f, "v")}"
         end
@@ -177,7 +202,7 @@ module Protostar
       end
 
       def write_varint(expr)
-        "if (x = #{expr}) < 0x80 && x >= 0\nbuf << x\nelse\nw.write_varint(x)\nend\n"
+        "if (x = #{expr}) < 0x80 && x >= 0\nbuf << x\nelsif x < 0x4000 && x >= 0\nbuf << ((x & 0x7F) | 0x80) << (x >> 7)\nelse\nw.write_varint(x)\nend\n"
       end
 
       def write_value(f, var)
@@ -189,6 +214,8 @@ module Protostar
         when F::STRING, F::BYTES then "#{write_varint("#{var}.bytesize")}w.write_raw(#{var})\n"
         when F::MESSAGE then "#{write_varint("sizes[#{var}]")}#{var}.__write(w, buf, sizes)\n"
         when F::GROUP then "#{var}.__write(w, buf, sizes)\n#{append(tag_bytes(f, Wire::END_GROUP))}"
+        when F::FLOAT
+          "if #{var} == #{var}\n[#{var}].pack(\"e\", buffer: buf)\nelse\nbuf << Protostar::Wire.float_nan(#{var})\nend\n"
         else "[#{var}].pack(#{F::FIXED.fetch(f.kind).last.inspect}, buffer: buf)\n"
         end
       end

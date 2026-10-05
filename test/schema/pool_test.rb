@@ -82,15 +82,34 @@ class PoolTest < Minitest::Test
     assert_equal 2, @pool.files.size
   end
 
-  def test_extension_number_taken
+  def extension(name, number)
+    {name: name, number: number, label: :LABEL_OPTIONAL, type: :TYPE_INT32, extendee: ".M"}
+  end
+
+  def test_extension_number_taken_by_another_file_warns_once_and_keeps_the_first
     @pool.add(build(name: "m.proto", message_type: [{name: "M", extension_range: [{start: 1, end: 100}]}]))
-    @pool.add(build(name: "a.proto", dependency: ["m.proto"],
-      extension: [{name: "a", number: 5, label: :LABEL_OPTIONAL, type: :TYPE_INT32, extendee: ".M"}]))
-    error = assert_raises(S::Error) do
-      @pool.add(build(name: "b.proto", dependency: ["m.proto"],
-        extension: [{name: "b", number: 5, label: :LABEL_OPTIONAL, type: :TYPE_INT32, extendee: ".M"}]))
+    a = @pool.add(build(name: "a.proto", dependency: ["m.proto"], extension: [extension("a", 5)]))
+    b = nil
+    _, err = capture_io do
+      b = @pool.add(build(name: "b.proto", dependency: ["m.proto"], extension: [extension("b", 5), extension("c", 6)]))
     end
-    assert_includes error.message, "extension number 5"
+    assert_equal "b.proto: Extension number 5 has already been used in \"M\" by extension \"a\" defined in a.proto.\n", err
+    assert_same b, @pool.file("b.proto")
+    assert_same a.extensions.first, @pool.find_extension("M", 5)
+    assert_equal %w[a c], @pool.extensions_of("M").map(&:name)
+    _, err = capture_io do
+      @pool.add(build(name: "c.proto", dependency: ["m.proto"], extension: [extension("d", 5)]), warn: false)
+    end
+    assert_empty err
+  end
+
+  def test_extension_number_taken_twice_in_one_file
+    @pool.add(build(name: "m.proto", message_type: [{name: "M", extension_range: [{start: 1, end: 100}]}]))
+    error = assert_raises(S::Error) do
+      @pool.add(build(name: "a.proto", dependency: ["m.proto"], extension: [extension("a", 5), extension("b", 5)]))
+    end
+    assert_equal "extension number 5 of \"M\" is already used by \"a\" (redefined by \"b\")", error.message
+    refute @pool.include?("a.proto")
   end
 
   def test_rejects_unbuilt_things

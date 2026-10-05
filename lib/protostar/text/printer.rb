@@ -37,7 +37,7 @@ module Protostar
           type.containing_message.equal?(info.descriptor.containing_message)
       end
 
-      def initialize(single_line: false, expand_any: true, as_utf8: false, unknown_fields: true, registry: nil, pool: nil)
+      def initialize(single_line: false, expand_any: false, as_utf8: false, unknown_fields: true, registry: nil, pool: nil)
         @single_line = single_line
         @unknown_fields = unknown_fields
         @expand_any = expand_any

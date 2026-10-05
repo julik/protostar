@@ -25,10 +25,12 @@ module Protostar
 
       def source(fields)
         branches = fields.map { |info| branch(info) }.join
+        packed = fields.select { |info| info.packable && VARINT_KINDS.include?(info.kind) }.map { |info| packed_method(info) }
         <<~RUBY
           # frozen_string_literal: true
+          #{packed.join}
           def __decode_fields(r, depth, end_group, frozen)
-            values = @values
+            #{"values = @values" unless fields.empty?}
             buf = r.buffer
             limit = r.limit
             pos = r.pos
@@ -82,9 +84,31 @@ module Protostar
         if info.packable
           packed_tag = (info.number << 3) | Wire::LENGTH_DELIMITED
           out << "when #{packed_tag} # #{info.name}, packed\n"
-          out << slow("Protostar::Codec::Decoder.packed(self, values, self.class.__fields[#{i}], r)")
+          out << if VARINT_KINDS.include?(info.kind)
+            "#{varint("n")}raise Protostar::DecodeError.new(\"length \#{n} runs past the end of the input\", offset: pos) " \
+              "if pos + n > limit\npos = __decode_packed#{i}(r, buf, pos, pos + n, limit, (values[#{i}] ||= []))\n"
+          else
+            slow("Protostar::Codec::Decoder.packed(self, values, self.class.__fields[#{i}], r)")
+          end
         end
         out
+      end
+
+      VARINT_KINDS = [F::INT32, F::INT64, F::UINT32, F::UINT64, F::SINT32, F::SINT64, F::BOOL].freeze
+
+      # A method reading a packed run of varints into `list` in one loop,
+      # rather than a Decoder call per element; it returns the position
+      # after the run. Kept out of `__decode_fields`, which YJIT runs slower
+      # with the loops inline.
+      def packed_method(info)
+        <<~RUBY
+          def __decode_packed#{info.index}(r, buf, pos, stop, limit, list)
+            while pos < stop
+            #{read(info, "stop")}list << v
+            end
+            pos
+          end
+        RUBY
       end
 
       # Hands the reader to a Decoder method and picks the position back up
@@ -92,18 +116,22 @@ module Protostar
         "r.pos = pos\n#{call}\npos = r.pos\n"
       end
 
-      def varint(var)
+      # Source reading a varint into `var`, inline when it is one or two
+      # bytes; `lim` is where its input ends (a packed run's end, say)
+      def varint(var, lim = "limit")
+        fallback = if lim == "limit"
+          "r.pos = pos\n#{var} = r.read_varint\npos = r.pos\n"
+        else
+          "r.pos = pos\nr.pop_limit(#{lim})\n#{var} = r.read_varint\nr.pop_limit(limit)\npos = r.pos\n"
+        end
         <<~RUBY
-          if pos < limit && (#{var} = buf.getbyte(pos)) < 0x80
+          if pos < #{lim} && (#{var} = buf.getbyte(pos)) < 0x80
             pos += 1
-          elsif pos + 1 < limit && (b = buf.getbyte(pos + 1)) < 0x80
+          elsif pos + 1 < #{lim} && (b = buf.getbyte(pos + 1)) < 0x80
             #{var} = (#{var} & 0x7F) | (b << 7)
             pos += 2
           else
-            r.pos = pos
-            #{var} = r.read_varint
-            pos = r.pos
-          end
+          #{fallback}end
         RUBY
       end
 
@@ -116,15 +144,15 @@ module Protostar
       end
 
       # Source that leaves the field's next value in `v`
-      def read(info)
+      def read(info, lim = "limit")
         case info.kind
-        when F::INT32 then "#{varint("v")}v -= 0x1_0000_0000 if (v &= 0xFFFF_FFFF) >= 0x8000_0000\n"
-        when F::INT64 then "#{varint("v")}v -= 0x1_0000_0000_0000_0000 if v >= 0x8000_0000_0000_0000\n"
-        when F::UINT32 then "#{varint("v")}v &= 0xFFFF_FFFF\n"
-        when F::UINT64 then varint("v")
-        when F::SINT32 then "#{varint("v")}v &= 0xFFFF_FFFF\nv = (v >> 1) ^ -(v & 1)\n"
-        when F::SINT64 then "#{varint("v")}v = (v >> 1) ^ -(v & 1)\n"
-        when F::BOOL then "#{varint("v")}v = v != 0\n"
+        when F::INT32 then "#{varint("v", lim)}v -= 0x1_0000_0000 if (v &= 0xFFFF_FFFF) >= 0x8000_0000\n"
+        when F::INT64 then "#{varint("v", lim)}v -= 0x1_0000_0000_0000_0000 if v >= 0x8000_0000_0000_0000\n"
+        when F::UINT32 then "#{varint("v", lim)}v &= 0xFFFF_FFFF\n"
+        when F::UINT64 then varint("v", lim)
+        when F::SINT32 then "#{varint("v", lim)}v &= 0xFFFF_FFFF\nv = (v >> 1) ^ -(v & 1)\n"
+        when F::SINT64 then "#{varint("v", lim)}v = (v >> 1) ^ -(v & 1)\n"
+        when F::BOOL then "#{varint("v", lim)}v = v != 0\n"
         when F::STRING, F::BYTES then bytes(info)
         else fixed(*F::FIXED.fetch(info.kind))
         end
@@ -148,7 +176,7 @@ module Protostar
       end
 
       def enum(info)
-        src = "start = pos\n#{varint("v")}"
+        src = info.closed_enum ? "start = pos\n#{varint("v")}" : varint("v")
         src << "v -= 0x1_0000_0000 if (v &= 0xFFFF_FFFF) >= 0x8000_0000\n"
         src << "if (e = self.class.__fields[#{info.index}].enum_names[v])\n"
         src << store(info, "e")

@@ -108,5 +108,11 @@ class DecodeErrorTest < Minitest::Test
     assert_decode_error "\x0A\x02\x08", "length 2 runs past the end", 2, klass: maps
     assert_decode_error "\x0A\x02\x0C\x00", "unmatched end of group 1", 2, klass: maps
     assert_decode_error "\xFA\x01\x01\x96", "truncated varint", 3
+    assert_decode_error "\xFA\x01\x01\x96\x01", "truncated varint", 3
+    assert_decode_error "\xFA\x01\x03\x01\x96\x96\x01", "truncated varint", 4
+    assert_decode_error "\xFA\x01\x05\x01", "length 5 runs past the end", 3
+    sint = CodecFixtures.load("google/protobuf/unittest.proto")["proto2_unittest.TestPackedTypes"]
+    assert_equal [-1, 1, -64, 64], sint.decode("\xF2\x05\x05\x01\x02\x7F\x80\x01".b).packed_sint32
+    assert_equal [1, 2], @all.decode("\xFA\x01\x01\x01\xFA\x01\x01\x02".b).repeated_int32, "runs append"
   end
 end

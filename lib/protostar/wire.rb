@@ -69,6 +69,25 @@ module Protostar
     def self.unzigzag(value)
       (value >> 1) ^ -(value & 1)
     end
+
+    # The four little-endian bytes of a NaN as a float, the way C converts a
+    # double NaN to float: sign and the top 23 bits of the payload kept, quiet
+    # bit set. `pack("e")` instead writes the same NaN whatever the value.
+    # @param nan [Float] a NaN
+    # @return [String] binary
+    def self.float_nan(nan)
+      bits = [nan].pack("E").unpack1("Q<")
+      [((bits >> 32) & 0x8000_0000) | 0x7FC0_0000 | ((bits >> 29) & 0x7F_FFFF)].pack("V")
+    end
+
+    # A run of floats as packed bytes, NaNs written by {float_nan}
+    # @param list [Array<Float, Integer>]
+    # @return [String] binary
+    def self.pack_floats(list)
+      bytes = list.pack("e*")
+      list.each_with_index { |v, i| bytes[4 * i, 4] = float_nan(v) if v.is_a?(Float) && v.nan? }
+      bytes
+    end
   end
 end
 

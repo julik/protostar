@@ -121,3 +121,9 @@ bundle exec rake generate:check   # fail when they are out of date
 
 `script/record_differential.rb` re-records `test/differential/` under Google's
 gem; run it outside the bundle, with `google-protobuf` 4.36.2 installed.
+
+## Licence
+
+MIT (`LICENSE.txt`). The generated `_pb.rb` files and the Google tests under `test/google/`
+come from Google's Protocol Buffers, under the BSD 3-Clause licence; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

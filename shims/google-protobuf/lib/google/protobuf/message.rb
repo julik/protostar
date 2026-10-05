@@ -32,6 +32,10 @@ module Google
           plan.each { |fd| define_field(accessors, fd, taken) }
           oneofs.each { |o| define_oneof(accessors, o, taken) }
           klass.prepend(accessors)
+          if (well_known = WellKnown::MIXINS[descriptor.name])
+            klass.include(well_known)
+            klass.extend(well_known::ClassMethods)
+          end
         end
 
         # Methods a message already has; a field named like one is reached through [] and []=

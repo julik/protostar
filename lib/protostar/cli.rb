@@ -68,7 +68,7 @@ module Protostar
         end
         o.on("--ruby_out=DIR", "Write protostar's native Ruby (*_pb.rb)") { |v| opts[:ruby] = v }
         o.on("--google_out=DIR", "Write protoc's google-protobuf Ruby (*_pb.rb)") { |v| opts[:google] = v }
-        o.on("--rbs_out=DIR", "Write RBS signatures (*_pb.rbs)") { |v| opts[:rbs] = v }
+        o.on("--rbs_out=DIR", "Write RBS signatures (*_pb.rbs): for protostar's classes with --ruby_out, else protoc's") { |v| opts[:rbs] = v }
         o.on("--grpc_out=DIR", "Write gRPC service stubs (*_services_pb.rb)") { |v| opts[:grpc] = v }
         o.on("--descriptor_set_out=FILE", "Write a FileDescriptorSet") { |v| opts[:descriptor_set] = v }
         o.on("--include_imports", "With --descriptor_set_out, include every import") { opts[:include_imports] = true }
@@ -116,11 +116,11 @@ module Protostar
         check_dir(dir)
         flag = "--#{kind}_out"
         named.each do |file|
-          if kind == :rbs && file.syntax == :editions
+          if kind == :rbs && file.syntax == :editions && !native_rbs?(opts)
             raise Failure, "#{file.name}: #{RBS_EDITIONS}--rbs_out: "
           end
           begin
-            emitter(kind, compiler).emit([file]).each { |path, content| written[::File.join(dir, path)] = content }
+            emitter(kind, compiler, opts).emit([file]).each { |path, content| written[::File.join(dir, path)] = content }
           rescue Emitters::Error => e
             raise Failure, "#{flag}: #{file.name}: #{e.message}"
           end
@@ -134,13 +134,19 @@ module Protostar
       written
     end
 
-    def emitter(kind, compiler)
+    def emitter(kind, compiler, opts)
       case kind
       when :ruby then Emitters::Ruby.new
       when :google then Emitters::GoogleRuby.new(pool: compiler.pool)
-      when :rbs then Emitters::Rbs.new
+      when :rbs then native_rbs?(opts) ? Emitters::ProtostarRbs.new : Emitters::Rbs.new
       when :grpc then Emitters::Grpc.new
       end
+    end
+
+    # --rbs_out describes protostar's classes next to --ruby_out, and
+    # google-protobuf's as protoc does otherwise
+    def native_rbs?(opts)
+      opts[:ruby] && !opts[:google]
     end
 
     def check_dir(dir)

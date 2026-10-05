@@ -14,7 +14,7 @@ module Protostar
       # A named thing: `kind` is :message, :enum, :enum_value, :field,
       # :oneof, :service, :method or :package; `object` is the AST node for
       # the file being linked and the Schema descriptor otherwise
-      Symbol = Struct.new(:kind, :full_name, :file_name, :object) do
+      Symbol = ::Struct.new(:kind, :full_name, :file_name, :object) do
         def type?
           kind == :message || kind == :enum
         end

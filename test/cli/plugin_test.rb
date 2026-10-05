@@ -47,6 +47,14 @@ class PluginTest < Minitest::Test
     assert_equal Emitters::Ruby.new.emit([directory]), response.file.to_h { |f| [f.name, f.content] }
   end
 
+  def test_rbs_with_native_ruby_describes_protostar_classes
+    response = Response.decode(Protostar::Plugin.respond(request("ruby,rbs", ["acme/directory.proto", "acme/editions.proto"]).encode))
+    assert_equal "", response.error
+    named = files.select { |f| %w[acme/directory.proto acme/editions.proto].include?(f.name) }
+    expected = Emitters::Ruby.new.emit(named).merge(Emitters::ProtostarRbs.new.emit(named))
+    assert_equal expected, response.file.to_h { |f| [f.name, f.content] }
+  end
+
   def test_google_format
     response = Response.decode(Protostar::Plugin.respond(request("google").encode))
     directory = files.find { |f| f.name == "acme/directory.proto" }

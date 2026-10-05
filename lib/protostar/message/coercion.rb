@@ -56,6 +56,12 @@ module Protostar
           klass = info.message_class
           return value if value.instance_of?(klass)
           return klass.new(value) if value.is_a?(Hash)
+          begin
+            coerced = klass.__coerce(value)
+          rescue RangeError
+            raise_type(info, value, "a finite value in #{klass.descriptor.full_name}'s range")
+          end
+          return coerced if coerced
           raise_type(info, value, "a #{klass.descriptor.full_name} or a Hash")
         end
         scalar(info, value)
@@ -91,11 +97,14 @@ module Protostar
 
       # The nearest single-precision value, as C's double-to-float conversion
       # gives it. `pack("e")` alone turns everything above FLT_MAX into
-      # Infinity, even values that round down to FLT_MAX.
+      # Infinity, even values that round down to FLT_MAX, and every NaN into
+      # the same one.
       def float32(f)
         a = f.abs
         if a > FLOAT_MAX && a < FLOAT_ROUNDS_TO_MAX
           (f > 0) ? FLOAT_MAX : -FLOAT_MAX
+        elsif f.nan?
+          Wire.float_nan(f).unpack1("e")
         else
           [f].pack("e").unpack1("e")
         end

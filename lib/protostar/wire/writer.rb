@@ -88,7 +88,11 @@ module Protostar
 
       # @return [self]
       def write_float(value)
-        [value].pack("e", buffer: @string)
+        if value.is_a?(Float) && value.nan?
+          @string << Wire.float_nan(value)
+        else
+          [value].pack("e", buffer: @string)
+        end
         self
       end
 

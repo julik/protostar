@@ -55,6 +55,19 @@ class CliTest < Minitest::Test
     end
   end
 
+  def test_rbs_next_to_ruby_out_describes_protostar_classes
+    Dir.mktmpdir do |dir|
+      out, err, status = protostar("-I", "proto", "--ruby_out=#{dir}", "--rbs_out=#{dir}",
+        "acme/person.proto", "acme/editions.proto")
+      assert_equal ["", "", 0], [out, err, status]
+      files = compiled("acme/person.proto", "acme/editions.proto").select { |f| f.name.start_with?("acme/") }
+      Emitters::ProtostarRbs.new.emit(files).each do |path, content|
+        assert_equal content, File.read(File.join(dir, path)), path
+      end
+      assert_includes File.read(File.join(dir, "acme/person_pb.rbs")), "< ::Protostar::Message"
+    end
+  end
+
   def test_descriptor_set_flags
     Dir.mktmpdir do |dir|
       set = File.join(dir, "set.binpb")

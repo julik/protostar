@@ -16,7 +16,9 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
-      - run: bundle exec rake test
+      - name: tests, under ruby -w, failing on warnings from lib/
+        run: bundle exec rake test:warnings
+      - run: bundle exec rake rbs:validate
   oracle:
     name: cross-check against google-protobuf
     runs-on: ubuntu-latest
@@ -29,6 +31,9 @@ jobs:
         env:
           BUNDLE_WITH: oracle
       - run: bundle exec rake test
+      - run: bundle exec rake rbs:validate
+      - name: no warnings from lib/ under ruby -w
+        run: bundle exec rake test:warnings
         env:
           PROTOSTAR_ORACLE: "1"
   shim:

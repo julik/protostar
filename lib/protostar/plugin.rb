@@ -59,18 +59,19 @@ module Protostar
         raise Protostar::Error, "ruby and google both write *_pb.rb; ask for one of them"
       end
       pool = Schema::Pool.new
-      request.proto_file.each { |proto| pool.add(Schema::Builder.from_proto(proto, pool: pool)) }
+      # protoc has already warned about extension numbers used twice
+      request.proto_file.each { |proto| pool.add(Schema::Builder.from_proto(proto, pool: pool), warn: false) }
       files = request.file_to_generate.map do |name|
         pool.file(name) || raise(Protostar::Error, "#{name} is not among the request's proto files")
       end
       generated = {}
       outputs.each do |output|
         files.each do |file|
-          if output == "rbs" && file.syntax == :editions
+          if output == "rbs" && file.syntax == :editions && !outputs.include?("ruby")
             raise Protostar::Error, "#{file.name}: #{CLI::RBS_EDITIONS}"
           end
           begin
-            generated.merge!(emitter(output, pool).emit([file]))
+            generated.merge!(emitter(output, pool, outputs).emit([file]))
           rescue Emitters::Error => e
             raise Protostar::Error, "#{file.name}: #{e.message}"
           end
@@ -79,11 +80,11 @@ module Protostar
       generated
     end
 
-    def emitter(output, pool)
+    def emitter(output, pool, outputs)
       case output
       when "ruby" then Emitters::Ruby.new
       when "google" then Emitters::GoogleRuby.new(pool: pool)
-      when "rbs" then Emitters::Rbs.new
+      when "rbs" then outputs.include?("ruby") ? Emitters::ProtostarRbs.new : Emitters::Rbs.new
       when "grpc" then Emitters::Grpc.new
       end
     end
