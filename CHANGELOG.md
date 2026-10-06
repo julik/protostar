@@ -39,6 +39,10 @@ together and depend on each other's exact version.
 - `shims/google-protobuf`: a gem named `google-protobuf` providing Google's `Google::Protobuf` API on protostar, so `grpc`, `googleapis-common-protos-types` and protoc's generated files run unchanged. Google's own Ruby tests pass against it.
 - Its own descriptor pool, so native and Google-format generated code can be loaded side by side.
 
+### Development
+
+- `rake test` runs the test files in a forked worker per core, sharded by recorded timings (about 26 s instead of 88 s on 10 cores); `PARALLEL=0` keeps the serial run. The shim's suite uses test-unit's process workers.
+
 ### Deprecated
 
 - `Compiler#compile_to_hashes`: use `compile` and `to_proto`. Goes away in 0.2.0.

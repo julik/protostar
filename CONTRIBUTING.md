@@ -40,6 +40,10 @@ Run the `rake` default task to make sure code is properly formatted and document
 full gate before a PR is a bit longer, because protoc is the oracle for most of this
 project and its expectations are recorded as fixtures:
 
+* `rake test` runs the test files in a worker process per core; `PARALLEL=0 rake test` runs
+  them in one, which is easier to debug. Make temp dirs with `tmpdir` and ports with
+  `free_port`, and define classes into a registry of the test's own: the guards in
+  `test/parallel/isolation_test.rb` fail otherwise
 * `rake test:warnings` runs the suite under `ruby -w` and fails on any warning from `lib/`
 * `rake shim:test` runs the `google-protobuf` shim's suite from its own bundle
 * `rake bootstrap:check`, `rake examples:check` and `rake conformance:check` fail when a

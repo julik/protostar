@@ -506,6 +506,10 @@ does:
   `rake conformance:check`. After changing an emitter, run the matching `:regenerate`.
 - `test/release/` builds both gems, installs them into an empty GEM_HOME and uses them
   from a subprocess with no bundle.
+- `rake test` runs the test files in a forked worker per core (`test/parallel.rb`);
+  `PARALLEL=0`, or `TEST=` naming one file, runs them in one process. Tests make temp
+  dirs with `tmpdir`, ports with `free_port`, and keep generated classes out of the
+  process-wide registry; `test/parallel/isolation_test.rb` checks that they do.
 
 [docs/design.md](docs/design.md) is the map of the code; [docs/compiler-internals.md](docs/compiler-internals.md)
 follows the compiler stage by stage. [examples/](examples/README.md) has four runnable
