@@ -22,6 +22,9 @@ of the imagination, _as anti-Ruby spirited as things can be._
 This is why. We sacrifice some speed (primarily in encoding and allocations) for the
 luxury of having a readable, predictable, Ruby-spirited protobuf universum.
 
+One that doesn't scream _"We despise you and your ridiculous slow toy language, but we made it
+work because we were told to"_ every time you touch it in your `irb`.
+
 protostar is one gem. It passes protobuf's own conformance suite, reproduces protoc's
 descriptors byte for byte on protoc's own test files, and runs Google's Ruby tests through
 its `google-protobuf` shim.
