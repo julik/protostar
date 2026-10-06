@@ -9,3 +9,4 @@ gets picked up.
 - `error-message-rough-edges.md`: two error messages that do not say what went wrong
 - `github-install-routes.md`: README install lines need the repo public; Bundler override notes
 - `introspectable-message-classes.md`: Klass.reflection, registry, sizes, explain printers
+- `marshal-and-json-round-trips.md`: Marshal as wire bytes, as_json for Rails, ActiveJob serializer
