@@ -11,6 +11,19 @@ module Protostar
         "\\" => 92, "'" => 39, "\"" => 34, "?" => 63
       }.freeze
 
+      # protoc's SimpleDtoa: the shortest of %.15g and %.17g that reads back exactly
+      # @param value [Float]
+      # @return [String]
+      def self.simple_dtoa(value)
+        return "inf" if value == Float::INFINITY
+        return "-inf" if value == -Float::INFINITY
+        return "nan" if value.nan?
+        text = format("%.15g", value)
+        # the 15-digit form is kept only when it reads back as the very same double
+        text = format("%.17g", value) unless [Float(text)].pack("G") == [value].pack("G")
+        text
+      end
+
       # @param text [String] as protoc writes it
       # @param type [Symbol] the field's short type
       # @param enum [Enum, nil] the field's enum type

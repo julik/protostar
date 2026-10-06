@@ -2,39 +2,6 @@
 
 module Protostar
   module Schema
-    class File
-      # Starts describing a file. The draft creates the real descriptors as it
-      # goes; {Draft::File#resolve} links them and {Draft::File#freeze!} hands
-      # back the finished, shareable file.
-      #
-      #   file = Schema::File.draft("shop.proto", package: "shop", syntax: :proto3)
-      #   file.message("Item") do |m|
-      #     m.field "name", 1, :string
-      #     m.field "price_cents", 2, :int64, optional: true
-      #     m.map "stock", 3, key: :string, value: :int32
-      #   end
-      #   file.resolve(pool)
-      #   file.freeze!  # => #<Protostar::Schema::File shop.proto>
-      #
-      # @param name [String] the file name as imported
-      # @param package [String, nil]
-      # @param syntax [Symbol, nil] :proto2, :proto3 or :editions; nil is proto2, and
-      #   unlike an explicit :proto2 leaves `syntax` out of the FileDescriptorProto, as protoc does
-      # @param edition [Symbol, Integer, nil] e.g. :EDITION_2023; implies :editions
-      # @param dependencies [Array<String>] imported file names
-      # @param public_dependencies [Array<String, Integer>] names or indexes of `import public` files
-      # @param weak_dependencies [Array<String, Integer>]
-      # @param option_dependencies [Array<String>] `import option` file names
-      # @param options [Hash, nil] the file's options
-      # @return [Draft::File]
-      def self.draft(name, package: nil, syntax: nil, edition: nil, dependencies: [], public_dependencies: [],
-        weak_dependencies: [], option_dependencies: [], options: nil)
-        Draft::File.new(name, package: package, syntax: syntax, edition: edition, dependencies: dependencies,
-          public_dependencies: public_dependencies, weak_dependencies: weak_dependencies,
-          option_dependencies: option_dependencies, options: options)
-      end
-    end
-
     # The construction stage of {Schema}: mutable handles that create
     # descriptors, then link, resolve and freeze them. Map entries, the
     # synthetic oneofs of proto3 `optional` fields, group fields and json
@@ -93,7 +60,7 @@ module Protostar
         case value
         when nil, String then value
         when Symbol then value.to_s
-        when Float then Compiler.simple_dtoa(value)
+        when Float then DefaultValue.simple_dtoa(value)
         else value.to_s
         end
       end
@@ -807,3 +774,6 @@ module Protostar
     end
   end
 end
+
+require_relative "draft/copy"
+require_relative "draft/resolution"

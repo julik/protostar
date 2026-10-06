@@ -264,6 +264,15 @@ module Protostar
 
       # Returned by descriptors before they are resolved
       EMPTY = new.freeze
+
+      # These options as the descriptor.proto message they are (a
+      # `Protostar::Google::Protobuf::FieldOptions`, say), custom options as
+      # extension bytes the message keeps as unknown fields
+      # @return [Protostar::Message]
+      def to_proto
+        klass = Proto.types.const_get(type_name.delete_prefix("google.protobuf."))
+        klass.decode(encode(klass.descriptor))
+      end
     end
 
     FileOptions = Options.define("FileOptions", :java_package, :java_outer_classname, :optimize_for, :go_package,
@@ -336,6 +345,22 @@ module Protostar
           out << bytes.b
         end
         out.freeze
+      end
+
+      # This value in wire format
+      # @param type [Message] the message type it is a value of
+      # @return [String] binary
+      def encode(type)
+        Proto::Codec.encode(type, self)
+      end
+
+      # @param type [Message]
+      # @param bytes [String]
+      # @param extensions [#call, nil] (extendee full name, number) to an extension {Field};
+      #   fields it does not know stay in {#unknown_fields}
+      # @return [MessageValue]
+      def self.decode(type, bytes, extensions = nil)
+        Proto::Codec.decode(type, bytes, extensions)
       end
     end
   end

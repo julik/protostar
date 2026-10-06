@@ -759,29 +759,3 @@ module Protostar
 end
 
 require_relative "builder/generator"
-
-module Protostar
-  class Message
-    class << self
-      # A message made with a {Builder} block, or with `new` when there is no
-      # block. `fields` are written first; the block may set them again (the
-      # bytes never leave the process, so overwrites are allowed).
-      #
-      #   person = Acme::Person.build(name: "Jane") do |pb|
-      #     pb.address { pb.street "x" }
-      #   end
-      #
-      # @param fields [Hash, nil] field names to values, as {#initialize} takes them
-      # @yieldparam pb [Builder]
-      # @return [Message]
-      def build(fields = nil, **more, &block)
-        return new(fields, **more) unless block
-        Builder.message(self, overwrites: true) do |pb|
-          pb.merge!(fields) if fields
-          pb.merge!(more) unless more.empty?
-          block.call(pb)
-        end
-      end
-    end
-  end
-end

@@ -6,6 +6,9 @@ module Protostar
   # {File#to_proto} and {File.from_proto} translate to and from protoc's
   # `FileDescriptorProto`.
   module Schema
+    autoload :Draft, ::File.expand_path("schema/draft", __dir__)
+    autoload :Proto, ::File.expand_path("schema/proto", __dir__)
+
     # Raised for malformed descriptors, missing dependencies and pool clashes
     class Error < Protostar::Error; end
 
@@ -60,6 +63,3 @@ require_relative "schema/service"
 require_relative "schema/resolver"
 require_relative "schema/pool"
 require_relative "schema/default_value"
-require_relative "schema/draft"
-require_relative "schema/draft/copy"
-require_relative "schema/draft/resolution"

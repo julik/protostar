@@ -21,6 +21,13 @@ module Protostar
       # The Ruby module the bootstrap's `google.protobuf` package lives in
       BOOTSTRAP_NAMESPACE = "Protostar::Google::Protobuf"
 
+      autoload :Ruby, ::File.expand_path("emitters/ruby", __dir__)
+      autoload :DescriptorSet, ::File.expand_path("emitters/descriptor_set", __dir__)
+      autoload :GoogleRuby, ::File.expand_path("emitters/google_ruby", __dir__)
+      autoload :Rbs, ::File.expand_path("emitters/rbs", __dir__)
+      autoload :ProtostarRbs, ::File.expand_path("emitters/protostar_rbs", __dir__)
+      autoload :Grpc, ::File.expand_path("emitters/grpc", __dir__)
+
       # protoc's Ruby generator naming rules (ruby_generator.cc), which grpc
       # stubs and application code depend on
       module Naming
@@ -259,10 +266,3 @@ module Protostar
     end
   end
 end
-
-require_relative "emitters/ruby"
-require_relative "emitters/descriptor_set"
-require_relative "emitters/google_ruby"
-require_relative "emitters/rbs"
-require_relative "emitters/protostar_rbs"
-require_relative "emitters/grpc"

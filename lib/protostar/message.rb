@@ -73,6 +73,45 @@ module Protostar
         JSON.encode(message, **options)
       end
 
+      # @api private
+      attr_reader :__view_class
+
+      # @return [Class] the {View} subclass whose instances read this class's messages
+      def view_class
+        @__view_class || raise(NotImplementedError, "#{self} is abstract; define message classes with Protostar::Types")
+      end
+
+      # A read-only view of an encoded message that decodes fields only when read
+      # @param bytes [String, IO::Buffer] not copied; must not change while the view is used
+      # @param offset [Integer] where the message starts in `bytes`
+      # @param length [Integer, nil] its length, by default up to the end of `bytes`
+      # @param recursion_limit [Integer] how deep messages may nest
+      # @return [View]
+      # @raise [DecodeError] when the top level of the message is malformed
+      def view(bytes, offset: 0, length: nil, recursion_limit: Codec::Decoder::RECURSION_LIMIT)
+        view_class.__open(bytes, offset, length, recursion_limit)
+      end
+
+      # A message made with a {Builder} block, or with `new` when there is no
+      # block. `fields` are written first; the block may set them again (the
+      # bytes never leave the process, so overwrites are allowed).
+      #
+      #   person = Acme::Person.build(name: "Jane") do |pb|
+      #     pb.address { pb.street "x" }
+      #   end
+      #
+      # @param fields [Hash, nil] field names to values, as {#initialize} takes them
+      # @yieldparam pb [Builder]
+      # @return [Message]
+      def build(fields = nil, **more, &block)
+        return new(fields, **more) unless block
+        Builder.message(self, overwrites: true) do |pb|
+          pb.merge!(fields) if fields
+          pb.merge!(more) unless more.empty?
+          block.call(pb)
+        end
+      end
+
       # @return [Message] a new message with `b` merged into a copy of `a`
       def merge(a, b)
         a.dup.merge!(b)

@@ -93,6 +93,12 @@ module Protostar
       def message_set_wire_format?
         options.message_set_wire_format?
       end
+
+      # @param default_json_names [Boolean] see {File#to_proto}
+      # @return [Protostar::Google::Protobuf::DescriptorProto]
+      def to_proto(default_json_names: true)
+        Proto::Writer.message(self, default_json_names)
+      end
     end
   end
 end
