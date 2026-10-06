@@ -37,6 +37,8 @@ class BuilderRactorTest < Minitest::Test
   def test_a_builder_class_first_needed_in_another_ractor
     # no other test builds this class at the top level
     wrapper = TYPES.fetch("google.protobuf.Int64Value")
+    # Builder itself is autoloaded here, which Ruby 3.2 and 3.3 cannot do in another Ractor
+    Protostar::Builder.for(Person)
     value, kept = in_ractor(wrapper) do |klass|
       [Protostar::Builder.message(klass) { |pb| pb.value 5 }.value, !klass.instance_variable_get(:@__builder).nil?]
     end

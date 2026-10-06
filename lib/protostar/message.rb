@@ -18,6 +18,10 @@ module Protostar
     EMPTY_ARRAY = [].freeze
     EMPTY_HASH = {}.freeze
 
+    # Needed while a class is defined, never after
+    autoload :Accessors, ::File.expand_path("message/accessors", __dir__)
+    autoload :Reflection, ::File.expand_path("message/reflection", __dir__)
+
     class << self
       # @return [Schema::Message]
       attr_reader :descriptor
@@ -565,6 +569,4 @@ module Protostar
 end
 
 require_relative "message/field_info"
-require_relative "message/reflection"
 require_relative "message/coercion"
-require_relative "message/accessors"

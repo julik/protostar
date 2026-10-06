@@ -6,8 +6,12 @@ module Protostar
   # {File#to_proto} and {File.from_proto} translate to and from protoc's
   # `FileDescriptorProto`.
   module Schema
+    autoload :DefaultValue, ::File.expand_path("schema/default_value", __dir__)
     autoload :Draft, ::File.expand_path("schema/draft", __dir__)
+    autoload :ExtensionRange, ::File.expand_path("schema/extension_range", __dir__)
     autoload :Proto, ::File.expand_path("schema/proto", __dir__)
+    autoload :Resolver, ::File.expand_path("schema/resolver", __dir__)
+    autoload :SourceInfo, ::File.expand_path("schema/source_info", __dir__)
 
     # Raised for malformed descriptors, missing dependencies and pool clashes
     class Error < Protostar::Error; end
@@ -51,15 +55,11 @@ end
 require_relative "schema/freezer"
 require_relative "schema/options"
 require_relative "schema/features"
-require_relative "schema/source_info"
 require_relative "schema/descriptor"
 require_relative "schema/file"
 require_relative "schema/message"
-require_relative "schema/extension_range"
 require_relative "schema/oneof"
 require_relative "schema/field"
 require_relative "schema/enum"
 require_relative "schema/service"
-require_relative "schema/resolver"
 require_relative "schema/pool"
-require_relative "schema/default_value"

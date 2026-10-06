@@ -26,6 +26,7 @@ module Protostar
       "(protostar compile writes the new spelling)", category: :deprecated)
   end
 
+  autoload :Types, File.expand_path("protostar/types", __dir__)
   autoload :DSL, File.expand_path("protostar/dsl", __dir__)
   autoload :WellKnown, File.expand_path("protostar/well_known", __dir__)
   autoload :JSON, File.expand_path("protostar/json", __dir__)
@@ -90,4 +91,3 @@ require_relative "protostar/unknown_field"
 require_relative "protostar/enum"
 require_relative "protostar/message"
 require_relative "protostar/codec"
-require_relative "protostar/types"
