@@ -7,6 +7,20 @@ stand in for Google's `google-protobuf` gem so that `grpc` and friends run witho
 No `protoc`, no C extension, no runtime dependencies. No native memory handles, GC problems, no uninspectable
 blobs, full introspection and control, and full Ractor compatibility. Ruby 3.2 or newer.
 
+## Very experimental
+
+This is young code. It passes protobuf's conformance suite and Google's own Ruby tests, but
+it has not yet carried anyone's production traffic, the API will move before 1.0, and the
+`google-protobuf` shim has a documented list of places where it differs from the C gem.
+Try it, kick it, and tell me what breaks.
+
+Ideas are as welcome as bug reports. The `llm/` directory is where this project thinks out
+loud: `llm/todos/` holds feature briefs that are not scheduled yet (lazy readers, Marshal
+round trips for Rails caching, a native codec, arenas, and more), `llm/instructions/` the
+briefs that became workstreams, and `llm/outputs/` what each one reported back. If you have
+a feature in mind, open a PR that adds a brief to `llm/todos/` in the same shape as the ones
+there: what you want, why, what it would take. That is the fastest way to get it built.
+
 Why bother? Because a Ruby app that speaks protobuf usually drags in a native gem that
 has to compile (or come prebuilt for your exact platform), plus a `protoc` binary of a
 matching version that someone has to install on every machine that regenerates code.
