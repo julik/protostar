@@ -20,9 +20,29 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
-      - name: tests, under ruby -w, failing on warnings from lib/
-        run: bundle exec rake test:warnings
+      # test/.timings balances the workers; any earlier run's copy beats none
+      - uses: actions/cache@v4
+        with:
+          path: test/.timings
+          key: test-timings-${{ matrix.ruby }}-${{ github.run_id }}
+          restore-keys: test-timings-${{ matrix.ruby }}-
+      - name: tests, a worker process per core
+        run: bundle exec rake test
       - run: bundle exec rake rbs:validate
+  warnings:
+    name: no warnings from lib/ under ruby -w (serial)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ["3.2", "3.3", "3.4", "4.0"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+      - run: bundle exec rake test:warnings
   oracle:
     name: cross-check against google-protobuf
     runs-on: ubuntu-latest

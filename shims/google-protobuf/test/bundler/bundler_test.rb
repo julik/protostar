@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "test/unit"
-require "tmpdir"
+require_relative "../isolation"
 require "open3"
 require "bundler"
 
@@ -65,7 +65,7 @@ class BundlerTest < Test::Unit::TestCase
   # Locks the Gemfile with gems already installed when it can, and from
   # rubygems.org when it cannot
   def resolve(gemfile)
-    Dir.mktmpdir("protostar-shim-bundler") do |dir|
+    Isolation.tmpdir("protostar-shim-bundler") do |dir|
       File.write(File.join(dir, "Gemfile"), gemfile)
       output = nil
       Bundler.with_unbundled_env do
