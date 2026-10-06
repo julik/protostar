@@ -14,3 +14,4 @@ gets picked up.
 - `thin-native-codec.md`: an optional, thin C gem for encode and decode only, same objects, same bytes
 - `fiber-local-arenas.md`: an experiment with per-Fiber object pools and scratch buffers for decode and build
 - `cli-ergonomics.md`: compile by default, include root from the file's directory, stdout for a single file
+- `registries-not-global.md`: Protostar::Registry as an object you hold, Ractor-shareable when frozen, generated files that do not self-register
