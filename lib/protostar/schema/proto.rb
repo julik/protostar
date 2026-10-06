@@ -30,7 +30,11 @@ module Protostar
     module Proto
       # @return [Module] `Protostar::Google::Protobuf`, descriptor.proto's message classes
       def self.types
-        require "protostar/google/protobuf/descriptor_pb"
+        # Loaded on first use, and never `require`d again once it is: a require
+        # from a non-main Ractor raises before Ruby 3.4, even for a loaded file
+        unless defined?(::Protostar::Google::Protobuf::FileDescriptorProto)
+          require "protostar/google/protobuf/descriptor_pb"
+        end
         ::Protostar::Google::Protobuf
       end
 

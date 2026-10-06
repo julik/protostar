@@ -312,7 +312,11 @@ Ractor.shareable?(frozen)       # => true
 Ractor.new(frozen) { |m| m.name.upcase }.take # => "ADA" (Ractor#value on Ruby 4.0)
 ```
 
-Load your `_pb.rb` files in the main Ractor before starting others.
+Load your `_pb.rb` files in the main Ractor before starting others. On Ruby 3.2 and 3.3
+nothing can be loaded from another Ractor, not even by `autoload`, so any part of
+protostar a Ractor will use has to be touched in the main Ractor first: a `to_proto` or
+`to_h` on a descriptor loads `descriptor.proto`'s classes, and `Protostar::Timestamp` and
+the other well-known types load theirs. Ruby 3.4 lifts this.
 
 ### Reflection
 

@@ -30,17 +30,15 @@ jobs:
         run: bundle exec rake test
       - run: bundle exec rake rbs:validate
   warnings:
+    # The parallel matrix above is the test gate; this one serial run, on the
+    # newest Ruby, which warns the most, keeps lib/ warning-free
     name: no warnings from lib/ under ruby -w (serial)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        ruby: ["3.2", "3.3", "3.4", "4.0"]
     steps:
       - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ${{ matrix.ruby }}
+          ruby-version: "4.0"
           bundler-cache: true
       - run: bundle exec rake test:warnings
   oracle:

@@ -41,6 +41,7 @@ together and depend on each other's exact version.
 
 ### Development
 
+- `to_proto` no longer calls `require` once descriptor.proto's classes are loaded, so it works inside a Ractor on Ruby 3.2 and 3.3 when the main Ractor loaded them first.
 - `rake test` runs the test files in a forked worker per core, sharded by recorded timings (about 15 s instead of 66 s on 10 cores); `PARALLEL=0` keeps the serial run. The shim's suite uses test-unit's process workers.
 
 ### Deprecated
