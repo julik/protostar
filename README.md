@@ -7,6 +7,25 @@ stand in for Google's `google-protobuf` gem so that `grpc` and friends run witho
 No `protoc`, no C extension, no runtime dependencies. No native memory handles, GC problems, no uninspectable
 blobs, full introspection and control, and full Ractor compatibility. Ruby 3.2 or newer.
 
+## The north star
+
+Why bother? Of course pure Ruby will be slower, you say... and that's correct.
+
+But: a Ruby app that speaks protobuf usually drags in a native gem that
+has to compile (or come prebuilt for your exact platform), plus a `protoc` binary of a
+matching version that someone has to install on every machine that regenerates code. protoc
+versions change. The DSL it outputs changes. The formatting changes. The proto messages are
+handles to native pointers - they can't be marshaled, they can't be cached, they can't be
+recreated without access to the native gem and the kitchen sink. They are, by any stretch
+of the imagination, _as anti-Ruby spirited as things can be._
+
+This is why. We sacrifice some speed (primarily in encoding and allocations) for the
+luxury of having a readable, predictable, Ruby-spirited protobuf universum.
+
+protostar is one gem. It passes protobuf's own conformance suite, reproduces protoc's
+descriptors byte for byte on protoc's own test files, and runs Google's Ruby tests through
+its `google-protobuf` shim.
+
 ## Very experimental
 
 This is young code. It passes protobuf's conformance suite and Google's own Ruby tests, but
@@ -20,13 +39,6 @@ round trips for Rails caching, a native codec, arenas, and more), `llm/instructi
 briefs that became workstreams, and `llm/outputs/` what each one reported back. If you have
 a feature in mind, open a PR that adds a brief to `llm/todos/` in the same shape as the ones
 there: what you want, why, what it would take. That is the fastest way to get it built.
-
-Why bother? Because a Ruby app that speaks protobuf usually drags in a native gem that
-has to compile (or come prebuilt for your exact platform), plus a `protoc` binary of a
-matching version that someone has to install on every machine that regenerates code.
-protostar is one gem. It passes protobuf's own conformance suite, reproduces protoc's
-descriptors byte for byte on protoc's own test files, and runs Google's Ruby tests through
-its `google-protobuf` shim.
 
 ## Installation
 
