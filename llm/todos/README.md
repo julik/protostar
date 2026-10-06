@@ -12,3 +12,4 @@ gets picked up.
 - `marshal-and-json-round-trips.md`: Marshal as wire bytes, as_json for Rails, ActiveJob serializer
 - `pure-ruby-codec-go-brrr.md`: the benchmark harness and every move to close the gap with the C extension in pure Ruby
 - `thin-native-codec.md`: an optional, thin C gem for encode and decode only, same objects, same bytes
+- `fiber-local-arenas.md`: an experiment with per-Fiber object pools and scratch buffers for decode and build
