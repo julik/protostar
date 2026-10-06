@@ -90,6 +90,18 @@ namespace :examples do
 end
 
 namespace :test do
+  desc "Run the suite in parallel and then serially, and fail unless both report the same counts"
+  task :parity do
+    require "open3"
+    counts = %w[1 0].to_h do |parallel|
+      out, = Open3.capture2e({"PARALLEL" => parallel}, "bundle", "exec", "rake", "test")
+      line = out[/^\d+ runs, \d+ assertions, \d+ failures, \d+ errors, \d+ skips$/] || abort("no summary from PARALLEL=#{parallel}:\n#{out}")
+      puts "PARALLEL=#{parallel}: #{line}"
+      [parallel, line]
+    end
+    abort "the parallel and serial runs differ" unless counts.values.uniq.size == 1
+  end
+
   desc "Run the tests in one process with RUBYOPT=-w and fail on any warning from lib/ or the code it generates"
   task :warnings do
     ruby "script/warnings.rb"

@@ -83,20 +83,21 @@ module TestSupport
       (Protostar.generated_pool.files.map(&:name) + registry).to_set
     end
 
-    # Fails the run when anything under test/corpus/ was added, removed or
-    # touched between now and the end of the run
-    def watch_corpus
-      before = corpus_stamp
+    # Fails the run when anything under the directory (test/corpus/ unless
+    # told otherwise) was added, removed or touched by the end of the run
+    def watch_corpus(dir = CORPUS)
+      before = stamp(dir)
       Minitest.after_run do
-        next if corpus_stamp == before
-        warn "test/corpus/ changed during the test run, and it is read-only (a checkout of test/corpus restores it)"
+        next if stamp(dir) == before
+        warn "#{dir} changed during the test run, and it is read-only (a checkout restores it)"
         exit 1
       end
     end
 
-    def corpus_stamp
-      Dir.glob("**/*", File::FNM_DOTMATCH, base: CORPUS).sort.map do |rel|
-        stat = File.lstat(File.join(CORPUS, rel))
+    # Every path under the directory with its mtime and size
+    def stamp(dir)
+      Dir.glob("**/*", File::FNM_DOTMATCH, base: dir).sort.map do |rel|
+        stat = File.lstat(File.join(dir, rel))
         [rel, stat.mtime.to_r, stat.size]
       end
     end

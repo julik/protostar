@@ -7,14 +7,14 @@
 #
 #   ruby -Ilib -Itest test/parallel.rb test/a_test.rb test/b_test.rb -- [minitest options]
 #
-# JOBS=N sets the number of workers. `rake test` runs this unless PARALLEL=0
-# or TEST= names a single file.
+# JOBS=N sets the number of workers, PARALLEL_TIMINGS=path another timings
+# file. `rake test` runs this unless PARALLEL=0 or TEST= names a single file.
 require "etc"
 require_relative "test_helper"
 
 module ParallelTests
   ROOT = File.expand_path("..", __dir__)
-  TIMINGS = File.join(__dir__, ".timings")
+  TIMINGS = ENV.fetch("PARALLEL_TIMINGS", File.join(__dir__, ".timings"))
   RACTOR = /(?:\A|_)ractor_test\.rb\z/
   # Seconds per byte of test file, for files with no timing yet
   GUESS = 0.0002

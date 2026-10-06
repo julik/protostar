@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require "tempfile"
 
 class ViewIOBufferTest < Minitest::Test
   def setup
@@ -58,11 +57,10 @@ class ViewIOBufferTest < Minitest::Test
 
   def test_mapped_file
     bytes = @all.new(optional_int32: 77, repeated_string: %w[from a file], optional_foreign_message: {c: 1}).encode
-    Tempfile.create(["view", ".binpb"]) do |file|
-      file.binmode
-      file.write(bytes)
-      file.flush
-      File.open(file.path, "rb") do |io|
+    tmpdir do |dir|
+      path = File.join(dir, "view.binpb")
+      File.binwrite(path, bytes)
+      File.open(path, "rb") do |io|
         buffer = IO::Buffer.map(io, nil, 0, IO::Buffer::READONLY)
         view = @all.view(buffer)
         assert_equal 77, view.optional_int32
