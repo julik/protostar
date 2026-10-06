@@ -18,3 +18,4 @@ gets picked up.
 - `rbs-by-default.md`: `--ruby_out` writes the `.rbs` next to the `.rb` unless `--no-rbs`
 - `generated-code-linter-guards.md`: rubocop and standard disable wrappers, frozen string literals stay on
 - `autoload-everything.md`: `require "protostar"` loads the namespace only; everything else on first use, with `eager_load!` for Ractors
+- `parallel-tests.md`: fork-per-core runner, isolation rules for tmpdirs, registries, env, ports and Ractors
