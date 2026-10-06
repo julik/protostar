@@ -13,3 +13,4 @@ gets picked up.
 - `pure-ruby-codec-go-brrr.md`: the benchmark harness and every move to close the gap with the C extension in pure Ruby
 - `thin-native-codec.md`: an optional, thin C gem for encode and decode only, same objects, same bytes
 - `fiber-local-arenas.md`: an experiment with per-Fiber object pools and scratch buffers for decode and build
+- `cli-ergonomics.md`: compile by default, include root from the file's directory, stdout for a single file
