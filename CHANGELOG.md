@@ -41,7 +41,7 @@ together and depend on each other's exact version.
 
 ### Development
 
-- `rake test` runs the test files in a forked worker per core, sharded by recorded timings (about 26 s instead of 88 s on 10 cores); `PARALLEL=0` keeps the serial run. The shim's suite uses test-unit's process workers.
+- `rake test` runs the test files in a forked worker per core, sharded by recorded timings (about 15 s instead of 66 s on 10 cores); `PARALLEL=0` keeps the serial run. The shim's suite uses test-unit's process workers.
 
 ### Deprecated
 
