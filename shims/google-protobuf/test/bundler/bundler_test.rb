@@ -12,6 +12,12 @@ class BundlerTest < Test::Unit::TestCase
   SHIM = File.expand_path("../..", __dir__)
   ROOT = File.expand_path("../..", SHIM)
 
+  # Two `bundle lock`s of the same git source at once collide on Bundler's
+  # git cache (shallow.lock). test-unit runs a test case with a startup hook
+  # in one process worker, so these go one after another
+  def self.startup
+  end
+
   def test_path_source
     lock = resolve(<<~GEMFILE)
       source "https://rubygems.org"
