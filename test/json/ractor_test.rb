@@ -13,14 +13,17 @@ class JSONTextRactorTest < Minitest::Test
     message = @klass.new(optional_int32: 5, optional_string: "é\n", repeated_double: [0.1, Float::NAN],
       map_string_nested_message: {"k" => {a: 1}}, optional_timestamp: {seconds: 1, nanos: 5}, optional_value: {list_value: {values: [{bool_value: true}]}})
     message.freeze
+    # Also autoloads JSON and Text here, which Ruby 3.2 and 3.3 cannot do in another Ractor
+    expected_json = message.to_json
+    expected_text = message.to_text
     ractor = Ractor.new(@klass, message) do |klass, m|
       json = m.to_json
       text = m.to_text
       [json, text, klass.decode_json(json) == m, Protostar::Text.parse(klass, text) == m]
     end
     json, text, json_equal, text_equal = ractor.respond_to?(:value) ? ractor.value : ractor.take
-    assert_equal message.to_json, json
-    assert_equal message.to_text, text
+    assert_equal expected_json, json
+    assert_equal expected_text, text
     assert json_equal
     assert text_equal
   end

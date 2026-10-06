@@ -137,6 +137,7 @@ module Protostar
         Codec::DecodeGenerator.install(klass, fields)
         Codec::EncodeGenerator.install(klass, fields)
         View::Generator.install(klass, fields, oneofs)
+        return unless descriptor.full_name.start_with?("google.protobuf.")
         well_known = WellKnown::MIXINS[descriptor.full_name]
         klass.include(well_known) if well_known
       end

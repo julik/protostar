@@ -68,6 +68,11 @@ module Protostar
       def open?
         !closed?
       end
+
+      # @return [Protostar::Google::Protobuf::EnumDescriptorProto]
+      def to_proto
+        Proto::Writer.enum(self)
+      end
     end
 
     # A value of an enum. Its {#full_name} lives in the enum's enclosing scope,
@@ -90,6 +95,11 @@ module Protostar
       # @return [File]
       def file
         @enum.file
+      end
+
+      # @return [Protostar::Google::Protobuf::EnumValueDescriptorProto]
+      def to_proto
+        Proto::Writer.enum_value(self)
       end
     end
   end

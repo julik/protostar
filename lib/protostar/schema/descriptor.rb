@@ -30,6 +30,12 @@ module Protostar
         "#<#{self.class.name} #{full_name}>"
       end
       alias_method :to_s, :inspect
+
+      # `to_proto` as a Hash, for reading; nothing builds from it
+      # @return [Hash]
+      def to_h
+        to_proto.to_h
+      end
     end
   end
 end

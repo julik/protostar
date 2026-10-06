@@ -1,25 +1,6 @@
 # frozen_string_literal: true
 
 module Protostar
-  @generated_pool = Schema::Pool.new
-
-  class << self
-    # @return [Schema::Pool] the process-wide pool generated `_pb.rb` files build into
-    attr_reader :generated_pool
-
-    # Builds every file of a serialized `FileDescriptorSet` into a pool, in
-    # order. Custom options are decoded against the extensions the pool (and
-    # the file itself) defines; files already in the pool are taken from it.
-    # @param bytes [String] a serialized google.protobuf.FileDescriptorSet
-    # @param pool [Schema::Pool]
-    # @return [Array<Schema::File>]
-    def load_descriptor_set(bytes, pool:)
-      Schema::Proto.each_file(bytes).map { |file_bytes| pool.add_serialized_file(file_bytes) }
-    end
-  end
-
-  Pool = Schema::Pool
-
   module Schema
     # The one place that knows protoc's shape. {File#to_proto} writes a
     # file as the `FileDescriptorProto` message of the bootstrap classes
@@ -28,13 +9,10 @@ module Protostar
     # exist as extension bytes inside options messages only here: written by
     # {MessageValue#encode}, read by {MessageValue.decode}.
     module Proto
+      # descriptor.proto's classes are autoloaded on first reference, which
+      # Ruby 3.2 and 3.3 can only do in the main Ractor
       # @return [Module] `Protostar::Google::Protobuf`, descriptor.proto's message classes
       def self.types
-        # Loaded on first use, and never `require`d again once it is: a require
-        # from a non-main Ractor raises before Ruby 3.4, even for a loaded file
-        unless defined?(::Protostar::Google::Protobuf::FileDescriptorProto)
-          require "protostar/google/protobuf/descriptor_pb"
-        end
         ::Protostar::Google::Protobuf
       end
 
@@ -592,140 +570,6 @@ module Protostar
           when :bytes then r.read_bytes.b
           end
         end
-      end
-    end
-
-    class MessageValue
-      # This value in wire format
-      # @param type [Message] the message type it is a value of
-      # @return [String] binary
-      def encode(type)
-        Proto::Codec.encode(type, self)
-      end
-
-      # @param type [Message]
-      # @param bytes [String]
-      # @param extensions [#call, nil] (extendee full name, number) to an extension {Field};
-      #   fields it does not know stay in {#unknown_fields}
-      # @return [MessageValue]
-      def self.decode(type, bytes, extensions = nil)
-        Proto::Codec.decode(type, bytes, extensions)
-      end
-    end
-
-    class Options
-      # These options as the descriptor.proto message they are (a
-      # `Protostar::Google::Protobuf::FieldOptions`, say), custom options as
-      # extension bytes the message keeps as unknown fields
-      # @return [Protostar::Message]
-      def to_proto
-        klass = Proto.types.const_get(type_name.delete_prefix("google.protobuf."))
-        klass.decode(encode(klass.descriptor))
-      end
-    end
-
-    class File
-      # This file as a `google.protobuf.FileDescriptorProto` of the bootstrap
-      # classes, as protoc's `FileDescriptor::CopyTo` writes it
-      # @param source_info [Boolean] include `source_code_info` when the file has it
-      # @param default_json_names [Boolean] false leaves out every `json_name` equal to the one
-      #   derived from the field name, as protoc's Ruby generator embeds descriptors
-      # @return [Protostar::Google::Protobuf::FileDescriptorProto]
-      def to_proto(source_info: true, default_json_names: true)
-        Proto::Writer.file(self, source_info: source_info, json_names: default_json_names)
-      end
-
-      # @param (see #to_proto)
-      # @return [String] the serialized FileDescriptorProto, byte for byte what protoc writes
-      def serialize(source_info: true, default_json_names: true)
-        bytes = to_proto(source_info: false, default_json_names: default_json_names).encode
-        return bytes unless source_info && @source_info
-        Proto::Writer.with_source_code_info(bytes, @source_info)
-      end
-
-      # Builds a file from a `google.protobuf.FileDescriptorProto` message (or
-      # its bytes), as a plugin receives them. Extension bytes in options are
-      # decoded by the extensions the pool (or the file itself) defines;
-      # others stay {Options#unknown_fields}.
-      # @param proto [Protostar::Google::Protobuf::FileDescriptorProto, String]
-      # @param pool [Pool] where dependencies and extensions are looked up; the file is not added
-      # @return [File]
-      def self.from_proto(proto, pool:)
-        proto = Proto.types::FileDescriptorProto.decode(proto) if proto.is_a?(String)
-        Proto::Reader.new(proto, pool).call
-      end
-    end
-
-    class Message
-      # @param default_json_names [Boolean] see {File#to_proto}
-      # @return [Protostar::Google::Protobuf::DescriptorProto]
-      def to_proto(default_json_names: true)
-        Proto::Writer.message(self, default_json_names)
-      end
-    end
-
-    class Field
-      # @param default_json_names [Boolean] see {File#to_proto}
-      # @return [Protostar::Google::Protobuf::FieldDescriptorProto]
-      def to_proto(default_json_names: true)
-        Proto::Writer.field(self, default_json_names)
-      end
-    end
-
-    class Oneof
-      # @return [Protostar::Google::Protobuf::OneofDescriptorProto]
-      def to_proto
-        Proto::Writer.oneof(self)
-      end
-    end
-
-    class Enum
-      # @return [Protostar::Google::Protobuf::EnumDescriptorProto]
-      def to_proto
-        Proto::Writer.enum(self)
-      end
-    end
-
-    class EnumValue
-      # @return [Protostar::Google::Protobuf::EnumValueDescriptorProto]
-      def to_proto
-        Proto::Writer.enum_value(self)
-      end
-    end
-
-    class Service
-      # @return [Protostar::Google::Protobuf::ServiceDescriptorProto]
-      def to_proto
-        Proto::Writer.service(self)
-      end
-    end
-
-    class Method
-      # @return [Protostar::Google::Protobuf::MethodDescriptorProto]
-      def to_proto
-        Proto::Writer.rpc(self)
-      end
-    end
-
-    class Descriptor
-      # `to_proto` as a Hash, for reading; nothing builds from it
-      # @return [Hash]
-      def to_h
-        to_proto.to_h
-      end
-    end
-
-    class Pool
-      # Builds and adds a serialized FileDescriptorProto, unless a file of that name is here
-      # @return [File]
-      def add_serialized_file(bytes)
-        proto = Proto.types::FileDescriptorProto.decode(bytes)
-        file(proto.name) || add(File.from_proto(proto, pool: self))
-      end
-
-      # @see Protostar.load_descriptor_set
-      def load_descriptor_set(bytes)
-        Protostar.load_descriptor_set(bytes, pool: self)
       end
     end
   end

@@ -56,7 +56,6 @@ module Google
         # The descriptor's options as a google.protobuf.*Options message of
         # the generated pool, frozen, without `features` (as the gem gives them)
         def options_message(type)
-          require "google/protobuf/descriptor_pb"
           options = @__schema.options
           bytes = options.declared? ? options.to_proto.encode : ""
           message = Google::Protobuf.const_get(type).decode(bytes)
@@ -68,7 +67,6 @@ module Google
         # pool, with json_names only where a .proto would have spelled them
         # out, as upb's to_proto gives them
         def proto_message(type, proto)
-          require "google/protobuf/descriptor_pb"
           Google::Protobuf.const_get(type).decode(proto.encode)
         end
       end
@@ -546,12 +544,9 @@ module Google
 
       # @return [Google::Protobuf::FileDescriptorProto]
       def to_proto
-        @to_proto ||= begin
-          require "google/protobuf/descriptor_pb"
-          Google::Protobuf::FileDescriptorProto.decode(
-            Protostar::Compiler::Emitters::GoogleRuby.serialized(@__schema)
-          )
-        end
+        @to_proto ||= Google::Protobuf::FileDescriptorProto.decode(
+          Protostar::Compiler::Emitters::GoogleRuby.serialized(@__schema)
+        )
       end
     end
   end

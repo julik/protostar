@@ -129,6 +129,67 @@ module Protostar
       end
       alias_method :to_s, :inspect
 
+      # This file as a `google.protobuf.FileDescriptorProto` of the bootstrap
+      # classes, as protoc's `FileDescriptor::CopyTo` writes it
+      # @param source_info [Boolean] include `source_code_info` when the file has it
+      # @param default_json_names [Boolean] false leaves out every `json_name` equal to the one
+      #   derived from the field name, as protoc's Ruby generator embeds descriptors
+      # @return [Protostar::Google::Protobuf::FileDescriptorProto]
+      def to_proto(source_info: true, default_json_names: true)
+        Proto::Writer.file(self, source_info: source_info, json_names: default_json_names)
+      end
+
+      # @param (see #to_proto)
+      # @return [String] the serialized FileDescriptorProto, byte for byte what protoc writes
+      def serialize(source_info: true, default_json_names: true)
+        bytes = to_proto(source_info: false, default_json_names: default_json_names).encode
+        return bytes unless source_info && @source_info
+        Proto::Writer.with_source_code_info(bytes, @source_info)
+      end
+
+      # Builds a file from a `google.protobuf.FileDescriptorProto` message (or
+      # its bytes), as a plugin receives them. Extension bytes in options are
+      # decoded by the extensions the pool (or the file itself) defines;
+      # others stay {Options#unknown_fields}.
+      # @param proto [Protostar::Google::Protobuf::FileDescriptorProto, String]
+      # @param pool [Pool] where dependencies and extensions are looked up; the file is not added
+      # @return [File]
+      def self.from_proto(proto, pool:)
+        proto = Proto.types::FileDescriptorProto.decode(proto) if proto.is_a?(String)
+        Proto::Reader.new(proto, pool).call
+      end
+
+      # Starts describing a file. The draft creates the real descriptors as it
+      # goes; {Draft::File#resolve} links them and {Draft::File#freeze!} hands
+      # back the finished, shareable file.
+      #
+      #   file = Schema::File.draft("shop.proto", package: "shop", syntax: :proto3)
+      #   file.message("Item") do |m|
+      #     m.field "name", 1, :string
+      #     m.field "price_cents", 2, :int64, optional: true
+      #     m.map "stock", 3, key: :string, value: :int32
+      #   end
+      #   file.resolve(pool)
+      #   file.freeze!  # => #<Protostar::Schema::File shop.proto>
+      #
+      # @param name [String] the file name as imported
+      # @param package [String, nil]
+      # @param syntax [Symbol, nil] :proto2, :proto3 or :editions; nil is proto2, and
+      #   unlike an explicit :proto2 leaves `syntax` out of the FileDescriptorProto, as protoc does
+      # @param edition [Symbol, Integer, nil] e.g. :EDITION_2023; implies :editions
+      # @param dependencies [Array<String>] imported file names
+      # @param public_dependencies [Array<String, Integer>] names or indexes of `import public` files
+      # @param weak_dependencies [Array<String, Integer>]
+      # @param option_dependencies [Array<String>] `import option` file names
+      # @param options [Hash, nil] the file's options
+      # @return [Draft::File]
+      def self.draft(name, package: nil, syntax: nil, edition: nil, dependencies: [], public_dependencies: [],
+        weak_dependencies: [], option_dependencies: [], options: nil)
+        Draft::File.new(name, package: package, syntax: syntax, edition: edition, dependencies: dependencies,
+          public_dependencies: public_dependencies, weak_dependencies: weak_dependencies,
+          option_dependencies: option_dependencies, options: options)
+      end
+
       private
 
       # protoc's rule: direct imports, plus the public imports of those, recursively

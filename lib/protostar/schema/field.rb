@@ -190,6 +190,12 @@ module Protostar
       def utf8_validation?
         @type == :string && @features.utf8_validation == :VERIFY
       end
+
+      # @param default_json_names [Boolean] see {File#to_proto}
+      # @return [Protostar::Google::Protobuf::FieldDescriptorProto]
+      def to_proto(default_json_names: true)
+        Proto::Writer.field(self, default_json_names)
+      end
     end
   end
 end

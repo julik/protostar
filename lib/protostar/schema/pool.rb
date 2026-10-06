@@ -107,6 +107,18 @@ module Protostar
         "#<#{self.class.name} #{@files.size} files>"
       end
 
+      # Builds and adds a serialized FileDescriptorProto, unless a file of that name is here
+      # @return [File]
+      def add_serialized_file(bytes)
+        proto = Proto.types::FileDescriptorProto.decode(bytes)
+        file(proto.name) || add(File.from_proto(proto, pool: self))
+      end
+
+      # @see Protostar.load_descriptor_set
+      def load_descriptor_set(bytes)
+        Protostar.load_descriptor_set(bytes, pool: self)
+      end
+
       private
 
       def check_clashes(file)
@@ -143,4 +155,25 @@ module Protostar
       end
     end
   end
+end
+
+module Protostar
+  @generated_pool = Schema::Pool.new
+
+  class << self
+    # @return [Schema::Pool] the process-wide pool generated `_pb.rb` files build into
+    attr_reader :generated_pool
+
+    # Builds every file of a serialized `FileDescriptorSet` into a pool, in
+    # order. Custom options are decoded against the extensions the pool (and
+    # the file itself) defines; files already in the pool are taken from it.
+    # @param bytes [String] a serialized google.protobuf.FileDescriptorSet
+    # @param pool [Schema::Pool]
+    # @return [Array<Schema::File>]
+    def load_descriptor_set(bytes, pool:)
+      Schema::Proto.each_file(bytes).map { |file_bytes| pool.add_serialized_file(file_bytes) }
+    end
+  end
+
+  Pool = Schema::Pool
 end

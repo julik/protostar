@@ -33,6 +33,11 @@ module Protostar
       def rpc(name)
         @rpcs_by_name[name.to_s]
       end
+
+      # @return [Protostar::Google::Protobuf::ServiceDescriptorProto]
+      def to_proto
+        Proto::Writer.service(self)
+      end
     end
 
     # One RPC of a {Service}
@@ -73,6 +78,11 @@ module Protostar
       # @return [Boolean]
       def server_streaming?
         @server_streaming
+      end
+
+      # @return [Protostar::Google::Protobuf::MethodDescriptorProto]
+      def to_proto
+        Proto::Writer.rpc(self)
       end
     end
   end

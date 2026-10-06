@@ -12,6 +12,19 @@ module Protostar
     # Where the bundled `google/protobuf/*.proto` imports live
     INCLUDE_DIR = ::File.expand_path("compiler/include", __dir__)
 
+    autoload :Lexer, ::File.expand_path("compiler/lexer", __dir__)
+    autoload :AST, ::File.expand_path("compiler/ast", __dir__)
+    autoload :SourceInfo, ::File.expand_path("compiler/source_info", __dir__)
+    autoload :Parser, ::File.expand_path("compiler/parser", __dir__)
+    autoload :SymbolTable, ::File.expand_path("compiler/symbol_table", __dir__)
+    autoload :Linker, ::File.expand_path("compiler/linker", __dir__)
+    autoload :OptionInterpreter, ::File.expand_path("compiler/option_interpreter", __dir__)
+    autoload :TextFormat, ::File.expand_path("compiler/text_format", __dir__)
+    autoload :Validator, ::File.expand_path("compiler/validator", __dir__)
+    autoload :Retention, ::File.expand_path("compiler/retention", __dir__)
+    autoload :Run, ::File.expand_path("compiler/run", __dir__)
+    autoload :Emitters, ::File.expand_path("compiler/emitters", __dir__)
+
     # One error or warning, with protoc's 1-based line and column (nil when
     # protoc reports none)
     class Diagnostic
@@ -199,13 +212,7 @@ module Protostar
     # protoc's SimpleDtoa: the shortest of %.15g and %.17g that reads back exactly
     # @api private
     def self.simple_dtoa(value)
-      return "inf" if value == Float::INFINITY
-      return "-inf" if value == -Float::INFINITY
-      return "nan" if value.nan?
-      text = format("%.15g", value)
-      # the 15-digit form is kept only when it reads back as the very same double
-      text = format("%.17g", value) unless [Float(text)].pack("G") == [value].pack("G")
-      text
+      Schema::DefaultValue.simple_dtoa(value)
     end
 
     # protoc's SimpleFtoa over the float nearest to `value`
@@ -250,15 +257,3 @@ module Protostar
     end
   end
 end
-
-require_relative "compiler/lexer"
-require_relative "compiler/ast"
-require_relative "compiler/source_info"
-require_relative "compiler/parser"
-require_relative "compiler/symbol_table"
-require_relative "compiler/linker"
-require_relative "compiler/option_interpreter"
-require_relative "compiler/text_format"
-require_relative "compiler/validator"
-require_relative "compiler/retention"
-require_relative "compiler/run"

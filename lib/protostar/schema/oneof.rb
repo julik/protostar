@@ -28,6 +28,11 @@ module Protostar
       def synthetic?
         @synthetic
       end
+
+      # @return [Protostar::Google::Protobuf::OneofDescriptorProto]
+      def to_proto
+        Proto::Writer.oneof(self)
+      end
     end
   end
 end
