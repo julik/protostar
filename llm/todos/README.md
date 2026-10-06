@@ -8,3 +8,4 @@ gets picked up.
 - `yjit-polymorphic-call-sites.md`: codec speed under YJIT drops once many classes are loaded
 - `error-message-rough-edges.md`: two error messages that do not say what went wrong
 - `github-install-routes.md`: README install lines need the repo public; Bundler override notes
+- `introspectable-message-classes.md`: Klass.reflection, registry, sizes, explain printers
