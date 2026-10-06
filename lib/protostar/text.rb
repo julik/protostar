@@ -30,16 +30,16 @@ module Protostar
 
     class << self
       # @param message [Message]
-      # @param single_line [Boolean] everything on one line, fields separated by spaces
-      # @param expand_any [Boolean] print an Any whose type is known as
+      # @option options [Boolean] :single_line everything on one line, fields separated by spaces
+      # @option options [Boolean] :expand_any print an Any whose type is known as
       #   `[type_url] { ... }`; off by default, as in `protoc --decode`
       #   (protoc's DebugString expands)
-      # @param as_utf8 [Boolean] keep valid UTF-8 in strings readable instead of
+      # @option options [Boolean] :as_utf8 keep valid UTF-8 in strings readable instead of
       #   escaping every byte above 0x7e in octal as protoc does
-      # @param unknown_fields [Boolean] false leaves unknown fields out, as
+      # @option options [Boolean] :unknown_fields false leaves unknown fields out, as
       #   protoc's Printer#SetHideUnknownFields does; extensions still print
-      # @param registry [Types::Registry] where classes for Any and extensions are found
-      # @param pool [Schema::Pool, nil] where extensions are found; by default
+      # @option options [Types::Registry] :registry where classes for Any and extensions are found
+      # @option options [Schema::Pool, nil] :pool where extensions are found; by default
       #   the message's file and the files it imports
       # @return [String]
       def print(message, **options)
@@ -48,10 +48,10 @@ module Protostar
 
       # @param klass [Class] a message class
       # @param text [String]
-      # @param allow_unknown_fields [Boolean] skip fields and extensions that are not known
-      # @param allow_partial [Boolean] when false, raise if a required field is missing
-      # @param registry [Types::Registry] where classes for Any and extensions are found
-      # @param pool [Schema::Pool, nil] where extensions are found
+      # @option options [Boolean] :allow_unknown_fields skip fields and extensions that are not known
+      # @option options [Boolean] :allow_partial when false, raise if a required field is missing
+      # @option options [Types::Registry] :registry where classes for Any and extensions are found
+      # @option options [Schema::Pool, nil] :pool where extensions are found
       # @return [Message]
       # @raise [ParseError]
       def parse(klass, text, **options)

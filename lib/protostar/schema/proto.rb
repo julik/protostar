@@ -704,7 +704,7 @@ module Protostar
     end
 
     class Descriptor
-      # {#to_proto} as a Hash, for reading; nothing builds from it
+      # `to_proto` as a Hash, for reading; nothing builds from it
       # @return [Hash]
       def to_h
         to_proto.to_h

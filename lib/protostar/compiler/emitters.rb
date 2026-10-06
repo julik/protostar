@@ -2,8 +2,8 @@
 
 module Protostar
   class Compiler
-    # Code generators. Each takes built {Schema::File}s and returns
-    # `{output path => contents}`.
+    # Code generators. Each takes built {Schema::File}s and returns a Hash of
+    # output path to contents.
     module Emitters
       # Raised when a file cannot be emitted, with protoc's generator message
       class Error < Protostar::Error; end

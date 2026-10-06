@@ -2,7 +2,12 @@
 
 require_relative "protostar/version"
 
+# Protocol buffers in pure Ruby: a `.proto` compiler ({Compiler}), message
+# classes with a binary codec, views, JSON and the text format, and the
+# {DSL} that generated `_pb.rb` files are written in. README.md has the tour.
 module Protostar
+  # The base of protostar's errors, except {Protostar::TypeError}, which is a
+  # Ruby `TypeError` so that `rescue TypeError` catches it
   class Error < StandardError; end
 
   # Warns in Ruby's `:deprecated` category (shown under `ruby -w` or

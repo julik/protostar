@@ -114,6 +114,11 @@ namespace :builder do
   end
 end
 
+desc "Build the API documentation into doc/ (options in .yardopts), failing on any YARD warning"
+task :yard do
+  sh "yard", "doc", "--fail-on-warning"
+end
+
 desc "Run every benchmark in bench/ and print one table (WRITE=1 also puts it into docs/benchmarks.md)"
 task :bench do
   Bundler.with_unbundled_env do
