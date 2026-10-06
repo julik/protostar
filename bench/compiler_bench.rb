@@ -1,98 +1,63 @@
 # frozen_string_literal: true
 
-# The compiler numbers of docs/compiler-internals.md section 21, plus the
-# runtime paths that build descriptors without the compiler: loading a
-# generated `_pb.rb` (the DSL), `add_serialized_file` and `to_proto`.
-# Best of N wall-clock runs, in milliseconds.
+# The compiler numbers of docs/compiler-internals.md section 21: the stages
+# on unittest.proto, a whole compile, descriptor.proto, and the whole corpus.
+# Each row is the best of several runs. There is no google-protobuf side:
+# its compiler is protoc, a separate program.
 #
-#   bundle exec ruby bench/compiler_bench.rb
-#   bundle exec ruby bench/compiler_bench.rb corpus   # adds the whole-corpus rows (slow)
+#   ruby bench/compiler_bench.rb
+#   BENCH_CORPUS=0 ruby bench/compiler_bench.rb   # without the slow whole-corpus rows
 
-$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
-require "protostar"
-require_relative "../test/support/corpus"
+require_relative "bench"
+require_relative "fixtures"
 
-def best(runs = 10)
-  times = Array.new(runs) do
-    t = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    yield
-    Process.clock_gettime(Process::CLOCK_MONOTONIC) - t
+Bench.section "Compiler" do |s|
+  next if Bench.google?
+  c = Protostar::Compiler
+  name = "google/protobuf/unittest.proto"
+  roots = Corpus::INCLUDE_ROOTS
+  source = File.read(File.join(roots.first, name))
+  fresh = -> { c.new(include_paths: roots) }
+
+  s.slow("lex unittest.proto", runs: 10) do
+    lexer = c::Lexer.new(source, ->(*) {})
+    lexer.next until lexer.current.type == :end
   end
-  times.min * 1000
-end
-
-def best_inner(runs = 10)
-  Array.new(runs) { yield }.min * 1000
-end
-
-def clock
-  t = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-  yield
-  Process.clock_gettime(Process::CLOCK_MONOTONIC) - t
-end
-
-def row(label, ms)
-  puts format("%-62s %9.1f ms", label, ms)
-end
-
-C = Protostar::Compiler
-NAME = "google/protobuf/unittest.proto"
-ROOTS = Corpus::INCLUDE_ROOTS
-source = File.read(File.join(ROOTS.first, NAME))
-fresh = -> { C.new(include_paths: ROOTS) }
-
-row "lex unittest.proto", best {
-  lexer = C::Lexer.new(source, ->(*) {})
-  lexer.next until lexer.current.type == :end
-}
-row "parse unittest.proto", best { C::Parser.new(source).parse(NAME) }
-
-warm = fresh.call
-warm.compile([NAME])
-imports = warm.pool.file(NAME).dependency_files.map(&:name)
-row "compile unittest.proto, imports pooled, builtin ready", best_inner {
-  c = fresh.call
-  c.compile(imports, retain_options: true)
-  c.send(:builtin_options_type, "google.protobuf.FileOptions")
-  clock { c.compile([NAME]) }
-}
-row "compile unittest.proto, fresh Compiler", best { fresh.call.compile([NAME]) }
-row "  the same, retain_options: true", best { fresh.call.compile([NAME], retain_options: true) }
-row "  the same, source_info: true", best { fresh.call.compile([NAME], source_info: true) }
-row "compile descriptor.proto, fresh Compiler", best { fresh.call.compile(["google/protobuf/descriptor.proto"]) }
-
-files = fresh.call.compile([NAME], source_info: true)
-emitter = C::Emitters::Ruby.new
-ruby = files.map { |f| emitter.file(f) }
-row "emit native Ruby, unittest.proto and its 3 imports", best { files.each { |f| emitter.file(f) } }
-module DSLBench
-  class << self
-    attr_accessor :pool
+  s.slow("parse unittest.proto", runs: 10) { c::Parser.new(source).parse(name) }
+  warm = fresh.call
+  warm.compile([name])
+  imports = warm.pool.file(name).dependency_files.map(&:name)
+  prepare = lambda do
+    compiler = fresh.call
+    compiler.compile(imports, retain_options: true)
+    compiler.send(:builtin_options_type, "google.protobuf.FileOptions")
+    compiler
   end
-
-  def self.file(*args, **kwargs, &block)
-    Protostar::DSL.file(*args, **kwargs, pool: pool, registry: nil, &block)
+  s.slow("compile unittest.proto, imports pooled, built-in descriptor.proto ready", runs: 10, prepare: prepare) do |compiler|
+    compiler.compile([name])
   end
-end
-blocks = ruby.map { |src| src[/^Protostar::DSL\.file.*?^end$/m].sub("Protostar::DSL.file(", "DSLBench.file(") }
-row "load that Ruby (the DSL) into a fresh pool", best {
-  DSLBench.pool = Protostar::Schema::Pool.new
-  blocks.each { |b| eval(b) } # standard:disable Security/Eval
-}
-bytes = files.map { |f| f.serialize(source_info: false) }
-row "add_serialized_file, unittest.proto and its 3 imports", best {
-  pool = Protostar::Schema::Pool.new
-  bytes.each { |b| pool.add_serialized_file(b) }
-}
-row "to_proto of unittest.proto, with source info", best { files.last.to_proto }
-row "serialize unittest.proto, with source info", best { files.last.serialize }
-row "serialize unittest.proto, without source info", best { files.last.serialize(source_info: false) }
+  s.slow("compile unittest.proto, fresh Compiler", runs: 10) { fresh.call.compile([name]) }
+  s.slow("compile unittest.proto, retain_options: true", runs: 10) { fresh.call.compile([name], retain_options: true) }
+  s.slow("compile unittest.proto, source_info: true", runs: 10) { fresh.call.compile([name], source_info: true) }
+  s.slow("compile descriptor.proto, fresh Compiler", runs: 10) { fresh.call.compile(["google/protobuf/descriptor.proto"]) }
 
-if ARGV.include?("corpus")
-  protos = Corpus.protos.map do |path|
-    root = ROOTS.find { |r| path.start_with?(r + "/") }
-    path.delete_prefix(root + "/")
+  files = fresh.call.compile([name], source_info: true)
+  emitter = c::Emitters::Ruby.new
+  s.slow("emit native Ruby, unittest.proto and 3 imports", runs: 10) { files.each { |f| emitter.file(f) } }
+  s.slow("to_proto of unittest.proto, with source info", runs: 10) { files.last.to_proto }
+  s.slow("serialize unittest.proto, with source info", runs: 10) { files.last.serialize }
+  s.slow("serialize unittest.proto, without source info", runs: 10) { files.last.serialize(source_info: false) }
+
+  if ENV["BENCH_CORPUS"] != "0"
+    protos = Corpus.protos.map do |path|
+      root = roots.find { |r| path.start_with?(r + "/") }
+      path.delete_prefix(root + "/")
+    end
+    s.slow("whole corpus, #{protos.size} files, a fresh Compiler each", runs: 3) do
+      protos.each { |n| fresh.call.compile([n]) }
+    end
+    s.slow("whole corpus, source_info: true", runs: 3) do
+      protos.each { |n| fresh.call.compile([n], source_info: true) }
+    end
   end
-  row "whole corpus, 107 files, fresh Compiler each", best(3) { protos.each { |n| fresh.call.compile([n]) } }
-  row "  the same, source_info: true", best(3) { protos.each { |n| fresh.call.compile([n], source_info: true) } }
 end
