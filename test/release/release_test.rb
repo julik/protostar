@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require "tmpdir"
 require "open3"
 require "rbconfig"
 require "fileutils"
@@ -28,8 +27,7 @@ class ReleaseTest < Minitest::Test
 
   def self.installed
     @installed ||= begin
-      dir = File.realpath(Dir.mktmpdir("protostar-release"))
-      Minitest.after_run { FileUtils.remove_entry(dir) }
+      dir = File.realpath(TestSupport.tmpdir("protostar-release"))
       gem_home = File.join(dir, "gem_home")
       gems = [[ROOT, "protostar.gemspec"], [SHIM, "google-protobuf.gemspec"]].map do |source, gemspec|
         target = File.join(dir, gemspec.sub(".gemspec", ".gem"))
@@ -58,7 +56,7 @@ class ReleaseTest < Minitest::Test
 
   def setup
     @dir, @gem_home = self.class.installed
-    @work = Dir.mktmpdir("work", @dir)
+    @work = tmpdir("work")
     File.write(File.join(@work, "note.proto"), PROTO)
   end
 

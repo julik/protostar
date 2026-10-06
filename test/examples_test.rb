@@ -4,9 +4,7 @@ require "test_helper"
 require "fileutils"
 require "open3"
 require "rbconfig"
-require "socket"
 require "timeout"
-require "tmpdir"
 
 # The playbooks under examples/ run, print what their READMEs say they print,
 # and show their files exactly as they are on disk.
@@ -178,7 +176,7 @@ class ExamplesTest < Minitest::Test
   # Runs the block in a copy of the playbook with its _pb.rb files removed,
   # then checks that what the block generated is what is committed
   def in_copy_without_generated_code(dir, keep: false)
-    Dir.mktmpdir do |tmp|
+    tmpdir do |tmp|
       FileUtils.cp_r(File.join(EXAMPLES, dir, "."), tmp)
       generated = Dir.glob("**/*_pb.rb", base: tmp)
       generated.each { |rel| FileUtils.rm(File.join(tmp, rel)) } unless keep
@@ -192,12 +190,5 @@ class ExamplesTest < Minitest::Test
       end
       out
     end
-  end
-
-  def free_port
-    server = TCPServer.new("127.0.0.1", 0)
-    server.addr[1]
-  ensure
-    server&.close
   end
 end

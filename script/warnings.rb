@@ -3,7 +3,8 @@
 # Runs the test suite with Ruby's warnings on (RUBYOPT=-w) and fails when any
 # warning comes from protostar itself: a file under lib/, or code that lib/
 # generates and evals ("(protostar decoder ...)", "(protostar encoder ...)").
-# Warnings from tests and gems are left alone.
+# Warnings from tests and gems are left alone. Serial, so that each
+# warning is printed once.
 #
 #   ruby script/warnings.rb
 require "open3"
@@ -13,7 +14,7 @@ OURS = %r{\A(?:#{Regexp.escape(File.join(ROOT, "lib"))}/|lib/|\(protostar )[^:]*
 
 env = {"RUBYOPT" => [ENV["RUBYOPT"], "-w"].compact.join(" ")}
 found = []
-status = Open3.popen2e(env, "bundle", "exec", "rake", "test", chdir: ROOT) do |_stdin, out, wait|
+status = Open3.popen2e(env, "bundle", "exec", "rake", "test:serial", chdir: ROOT) do |_stdin, out, wait|
   out.each_line do |line|
     if OURS.match?(line)
       found << line

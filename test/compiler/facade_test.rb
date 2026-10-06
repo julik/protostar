@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require "tmpdir"
 require "fileutils"
 
 # Protostar::Compiler's public surface: include path resolution, the bundled
@@ -10,7 +9,7 @@ class CompilerFacadeTest < Minitest::Test
   C = Protostar::Compiler
 
   def with_dirs(*trees)
-    Dir.mktmpdir do |root|
+    tmpdir do |root|
       dirs = trees.each_with_index.map do |tree, i|
         dir = File.join(root, "inc#{i}")
         tree.each do |name, body|

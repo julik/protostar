@@ -3,7 +3,6 @@
 require "test_helper"
 require "open3"
 require "protostar/cli"
-require "tmpdir"
 require "rbconfig"
 
 # `protostar compile`, run as a subprocess over test/fixtures/project
@@ -32,7 +31,7 @@ class CliTest < Minitest::Test
   end
 
   def test_every_output
-    Dir.mktmpdir do |dir|
+    tmpdir do |dir|
       %w[ruby google rbs grpc].each { |k| Dir.mkdir(File.join(dir, k)) }
       set = File.join(dir, "set.binpb")
       out, err, status = protostar("-I", "proto", "--ruby_out=#{dir}/ruby", "--google_out=#{dir}/google",
@@ -56,7 +55,7 @@ class CliTest < Minitest::Test
   end
 
   def test_rbs_next_to_ruby_out_describes_protostar_classes
-    Dir.mktmpdir do |dir|
+    tmpdir do |dir|
       out, err, status = protostar("-I", "proto", "--ruby_out=#{dir}", "--rbs_out=#{dir}",
         "acme/person.proto", "acme/editions.proto")
       assert_equal ["", "", 0], [out, err, status]
@@ -69,7 +68,7 @@ class CliTest < Minitest::Test
   end
 
   def test_descriptor_set_flags
-    Dir.mktmpdir do |dir|
+    tmpdir do |dir|
       set = File.join(dir, "set.binpb")
       _, err, status = protostar("--proto_path=proto", "--descriptor_set_out=#{set}", "--include_imports",
         "--include_source_info", "acme/directory.proto")
@@ -81,7 +80,7 @@ class CliTest < Minitest::Test
   end
 
   def test_generated_ruby_loads_and_works
-    Dir.mktmpdir do |dir|
+    tmpdir do |dir|
       _, err, status = protostar("-Iproto", "--ruby_out=#{dir}", "acme/person.proto")
       assert_equal ["", 0], [err, status]
       script = <<~RUBY
@@ -96,7 +95,7 @@ class CliTest < Minitest::Test
   end
 
   def test_input_given_as_a_path_on_disk
-    Dir.mktmpdir do |dir|
+    tmpdir do |dir|
       _, err, status = protostar("-I./proto", "--ruby_out=#{dir}", "proto/acme/person.proto")
       assert_equal ["", 0], [err, status]
       assert File.file?(File.join(dir, "acme/person_pb.rb"))
@@ -104,7 +103,7 @@ class CliTest < Minitest::Test
   end
 
   def test_errors_name_the_file_on_disk
-    Dir.mktmpdir do |dir|
+    tmpdir do |dir|
       out, err, status = protostar("-I", "broken", "--ruby_out=#{dir}", "bad.proto")
       assert_equal "", out
       assert_equal "broken/bad.proto:5:13: Field number 1 has already been used in \"A\" by field \"x\". " \
@@ -115,7 +114,7 @@ class CliTest < Minitest::Test
   end
 
   def test_msvs_error_format
-    Dir.mktmpdir do |dir|
+    tmpdir do |dir|
       _, err, status = protostar("-I./broken/", "--error_format=msvs", "--ruby_out=#{dir}", "bad.proto")
       assert_equal "broken/bad.proto(5) : error in column=13: Field number 1 has already been used in \"A\" by " \
         "field \"x\". Next available field number is 2.\n", err
@@ -124,7 +123,7 @@ class CliTest < Minitest::Test
   end
 
   def test_warnings_go_to_stderr_and_succeed
-    Dir.mktmpdir do |dir|
+    tmpdir do |dir|
       _, err, status = protostar("-Iproto", "--ruby_out=#{dir}", "acme/unused.proto")
       assert_equal ["proto/acme/unused.proto:5:1: warning: Import acme/person.proto is unused.\n", 0], [err, status]
       _, err, = protostar("-Iproto", "--error_format=msvs", "--ruby_out=#{dir}", "acme/unused.proto")
@@ -148,7 +147,7 @@ class CliTest < Minitest::Test
   end
 
   def test_generator_errors
-    Dir.mktmpdir do |dir|
+    tmpdir do |dir|
       _, err, status = protostar("compile", "-Iproto", "--rbs_out=#{dir}", "acme/editions.proto")
       assert_equal ["acme/editions.proto: #{Protostar::CLI::RBS_EDITIONS}--rbs_out: \n", 1], [err, status]
       _, err, status = protostar("compile", "-Ibroken", "--google_out=#{dir}", "bad_package.proto")

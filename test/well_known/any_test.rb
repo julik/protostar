@@ -53,9 +53,11 @@ class WellKnownAnyTest < Minitest::Test
     file = SchemaFixtures.add(pool, "wkt_any_global.proto", package: "wkt_any_global", syntax: :proto3) do |f|
       f.message("Thing") { |m| m.field "n", 1, :int32 }
     end
-    thing = Protostar::Types.define(file).fetch("wkt_any_global.Thing")
-    any = @any.pack(thing.new(n: 4))
-    assert_equal '{"@type":"type.googleapis.com/wkt_any_global.Thing","n":4}', any.to_json
-    assert_equal any, @any.decode_json(any.to_json)
+    TestSupport.isolated_globals do
+      thing = Protostar::Types.define(file).fetch("wkt_any_global.Thing")
+      any = @any.pack(thing.new(n: 4))
+      assert_equal '{"@type":"type.googleapis.com/wkt_any_global.Thing","n":4}', any.to_json
+      assert_equal any, @any.decode_json(any.to_json)
+    end
   end
 end

@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "tmpdir"
 require "rbconfig"
 require "monitor"
 
@@ -116,7 +115,7 @@ module EmitterSupport
     end
 
     def run(rels)
-      Dir.mktmpdir("protostar-emit") do |dir|
+      TestSupport.tmpdir("protostar-emit") do |dir|
         names = []
         rels.each do |rel|
           compiled(rel).files.each do |file|

@@ -6,7 +6,7 @@ module Oracle
   EDITION_KEYS = %i[edition edition_introduced edition_deprecated edition_removed minimum_edition maximum_edition].freeze
 
   def self.available?
-    return false unless ENV["PROTOSTAR_ORACLE"]
+    return false unless TestSupport::ORACLE
     require "google/protobuf"
     require "google/protobuf/descriptor_pb"
     true

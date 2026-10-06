@@ -81,9 +81,12 @@ class TypesTest < Minitest::Test
 
   def test_global_registry
     pool, = SchemaFixtures.load("google/protobuf/unittest_empty.proto")
-    types = Protostar::Types.define(pool.files.last)
-    types.each { |full_name, type| assert_same type, Protostar::Types.find(full_name) }
-    assert_same types, Protostar::Types.define(pool.files.last)
+    TestSupport.isolated_globals do |_, registry|
+      types = Protostar::Types.define(pool.files.last)
+      types.each { |full_name, type| assert_same type, Protostar::Types.find(full_name) }
+      assert_same types, Protostar::Types.define(pool.files.last)
+      assert_same types, registry.file(pool.files.last.name)
+    end
   end
 
   def test_enum_modules
@@ -134,7 +137,7 @@ class TypesTest < Minitest::Test
     file = SchemaFixtures.add(Protostar::Schema::Pool.new, "evil.proto", package: "evil") do |f|
       f.message("M") { |m| m.field "a; raise 'pwned'", 1, :int32 }
     end
-    err = assert_raises(Protostar::Error) { Protostar::Types.define(file) }
+    err = assert_raises(Protostar::Error) { Protostar::Types.define(file, registry: Protostar::Types::Registry.new) }
     assert_includes err.message, "evil.M"
   end
 end

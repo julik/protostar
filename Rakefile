@@ -4,11 +4,24 @@ require "bundler/gem_tasks"
 require "rake/testtask"
 require "standard/rake"
 
-Rake::TestTask.new(:test) do |t|
+TEST_FILES = FileList["test/**/*_test.rb"].exclude("test/corpus/**/*")
+
+Rake::TestTask.new("test:serial") do |t|
+  t.description = "Run the tests in one process (TEST=file, TESTOPTS=... work as for rake test)"
   t.libs << "test"
   t.libs << "lib"
-  t.test_files = FileList["test/**/*_test.rb"].exclude("test/corpus/**/*")
+  t.test_files = TEST_FILES
   t.warning = false
+end
+
+desc "Run the tests in a worker process per core (JOBS=N); PARALLEL=0, or TEST= naming one file, runs them in one"
+task :test do
+  files = ENV["TEST"] ? FileList[ENV["TEST"]] : TEST_FILES
+  if ENV["PARALLEL"] == "0" || files.size == 1
+    Rake::Task["test:serial"].invoke
+  else
+    ruby "-Ilib", "-Itest", "test/parallel.rb", *files, "--", *ENV["TESTOPTS"].to_s.split
+  end
 end
 
 namespace :corpus do
@@ -77,7 +90,7 @@ namespace :examples do
 end
 
 namespace :test do
-  desc "Run the tests with RUBYOPT=-w and fail on any warning from lib/ or the code it generates"
+  desc "Run the tests in one process with RUBYOPT=-w and fail on any warning from lib/ or the code it generates"
   task :warnings do
     ruby "script/warnings.rb"
   end
