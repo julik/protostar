@@ -15,3 +15,5 @@ gets picked up.
 - `fiber-local-arenas.md`: an experiment with per-Fiber object pools and scratch buffers for decode and build
 - `cli-ergonomics.md`: compile by default, include root from the file's directory, stdout for a single file
 - `registries-not-global.md`: Protostar::Registry as an object you hold, Ractor-shareable when frozen, generated files that do not self-register
+- `rbs-by-default.md`: `--ruby_out` writes the `.rbs` next to the `.rb` unless `--no-rbs`
+- `generated-code-linter-guards.md`: rubocop and standard disable wrappers, frozen string literals stay on
