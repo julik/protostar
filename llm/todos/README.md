@@ -10,3 +10,5 @@ gets picked up.
 - `github-install-routes.md`: README install lines need the repo public; Bundler override notes
 - `introspectable-message-classes.md`: Klass.reflection, registry, sizes, explain printers
 - `marshal-and-json-round-trips.md`: Marshal as wire bytes, as_json for Rails, ActiveJob serializer
+- `pure-ruby-codec-go-brrr.md`: the benchmark harness and every move to close the gap with the C extension in pure Ruby
+- `thin-native-codec.md`: an optional, thin C gem for encode and decode only, same objects, same bytes
