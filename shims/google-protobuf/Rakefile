@@ -1,17 +1,22 @@
 # frozen_string_literal: true
 
-require "rake/testtask"
+require "etc"
+require "rake"
 
 # Google's ruby/tests keep their own file names (basic.rb, utf8.rb, ...)
 GOOGLE_TESTS = %w[basic basic_proto2 type_errors utf8].map { |n| "test/google/#{n}.rb" }
+TEST_FILES = FileList["test/**/*_test.rb"] + GOOGLE_TESTS
 
-Rake::TestTask.new(:test) do |t|
-  t.libs << "lib"
-  t.libs << "test"
+# test-unit's own runner, given the files and load paths rather than a loader
+# requiring them, because its process workers collect the tests anew from those
+RUNNER = 'require "test/unit"; exit Test::Unit::AutoRunner.run(true, nil, ARGV)'
+
+desc "Run the tests in a worker process per core (JOBS=N); PARALLEL=0 runs them in one, TEST= picks files"
+task :test do
+  files = ENV["TEST"] ? FileList[ENV["TEST"]] : TEST_FILES
+  parallel = (ENV["PARALLEL"] == "0" || files.size == 1) ? [] : ["--parallel=process", "--n-workers=#{ENV.fetch("JOBS", Etc.nprocessors)}"]
   # Google's tests require their generated files by bare name
-  t.libs << "test/google"
-  t.test_files = FileList["test/**/*_test.rb"] + GOOGLE_TESTS
-  t.warning = false
+  ruby "-e", RUNNER, "--", "-I", "lib:test:test/google", *parallel, *ENV["TESTOPTS"].to_s.split, *files
 end
 
 desc "Regenerate the well-known types and the test fixtures with protostar's compiler"

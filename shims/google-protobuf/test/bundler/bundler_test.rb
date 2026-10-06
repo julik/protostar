@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "test/unit"
-require "tmpdir"
+require_relative "../isolation"
 require "open3"
 require "bundler"
 
@@ -11,6 +11,12 @@ require "bundler"
 class BundlerTest < Test::Unit::TestCase
   SHIM = File.expand_path("../..", __dir__)
   ROOT = File.expand_path("../..", SHIM)
+
+  # Two `bundle lock`s of the same git source at once collide on Bundler's
+  # git cache (shallow.lock). test-unit runs a test case with a startup hook
+  # in one process worker, so these go one after another
+  def self.startup
+  end
 
   def test_path_source
     lock = resolve(<<~GEMFILE)
@@ -65,7 +71,7 @@ class BundlerTest < Test::Unit::TestCase
   # Locks the Gemfile with gems already installed when it can, and from
   # rubygems.org when it cannot
   def resolve(gemfile)
-    Dir.mktmpdir("protostar-shim-bundler") do |dir|
+    Isolation.tmpdir("protostar-shim-bundler") do |dir|
       File.write(File.join(dir, "Gemfile"), gemfile)
       output = nil
       Bundler.with_unbundled_env do

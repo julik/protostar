@@ -23,15 +23,11 @@ class RubyEmitterTest < Minitest::Test
   def round_trip(hash)
     built = build(hash)
     source = Emitters::Ruby.new.definition(built)
-    pool = Protostar::Schema::Pool.new
-    saved = Protostar.generated_pool
-    Protostar.instance_variable_set(:@generated_pool, pool)
-    begin
+    loaded = TestSupport.isolated_globals do |pool|
       eval(source, TOPLEVEL_BINDING, "(emitted)") # rubocop:disable Security/Eval
-    ensure
-      Protostar.instance_variable_set(:@generated_pool, saved)
+      pool.file(built.name)
     end
-    assert_equal built.serialize, pool.file(built.name).serialize, source
+    assert_equal built.serialize, loaded.serialize, source
     source
   end
 
@@ -171,15 +167,10 @@ class RubyEmitterTest < Minitest::Test
     source = Emitters::Ruby.new.definition(file)
     assert_includes source, 'f.message "M", deprecated: true, unknown_fields: "\x88\xB5\x18\a".b'
     refute_includes source, "opts.level"
-    pool = Protostar::Schema::Pool.new
-    saved = Protostar.generated_pool
-    Protostar.instance_variable_set(:@generated_pool, pool)
-    begin
+    loaded = TestSupport.isolated_globals do |pool|
       eval(source, TOPLEVEL_BINDING, "(emitted)") # rubocop:disable Security/Eval
-    ensure
-      Protostar.instance_variable_set(:@generated_pool, saved)
+      pool.file("rt/io/app.proto")
     end
-    loaded = pool.file("rt/io/app.proto")
     assert_equal "\x88\xb5\x18\x07".b, loaded.messages.first.options.unknown_fields
     assert loaded.messages.first.options.deprecated?
     assert_equal file.serialize(source_info: false), loaded.serialize

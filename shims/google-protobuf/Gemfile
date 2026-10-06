@@ -10,7 +10,7 @@ gem "protostar", path: "../.."
 
 group :test do
   gem "rake"
-  gem "test-unit"
+  gem "test-unit", ">= 3.7.4" # --parallel=process
   gem "bigdecimal"
   gem "grpc"
   gem "googleapis-common-protos-types"

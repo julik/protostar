@@ -3,7 +3,6 @@
 require "test_helper"
 require "open3"
 require "rbconfig"
-require "tmpdir"
 require "fileutils"
 
 # The RBS written next to --ruby_out, for protostar's own classes
@@ -190,7 +189,7 @@ class ProtostarRbsTest < Minitest::Test
     end
     emitter = Emitters::ProtostarRbs.new
     batches(files).each do |batch|
-      Dir.mktmpdir do |dir|
+      tmpdir do |dir|
         batch.each_value do |f|
           emitter.emit([f]).each do |path, content|
             FileUtils.mkdir_p(File.dirname(File.join(dir, path)))

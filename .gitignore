@@ -1,6 +1,7 @@
 /.bundle/
 /pkg/
 /tmp/
+/test/.timings
 /coverage/
 /doc/
 /.yardoc/

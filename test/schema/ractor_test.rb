@@ -6,6 +6,10 @@ class RactorTest < Minitest::Test
   def test_descriptors_built_in_main_are_readable_in_another_ractor
     _, file = SchemaFixtures.load("google/protobuf/unittest.proto")
     assert Ractor.shareable?(file)
+    # Everything the Ractor will touch must already be loaded here: a require
+    # from a non-main Ractor raises before Ruby 3.4. `to_h` goes through
+    # descriptor.proto's classes
+    Protostar::Schema::Proto.types
 
     experimental = Warning[:experimental]
     Warning[:experimental] = false
