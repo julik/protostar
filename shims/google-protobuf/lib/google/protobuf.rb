@@ -22,6 +22,17 @@ module Google
     # @return [Symbol] which implementation is loaded
     IMPLEMENTATION = :PROTOSTAR
 
+    # descriptor.proto's classes, which descriptors' `options` and `to_proto`
+    # return, load on first use as the gem's C code requires them. The
+    # well-known types stay undefined until their files are required, as in the gem.
+    %i[
+      FileDescriptorSet FileDescriptorProto DescriptorProto ExtensionRangeOptions FieldDescriptorProto
+      OneofDescriptorProto EnumDescriptorProto EnumValueDescriptorProto ServiceDescriptorProto
+      MethodDescriptorProto FileOptions MessageOptions FieldOptions OneofOptions EnumOptions EnumValueOptions
+      ServiceOptions MethodOptions UninterpretedOption FeatureSet FeatureSetDefaults SourceCodeInfo
+      GeneratedCodeInfo Edition SymbolVisibility
+    ].each { |name| autoload(name, ::File.expand_path("protobuf/descriptor_pb", __dir__)) }
+
     # @return [String] the message's binary encoding
     def self.encode(msg, options = {})
       msg.to_proto(options)
