@@ -1651,11 +1651,11 @@ Things to know when changing the code:
 | `lib/protostar/compiler/validator.rb` | 943 | `Validator` and the CLI checks |
 | `lib/protostar/compiler/retention.rb` | 104 | `Retention.strip` |
 | `lib/protostar/compiler/include/` | | bundled `google/protobuf/*.proto` (14 files) and LICENSE |
-| `lib/protostar/schema/draft.rb` | 809 | `Schema::File.draft`, the draft classes, the naming rules |
+| `lib/protostar/schema/draft.rb` | 779 | the draft classes `Schema::File.draft` makes, the naming rules |
 | `lib/protostar/schema/draft/resolution.rb` | 171 | `Draft::Resolution`: options objects, feature resolution, defaults |
 | `lib/protostar/schema/draft/copy.rb` | 88 | `Draft.copy`: a built file rebuilt for another pool |
-| `lib/protostar/schema/options.rb` | 337 | `MessageValue`, `Options` and its nine subclasses |
-| `lib/protostar/schema/proto.rb` | 728 | the translation to and from protoc's shape: `to_proto`, `serialize`, `from_proto`, the option value codec |
+| `lib/protostar/schema/options.rb` | 367 | `MessageValue`, `Options` and its nine subclasses |
+| `lib/protostar/schema/proto.rb` | 576 | the translation to and from protoc's shape behind `to_proto`, `serialize` and `from_proto` (one-line delegations on the descriptor classes, autoloading it), the option value codec |
 | `lib/protostar/schema/resolver.rb` | 118 | `Schema::Resolver`: the same scoping rule over built files |
 | `lib/protostar/schema/features.rb` | 152 | `Schema::Features`, `EDITIONS`, `DEFAULTS` |
 | `lib/protostar/dsl.rb` | 351 | `Protostar::DSL`, adapters onto the draft API |

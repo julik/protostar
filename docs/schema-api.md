@@ -201,8 +201,8 @@ imports, so the names might resolve to nothing when it is loaded.
 
 ### Where options are wire bytes
 
-Only in `lib/protostar/schema/proto.rb`: `MessageValue#encode(type)` and
-`MessageValue.decode(type, bytes, extension_lookup)`. `to_proto` writes options with the
+Only in `lib/protostar/schema/proto.rb` (`Proto::Codec`), behind `MessageValue#encode(type)`
+and `MessageValue.decode(type, bytes, extension_lookup)`. `to_proto` writes options with the
 first, `from_proto` reads them with the second, after linking the drafted file so the
 file's own extensions are known (one pass; it used to decode twice). The compiler's
 text-format reader uses `encode` for `google.protobuf.Any` values in aggregates, which

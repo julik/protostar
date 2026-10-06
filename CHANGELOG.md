@@ -42,6 +42,7 @@ together and depend on each other's exact version.
 ### Development
 
 - `to_proto` no longer calls `require` once descriptor.proto's classes are loaded, so it works inside a Ractor on Ruby 3.2 and 3.3 when the main Ractor loaded them first.
+- `require "protostar"` loads the schema, the wire format and the binary codec only: 28 files in 8.7 ms instead of 85 files in 53 ms (Ruby 3.4, M1 Pro). The compiler, JSON, text format, views, builder, DSL, well-known helpers and descriptor.proto's classes (`Protostar::Google::Protobuf::*`, long names too) are autoloaded on first use; loading and decoding a Timestamp takes 19 ms instead of 52. In a program with Ractors, touch what a Ractor will use in the main Ractor first.
 - `rake test` runs the test files in a forked worker per core, sharded by recorded timings (about 15 s instead of 66 s on 10 cores); `PARALLEL=0` keeps the serial run. The shim's suite uses test-unit's process workers.
 
 ### Deprecated
