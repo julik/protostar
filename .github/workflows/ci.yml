@@ -79,6 +79,8 @@ jobs:
           ruby-version: "3.4"
           bundler-cache: true
       - run: bundle exec rake standard
+      - name: API docs build with no YARD warnings
+        run: bundle exec rake yard
   conformance:
     name: protobuf conformance suite (binary, JSON, text format)
     runs-on: ubuntu-latest
