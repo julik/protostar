@@ -1,10 +1,11 @@
 # protostar
 
-Protocol buffers in pure Ruby. protostar compiles `.proto` files to Ruby, encodes and
+(Slightly unhinged) Protocol buffers in pure Ruby. protostar compiles `.proto` files to Ruby, encodes and
 decodes messages, reads them without decoding, writes them as JSON and as text, and can
 stand in for Google's `google-protobuf` gem so that `grpc` and friends run without it.
 
-No `protoc`, no C extension, no runtime dependencies. Ruby 3.2 or newer.
+No `protoc`, no C extension, no runtime dependencies. No native memory handles, GC problems, no uninspectable
+blobs, full introspection and control, and full Ractor compatibility. Ruby 3.2 or newer.
 
 Why bother? Because a Ruby app that speaks protobuf usually drags in a native gem that
 has to compile (or come prebuilt for your exact platform), plus a `protoc` binary of a
