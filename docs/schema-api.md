@@ -188,13 +188,14 @@ friends. Three things stand in the way, and `to_proto` gives that message when i
 
 Draft calls take `options:` as an `Options` or `MessageValue`, or as a Hash in the DSL's
 spelling: fields by name, custom options under `extensions:` (by full name or `Field`),
-wire bytes under `unknown_fields:`. Inside message values a Hash's own extensions are
-`__extensions:` and its unknown fields `__unknown_fields:` (`[number, wire_type, bytes]`
-triples), because a custom message type may have a field named `extensions`. Names are
+wire bytes under `unknown_fields:`. Message values are Hashes in the same spelling, at any
+depth. A custom message type may have a field named `extensions` or `unknown_fields`; give
+that field with a String key (`"extensions" => ...`), which the emitter does too. Names are
 resolved at `resolve` time against the file, its imports, and the pool; a name that resolves
-nowhere is an error.
+nowhere is an error. The earlier spellings, `__extensions:` and `__unknown_fields:` as
+`[number, wire_type, bytes]` triples, are still read until 0.2.0 with a deprecation warning.
 
-The native emitter writes custom options from `import option` files as `__unknown_fields`,
+The native emitter writes custom options from `import option` files as `unknown_fields`,
 as protoc's own Ruby generator embeds them: a generated file does not load its option-only
 imports, so the names might resolve to nothing when it is loaded.
 

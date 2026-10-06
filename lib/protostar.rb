@@ -2,8 +2,24 @@
 
 require_relative "protostar/version"
 
+# Protocol buffers in pure Ruby: a `.proto` compiler ({Compiler}), message
+# classes with a binary codec, views, JSON and the text format, and the
+# {DSL} that generated `_pb.rb` files are written in. README.md has the tour.
 module Protostar
+  # The base of protostar's errors, except {Protostar::TypeError}, which is a
+  # Ruby `TypeError` so that `rescue TypeError` catches it
   class Error < StandardError; end
+
+  # Warns in Ruby's `:deprecated` category (shown under `ruby -w` or
+  # `-W:deprecated`), naming the first caller outside protostar
+  # @api private
+  def self.deprecated(old, replacement)
+    lib = __dir__ + "/"
+    site = caller_locations.find { |l| !l.path.start_with?(lib) }
+    where = site ? "#{site.path}:#{site.lineno}: " : ""
+    warn("#{where}warning: protostar: #{old} is deprecated and goes away in 0.2.0, write #{replacement} " \
+      "(protostar compile writes the new spelling)", category: :deprecated)
+  end
 
   # Short names for the well-known types: `Protostar::Timestamp` is
   # `Protostar::Google::Protobuf::Timestamp`. Each loads its bootstrap file

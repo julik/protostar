@@ -12,10 +12,10 @@ Protostar::DSL.file(
   java_package: "com.google.protobuf_test_messages.edition_unstable",
   objc_class_prefix: "EditionUnstable"
 ) do |f|
-  f.message "ComplexMessage", visibility: :VISIBILITY_EXPORT do |m|
+  f.message "ComplexMessage", visibility: :export do |m|
     m.field :d, 1, :sfixed32
   end
-  f.message "TestAllTypesEditionUnstable", visibility: :VISIBILITY_EXPORT do |m|
+  f.message "TestAllTypesEditionUnstable", visibility: :export do |m|
     # Singular
     m.field :optional_int32, 1, :sfixed32
     m.field :optional_foreign_message, 2, :message, ".protobuf_test_messages.edition_unstable.ForeignMessageEditionUnstable",
@@ -42,10 +42,10 @@ Protostar::DSL.file(
     m.map :map_string_bytes, 15, :string, :bytes
     m.extensions 120..200
   end
-  f.message "ForeignMessageEditionUnstable", visibility: :VISIBILITY_EXPORT do |m|
+  f.message "ForeignMessageEditionUnstable", visibility: :export do |m|
     m.field :c, 1, :sfixed32
   end
-  f.enum "ForeignEnumEditionUnstable", visibility: :VISIBILITY_EXPORT do |e|
+  f.enum "ForeignEnumEditionUnstable", visibility: :export do |e|
     e.value :FOREIGN_FOO, 0
     e.value :FOREIGN_BAR, 1
     e.value :FOREIGN_BAZ, 2

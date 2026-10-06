@@ -83,10 +83,16 @@ class CompilerFacadeTest < Minitest::Test
     assert_same compiler.compile(["c.proto"]).last, compiler.compile(["c.proto"]).last
   end
 
-  def test_compile_to_hashes
-    hashes = C.new.compile_to_hashes(["x.proto"], sources: {"x.proto" => "syntax = \"proto3\"; message X { int32 a_b = 1; }\n"})
+  def test_compile_to_hashes_is_deprecated
+    sources = {"x.proto" => "syntax = \"proto3\"; message X { int32 a_b = 1; }\n"}
+    hashes = nil
+    deprecated, Warning[:deprecated] = Warning[:deprecated], true
+    _, err = capture_io { hashes = C.new.compile_to_hashes(["x.proto"], sources: sources) }
+    Warning[:deprecated] = deprecated
     assert_equal [{name: "x.proto", message_type: [{name: "X", field: [{name: "a_b", number: 1, label: :LABEL_OPTIONAL,
                                                                         type: :TYPE_INT32, json_name: "aB"}]}], syntax: "proto3"}], hashes
+    assert_equal C.new.compile(["x.proto"], sources: sources).map { |f| f.to_proto.to_h }, hashes
+    assert_match(/\A#{Regexp.escape(__FILE__)}:\d+: warning: protostar: Compiler#compile_to_hashes is deprecated/, err)
   end
 
   def test_source_info_on_request

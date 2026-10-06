@@ -32,6 +32,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "standard", "~> 1.50"
   spec.add_development_dependency "magic_frozen_string_literal"
   spec.add_development_dependency "yard"
-  spec.add_development_dependency "benchmark-ips"
   spec.add_development_dependency "rbs", ">= 3.5"
 end

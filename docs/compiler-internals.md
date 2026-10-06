@@ -65,7 +65,7 @@ files.last.to_proto                                              # its FileDescr
 compiler.diagnostics                                             # warnings of the last compile
 ```
 
-(`compile_to_hashes` gives each file's `to_proto.to_h`, for reading.)
+(`compile_to_hashes` gave each file's `to_proto.to_h`; it is deprecated and goes away in 0.2.0.)
 
 `compile` also takes `sources: {"name.proto" => text}` for in-memory files (used throughout
 this document and the tests), `retain_options: true` (see section 18) and a private
@@ -1533,7 +1533,7 @@ code names in its comments.
 ## 21. Performance
 
 Measured on Ruby 3.4.1, arm64 macOS (Apple Silicon), interpreter only (this Ruby has no
-YJIT), best of 10 runs (3 for the corpus), with `bench/compiler_bench.rb`. `unittest.proto`
+YJIT), best of 10 runs (3 for the corpus), with `bench/compiler_bench.rb` (the DSL and `add_serialized_file` rows are in `bench/definition_bench.rb`). `unittest.proto`
 is 65,682 bytes, 2,731 lines. "Before" is the same bench on the commit before WS14 (the
 descriptor hash and `Schema::Builder`), run on the same machine the same day; the
 "doc" column is what this section said then, measured with other scripts.

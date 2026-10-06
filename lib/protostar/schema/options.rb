@@ -287,9 +287,11 @@ module Protostar
       repeated: %i[declaration])
 
     class MessageValue
-      # A value from a Hash: fields by name, `extensions:` (or `__extensions:`)
-      # by full name or {Field}, `unknown_fields:` as bytes (or
-      # `__unknown_fields:` as `[number, wire_type, bytes]` triples)
+      # A value from a Hash: fields by name, `extensions:` by full name or
+      # {Field}, `unknown_fields:` as bytes. A field named `extensions` or
+      # `unknown_fields` takes a String key. `__extensions:` and
+      # `__unknown_fields:` (as `[number, wire_type, bytes]` triples) are the
+      # deprecated spellings.
       # @api private
       def self.from_hash(hash, extension, owner)
         fields = {}
@@ -298,13 +300,16 @@ module Protostar
         hash.each do |key, value|
           case key
           when :extensions, :__extensions
+            Protostar.deprecated("__extensions:", "extensions:") if key == :__extensions
             value.each do |name, v|
               field = name.is_a?(Field) ? name : extension.call(name.to_s.delete_prefix("."))
               raise Error, "#{owner}: option extension #{name} is not defined here or in an import" unless field
               extensions[field] = from_value(v, extension, owner)
             end
           when :unknown_fields then unknown = value.b.freeze
-          when :__unknown_fields then unknown = unknown_bytes(value)
+          when :__unknown_fields
+            Protostar.deprecated("__unknown_fields: [[number, wire_type, bytes]]", "unknown_fields: \"bytes\".b")
+            unknown = unknown_bytes(value)
           else fields[key.to_sym] = from_value(value, extension, owner)
           end
         end

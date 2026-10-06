@@ -245,6 +245,73 @@ class DslTest < Minitest::Test
     assert_raises(Protostar::Schema::Error) { dsl("dsltest/bad.proto") { |f| f.message("M") { |m| m.field :a, 1, ".Nope" } } }
   end
 
+  OPTION_TYPES = <<~PROTO
+    syntax = "proto2";
+    package dsltest.spell;
+    import "google/protobuf/descriptor.proto";
+    message Note {
+      optional string text = 1;
+      optional string extensions = 2;
+      extensions 100 to 199;
+    }
+    extend Note { optional int32 weight = 100; }
+    extend google.protobuf.MessageOptions { optional Note note = 52001; }
+  PROTO
+
+  def spelled(name, visibility: :export, &message_block)
+    @pool.add(compiled("dsltest/spell_types.proto", OPTION_TYPES)) unless @pool.include?("dsltest/spell_types.proto")
+    dsl(name, package: "dsltest.spell.#{File.basename(name, ".proto")}", edition: 2024, dependencies: ["dsltest/spell_types.proto"]) do |f|
+      f.message("M", visibility: visibility, **message_block.call)
+    end.messages.first
+  end
+
+  def test_spelling_of_extensions_unknown_fields_and_visibility
+    unknown = "\xA0\x1F\x05".b # field 500, varint 5
+    message = spelled("dsltest/spell_new.proto") do
+      {extensions: {"dsltest.spell.note" => {
+        :text => "t", "extensions" => "a field", :extensions => {"dsltest.spell.weight" => 3},
+        :unknown_fields => unknown
+      }}}
+    end
+    note = message.options.extension("dsltest.spell.note")
+    assert_equal "t", note[:text]
+    assert_equal "a field", note[:extensions]
+    assert_equal 3, note.extension("dsltest.spell.weight")
+    assert_equal unknown, note.unknown_fields
+    assert_equal :export, message.visibility
+
+    source = Protostar::Compiler::Emitters::Ruby.new.definition(message.file)
+    assert_includes source, "  f.message \"M\",\n    visibility: :export,\n"
+    assert_includes source, '"extensions" => "a field"'
+    assert_includes source, 'extensions: {"dsltest.spell.weight" => 3}'
+    assert_includes source, 'unknown_fields: "\xA0\x1F\x05".b'
+    refute_includes source, "__"
+  end
+
+  def test_old_spellings_are_read_with_a_deprecation_warning
+    expected = spelled("dsltest/spell_now.proto") do
+      {extensions: {"dsltest.spell.note" => {text: "t", extensions: {"dsltest.spell.weight" => 3},
+                                             unknown_fields: "\xA0\x1F\x05".b}}}
+    end
+    old = nil
+    deprecated, Warning[:deprecated] = Warning[:deprecated], true
+    _, err = capture_io do
+      old = spelled("dsltest/spell_old.proto", visibility: :VISIBILITY_EXPORT) do
+        {extensions: {"dsltest.spell.note" => {text: "t", __extensions: {"dsltest.spell.weight" => 3},
+                                               __unknown_fields: [[500, 0, "\x05".b]]}}}
+      end
+    end
+    Warning[:deprecated] = deprecated
+    assert_equal expected.options.extension("dsltest.spell.note"), old.options.extension("dsltest.spell.note")
+    assert_equal :export, old.visibility
+    lines = err.lines
+    assert_equal 3, lines.size, err
+    assert lines.all? { |l| l.start_with?("#{__FILE__}:") }, err
+    assert_match(/visibility: :VISIBILITY_EXPORT is deprecated .* write visibility: :export/, lines[0])
+    assert_match(/__extensions: is deprecated .* write extensions:/, err)
+    assert_match(/__unknown_fields: .* is deprecated .* write unknown_fields:/, err)
+  end
+
   def test_map_entry_name
     assert_equal "FooBarEntry", DSL.map_entry_name("foo_bar")
     assert_equal "X1yEntry", DSL.map_entry_name("x1y")

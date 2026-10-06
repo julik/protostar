@@ -107,7 +107,8 @@ module Protostar
       #   @return [Symbol]
       # @!attribute [r] enforce_proto_limits
       #   @return [Symbol]
-      attr_reader(*NAMES)
+      attr_reader :field_presence, :enum_type, :repeated_field_encoding, :utf8_validation, :message_encoding,
+        :json_format, :enforce_naming_style, :default_symbol_visibility, :enforce_proto_limits
 
       # Overlays a declared `features` option (a FeatureSet) on these features
       # @param declared [MessageValue, nil]

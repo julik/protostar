@@ -22,18 +22,24 @@ module Protostar
   #
   # Every descriptor-level call takes the options of its descriptor as extra
   # keywords: `deprecated: true`, `packed: false`, `features: {...}`, with
-  # custom options by extension full name under `extensions:`. An
-  # `options:` Hash is taken as the options message verbatim instead (custom
-  # options under `__extensions:`, undecodable fields under
-  # `__unknown_fields:` as `[number, wire_type, bytes]`), and is how an empty
-  # options message is written. Inside option values, a message's own
-  # extensions are spelled `__extensions:` too.
+  # custom options by extension full name under `extensions:` and fields
+  # nobody could interpret as wire bytes under `unknown_fields:`. An
+  # `options:` Hash is taken as the options message verbatim instead, in the
+  # same spelling, and is how an empty options message is written. Option
+  # values that are messages are Hashes in that spelling too; a field of
+  # such a message that is itself named `extensions` or `unknown_fields` is
+  # given with a String key.
+  #
+  # The earlier spellings, `__extensions:`, `__unknown_fields:` (as
+  # `[number, wire_type, bytes]` triples) and `visibility: :VISIBILITY_EXPORT`,
+  # are still read until 0.2.0, with a deprecation warning.
   module DSL
     # Raised for a call the DSL cannot turn into a descriptor
     class Error < Protostar::Error; end
 
     SYNTAXES = {proto2: :proto2, proto3: :proto3, editions: :editions}.freeze
     LABELS = %i[optional required repeated].freeze
+    OLD_VISIBILITIES = {VISIBILITY_LOCAL: :local, VISIBILITY_EXPORT: :export}.freeze
 
     class << self
       # Describes, builds and defines one `.proto` file. Loading a file the pool
@@ -109,12 +115,21 @@ module Protostar
         out = verbatim ? verbatim.dup : {}
         keywords.each do |key, value|
           if key == :extensions
-            out[:__extensions] = (out[:__extensions] || {}).merge(value)
+            out[:extensions] = (out[:extensions] || {}).merge(value)
           else
             out[key] = value
           end
         end
         out
+      end
+
+      # :local or :export; the deprecated protoc spellings are read with a warning
+      # @api private
+      def visibility(value)
+        replacement = OLD_VISIBILITIES[value]
+        return value unless replacement
+        Protostar.deprecated("visibility: #{value.inspect}", "visibility: #{replacement.inspect}")
+        replacement
       end
 
       # protoc's name for the entry message of a map field
@@ -171,11 +186,11 @@ module Protostar
 
       # A nested (or top-level) message
       # @param name [String]
-      # @param visibility [Symbol, nil] :local or :export (edition 2024); :VISIBILITY_LOCAL and
-      #   :VISIBILITY_EXPORT are read the same
+      # @param visibility [Symbol, nil] :local or :export (edition 2024)
       # @param options [Hash, nil] MessageOptions verbatim
       # @yieldparam m [MessageBuilder]
       def message(name, visibility: nil, options: nil, **message_options, &block)
+        visibility = DSL.visibility(visibility)
         @draft.message(name, visibility: visibility, options: DSL.options(options, message_options)) do |m|
           block&.call(MessageBuilder.new(m))
         end
@@ -184,6 +199,7 @@ module Protostar
       # An enum
       # @yieldparam e [EnumBuilder]
       def enum(name, visibility: nil, options: nil, **enum_options, &block)
+        visibility = DSL.visibility(visibility)
         @draft.enum(name, visibility: visibility, options: DSL.options(options, enum_options)) do |e|
           block&.call(EnumBuilder.new(e))
         end
