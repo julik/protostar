@@ -442,11 +442,11 @@ through moving an app or a gem from google-protobuf and protoc, either way.
 Pure Ruby is slower than C, and there is no hiding it. On the [benchmarks](docs/benchmarks.md)
 (Ruby 3.4, Apple M1 Pro), decoding a populated 413-byte message takes 42 µs, 30 µs with
 YJIT, where google-protobuf's C extension takes 3 µs; encoding it, 30 µs and 12 µs against
-0.9 µs. A 50-byte message decodes in 2.5 µs and encodes in 3.5 µs with YJIT. Where
+0.9 µs. A 50-byte message decodes in 2.5 µs and encodes in 3.6 µs with YJIT. Where
 protostar does well: with YJIT, a view reads two fields of a 1 MiB message in 53 µs, five
 times faster than the C gem decodes it; the Builder writes large responses without
 building objects; and nothing has to compile at install time. Defining classes costs
-about 1.3 ms per message class when a `_pb.rb` is loaded.
+about 1.1 ms per message class when a `_pb.rb` is loaded.
 
 If protobuf encoding is your hot path, measure with your own messages
 (`rake bench` shows how) before you switch.
