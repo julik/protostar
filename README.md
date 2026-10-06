@@ -5,7 +5,7 @@ decodes messages, reads them without decoding, writes them as JSON and as text, 
 stand in for Google's `google-protobuf` gem so that `grpc` and friends run without it.
 
 No `protoc`, no C extension, no runtime dependencies. No native memory handles, GC problems, no uninspectable
-blobs, full introspection and control, and full Ractor compatibility. Ruby 3.2 or newer.
+blobs, no issues with `fork()`, Fibers or Ractors or Threads. Full introspection and control. Ruby 3.2 or newer.
 
 ## The north star
 
