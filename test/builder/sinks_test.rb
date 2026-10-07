@@ -173,6 +173,18 @@ class BuilderSinksTest < Minitest::Test
     assert_equal Root.new(loose: Array.new(5000, 300)), Root.decode(keeper.chunks.join)
   end
 
+  def test_a_large_packed_run_is_held_as_bytes_and_written_whole
+    keeper = Keeper.new
+    values = Array.new(40_000) { |i| i * 7 - 1000 }
+    Protostar::Builder.write(keeper, Root) do |pb|
+      pb.name "n"
+      values.each_slice(1000) { |s| pb.nums s }
+    end
+    assert_equal Root.new(name: "n", nums: values), Root.decode(keeper.chunks.join)
+    assert_equal 2, keeper.chunks.size
+    assert_operator keeper.chunks.last.bytesize, :>, 65_536
+  end
+
   def test_not_a_sink
     error = assert_raises(ArgumentError) { Protostar::Builder.write(Object.new, Person) { |pb| pb.name "x" } }
     assert_equal "Object is not a sink: it answers none of write, << and call", error.message

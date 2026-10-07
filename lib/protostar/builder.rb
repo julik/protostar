@@ -431,9 +431,14 @@ module Protostar
       if info.packed
         run = (@pending ||= {}.compare_by_identity)[info]
         if run.nil? || @replace
-          run = @pending[info] = []
+          # varints are kept as their bytes, a fraction of what an Array of Integers takes
+          run = @pending[info] = PACK[info.kind] ? [] : Wire::Writer.new
         end
-        list.each { |e| run << __packed_value(info, e) }
+        if run.is_a?(Array)
+          list.each { |e| run << __packed_value(info, e) }
+        else
+          list.each { |e| run.write_varint(__packed_value(info, e)) }
+        end
       elsif @replace
         (@pending ||= {}.compare_by_identity)[info] = list.dup
       else
@@ -782,7 +787,7 @@ module Protostar
       end
     end
 
-    # A packed element as the run will hold it: an Integer (enum numbers
+    # A packed element as it goes into the run: an Integer (enum numbers
     # resolved, sint zigzagged), a Float, or 1 or 0 for bools
     def __packed_value(info, v)
       case info.kind
@@ -808,30 +813,33 @@ module Protostar
       fields.each do |info|
         list = pending[info]
         if info.packed
-          __packed(info, list) unless list.empty?
+          __packed(info, list) unless list.is_a?(Array) ? list.empty? : list.string.empty?
         else
           __elements(info, list)
         end
       end
     end
 
-    def __packed(info, list)
+    # A packed run: an Array of fixed-width values, or a writer holding varints
+    def __packed(info, run)
       @buf << info.packed_tag
-      if (format = PACK[info.kind])
-        __varint(F::FIXED.fetch(info.kind)[0] * list.size)
-        if info.kind == F::FLOAT
-          @buf << Wire.pack_floats(list)
+      if run.is_a?(Wire::Writer)
+        bytes = run.string
+        __varint(bytes.bytesize)
+        if @w.io && bytes.bytesize >= BIG && bytes.bytesize >= @w.flush_at
+          @w.write_through(bytes)
         else
-          list.pack(format, buffer: @buf)
+          @w.write_raw(bytes)
         end
-      elsif info.kind == F::BOOL
-        __varint(list.size)
-        list.each { |b| @buf << b }
       else
-        __varint(list.sum { |n| Wire.varint_size(n) })
-        list.each { |n| __varint(n) }
+        __varint(F::FIXED.fetch(info.kind)[0] * run.size)
+        if info.kind == F::FLOAT
+          @buf << Wire.pack_floats(run)
+        else
+          run.pack(PACK[info.kind], buffer: @buf)
+        end
+        @w.flush_if_full
       end
-      @w.flush_if_full
     end
 
     def __int(info, v)
