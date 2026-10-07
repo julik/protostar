@@ -16,3 +16,4 @@ gets picked up.
 - `registries-not-global.md`: Protostar::Registry as an object you hold, Ractor-shareable when frozen, generated files that do not self-register
 - `rbs-by-default.md`: `--ruby_out` writes the `.rbs` next to the `.rb` unless `--no-rbs`
 - `generated-code-linter-guards.md`: rubocop and standard disable wrappers, frozen string literals stay on
+- `lint-command.md`: `protostar lint`, Rust-style diagnostics with spans, codes and help, plus best-practice rules led by "required is forever"
