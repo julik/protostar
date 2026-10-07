@@ -23,13 +23,17 @@ module Protostar
         attr_reader :message
         # @return [String, nil] for an :import problem, the imported file name
         attr_reader :import
+        # @return [Array<Array(AST::Node, Symbol, String)>] other places the problem
+        #   involves, as node, position kind and label, for the rich renderer
+        attr_reader :related
 
-        def initialize(severity:, message:, node: nil, location: nil, import: nil)
+        def initialize(severity:, message:, node: nil, location: nil, import: nil, related: [])
           @severity = severity
           @node = node
           @location = location
           @message = message
           @import = import
+          @related = related.freeze
           freeze
         end
 
@@ -178,12 +182,13 @@ module Protostar
       end
 
       # Records an error against a node's recorded position
-      def error(node, location, message)
-        @problems << Problem.new(severity: :error, node: node, location: location, message: message)
+      def error(node, location, message, related: [])
+        @problems << Problem.new(severity: :error, node: node, location: location, message: message, related: related)
       end
 
-      def warning(node, location, message)
-        @problems << Problem.new(severity: :warning, node: node, location: location, message: message)
+      def warning(node, location, message, related: [])
+        @problems << Problem.new(severity: :warning, node: node, location: location, message: message,
+          related: related)
       end
 
       def import_error(name, message)
@@ -325,11 +330,14 @@ module Protostar
         existing = @table.add(kind, full_name, descriptor_of(node))
         return true unless existing
         if existing.file_name == @ast.name
+          first = existing.object && @descriptors.key(existing.object)
+          related = first ? [[first, :name, "first defined here"]] : []
           dot = full_name.rindex(".")
           if dot
-            error(node, :name, "\"#{full_name[(dot + 1)..]}\" is already defined in \"#{full_name[0, dot]}\".")
+            error(node, :name, "\"#{full_name[(dot + 1)..]}\" is already defined in \"#{full_name[0, dot]}\".",
+              related: related)
           else
-            error(node, :name, "\"#{full_name}\" is already defined.")
+            error(node, :name, "\"#{full_name}\" is already defined.", related: related)
           end
         else
           error(node, :name, "\"#{full_name}\" is already defined in file \"#{existing.file_name}\".")
@@ -420,12 +428,13 @@ module Protostar
             next unless range.start <= field.number && field.number < range.end
             hint(message, range, :number)
             error(range, :number, "Extension range #{range.start} to #{range.end - 1} includes field " \
-              "\"#{field.name}\" (#{field.number}).")
+              "\"#{field.name}\" (#{field.number}).", related: [[field, :number, "`#{field.name}` uses it"]])
           end
           ranges.each do |range|
             next unless range.start <= field.number && field.number < range.end
             hint(message, range, :number)
-            error(range, :number, "Field \"#{field.name}\" uses reserved number #{field.number}.")
+            error(range, :number, "Field \"#{field.name}\" uses reserved number #{field.number}.",
+              related: [[field, :number, "`#{field.name}` uses it"]])
           end
           error(field, :name, "Field name \"#{field.name}\" is reserved.") if reserved_names[field.name]
         end
@@ -541,7 +550,8 @@ module Protostar
         enum.value.each do |value|
           ranges.each do |range|
             next unless value.number.between?(range.start, range.end)
-            error(range, :number, "Enum value \"#{value.name}\" uses reserved number #{value.number}.")
+            error(range, :number, "Enum value \"#{value.name}\" uses reserved number #{value.number}.",
+              related: [[value, :number, "`#{value.name}` uses it"]])
           end
           error(value, :name, "Enum value \"#{value.name}\" is reserved.") if reserved_names[value.name]
         end
@@ -668,10 +678,11 @@ module Protostar
           holder_name = holder ? holder.full_name : "unknown"
           if field.extension
             error(field, :number, "Extension number #{field.number} has already been used in \"#{holder_name}\" by " \
-              "extension \"#{conflict.full_name}\".")
+              "extension \"#{conflict.full_name}\".", related: [[conflict, :number, "first used by `#{conflict.name}`"]])
           else
             error(field, :number, "Field number #{field.number} has already been used in \"#{holder_name}\" by field " \
-              "\"#{conflict.name}\". #{next_available_number(field.parent)}.")
+              "\"#{conflict.name}\". #{next_available_number(field.parent)}.",
+              related: [[conflict, :number, "first used by `#{conflict.name}`"]])
           end
         else
           @fields_by_number[key] = field

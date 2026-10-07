@@ -1,0 +1,8 @@
+warning[W0404]: enum value `COLOR_RED` has no comment
+ --> acme/users/v1/color.proto:6:3
+  |
+6 |   COLOR_RED = 1;
+  |   ^^^^^^^^^ undocumented
+  |
+  = help: say what it is for in a `//` comment above it
+  = note: rule COMMENT_ENUM_VALUE (strict set)

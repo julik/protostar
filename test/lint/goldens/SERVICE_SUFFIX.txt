@@ -1,0 +1,8 @@
+warning[W0210]: service `Users` does not end in `Service`
+ --> acme/users/v1/api.proto:3:9
+  |
+3 | service Users {}
+  |         ^^^^^ no `Service` suffix
+  |
+  = help: name it `UsersService`
+  = note: rule SERVICE_SUFFIX (default set)

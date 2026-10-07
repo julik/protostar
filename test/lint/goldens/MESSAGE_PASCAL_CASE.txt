@@ -1,0 +1,8 @@
+warning[W0203]: message `user_profile` is not PascalCase
+ --> acme/users/v1/user.proto:3:9
+  |
+3 | message user_profile {}
+  |         ^^^^^^^^^^^^ not PascalCase
+  |
+  = help: name it `UserProfile` and update what refers to it
+  = note: rule MESSAGE_PASCAL_CASE (default set)

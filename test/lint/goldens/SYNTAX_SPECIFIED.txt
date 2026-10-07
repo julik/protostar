@@ -1,0 +1,9 @@
+warning[W0111]: file `acme/users/v1/user.proto` has no `syntax` or `edition` line
+ --> acme/users/v1/user.proto:1:1
+  |
+1 | package acme.users.v1;
+  | ^^^^^^^ proto2 by default
+  |
+  = help: start the file with `edition = "2023";` or `syntax = "proto3";`
+  = note: rule SYNTAX_SPECIFIED (minimal set)
+  = fix: add `syntax = "proto2";`, which is what the file already is

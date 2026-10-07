@@ -1,0 +1,1 @@
+{"code":"W0209","severity":"warning","message":"service `user_service` is not PascalCase","file":"acme/users/v1/api.proto","path":null,"line":3,"column":9,"spans":[{"line":3,"column":9,"end_line":3,"end_column":21,"label":"not PascalCase","primary":true}],"help":["name it `UserService`"],"notes":["rule SERVICE_PASCAL_CASE (default set)"],"fix":null,"rule":"SERVICE_PASCAL_CASE"}

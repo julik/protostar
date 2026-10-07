@@ -1,0 +1,17 @@
+warning[W0402]: field `name` has no comment
+ --> acme/users/v1/user.proto:6:10
+  |
+6 |   string name = 2;
+  |          ^^^^ undocumented
+  |
+  = help: say what it is for in a `//` comment above it
+  = note: rule COMMENT_FIELD (strict set)
+
+warning[W0402]: field `labels` has no comment
+ --> acme/users/v1/user.proto:7:23
+  |
+7 |   map<string, string> labels = 3;
+  |                       ^^^^^^ undocumented
+  |
+  = help: say what it is for in a `//` comment above it
+  = note: rule COMMENT_FIELD (strict set)

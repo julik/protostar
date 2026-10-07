@@ -1,0 +1,1 @@
+{"code":"W0102","severity":"warning","message":"field `tag` is a group","file":"acme/users/v1/user.proto","path":null,"line":4,"column":12,"spans":[{"line":4,"column":12,"end_line":4,"end_column":17,"label":"group","primary":true}],"help":["declare `message Tag` and a field of that type"],"notes":["rule NO_GROUPS (minimal set)"],"fix":null,"rule":"NO_GROUPS"}

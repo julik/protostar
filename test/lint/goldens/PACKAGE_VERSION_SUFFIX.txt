@@ -1,0 +1,8 @@
+warning[W0304]: package `acme.users` has no version suffix
+ --> acme/users/user.proto:2:1
+  |
+2 | package acme.users;
+  | ^^^^^^^^^^^^^^^^^^^ no version
+  |
+  = help: add one, e.g. `acme.users.v1`
+  = note: rule PACKAGE_VERSION_SUFFIX (strict set)

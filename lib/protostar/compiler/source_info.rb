@@ -116,6 +116,21 @@ module Protostar
         end
       end
 
+      # Where the shortest location starting at a position ends: the extent of
+      # the element whose name, number or type is reported there
+      # @param locations [Array<Location>]
+      # @return [Array(Integer, Integer), nil] 0-based line and column just past the end
+      def self.extent(locations, line, column)
+        best = nil
+        locations.each do |loc|
+          span = loc.span
+          next unless span[0] == line && span[1] == column && span.size >= 3
+          finish = (span.size == 4) ? [span[2], span[3]] : [span[0], span[2]]
+          best = finish if best.nil? || (finish <=> best) < 0
+        end
+        best
+      end
+
       # OptionInterpreter::UpdateSourceCodeInfo: the location of each
       # interpreted option takes the path of the option it set, and the
       # locations nested under it (name parts, values) are dropped

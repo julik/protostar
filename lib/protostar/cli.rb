@@ -14,7 +14,8 @@ module Protostar
   #
   #   protostar proto/acme/person.proto > person_pb.rb
   class CLI
-    USAGE = "Usage: protostar [compile] [OPTION] PROTO_FILES\n       protostar --version"
+    USAGE = "Usage: protostar [compile] [OPTION] PROTO_FILES\n       protostar lint [OPTION] PROTO_FILES_OR_DIRS\n" \
+      "       protostar --version"
     DEFAULTS = "Without -I, the directory of each PROTO_FILE is an include path and the file is named by its\n" \
       "basename. With one PROTO_FILE and no --*_out, what --ruby_out would write is printed to stdout."
     NO_STDIN = "Reading a .proto from stdin (-) is not supported; pass the file's path."
@@ -38,6 +39,12 @@ module Protostar
       new(out, err).run(argv)
     end
 
+    # Whether to colour what goes to `io`: a terminal, and NO_COLOR unset
+    # @api private
+    def self.color?(io)
+      io.respond_to?(:tty?) && io.tty? && ENV.fetch("NO_COLOR", "").empty?
+    end
+
     def initialize(out, err)
       @out = out
       @err = err
@@ -56,6 +63,9 @@ module Protostar
       when "compile"
         argv.shift
         compile(argv)
+      when "lint"
+        argv.shift
+        Lint::Command.new(@out, @err).run(argv)
       else
         return compile(argv) unless command?(argv.first)
         @err.puts "Unknown command: #{argv.first}", USAGE
@@ -87,7 +97,9 @@ module Protostar
         o.on("--descriptor_set_out=FILE", "Write a FileDescriptorSet") { |v| opts[:descriptor_set] = v }
         o.on("--include_imports", "With --descriptor_set_out, include every import") { opts[:include_imports] = true }
         o.on("--include_source_info", "With --descriptor_set_out, keep source info") { opts[:include_source_info] = true }
-        o.on("--error_format=FORMAT", "gcc (default) or msvs") { |v| opts[:error_format] = v }
+        o.on("--error_format=FORMAT", "gcc (default), msvs, or rich: rustc-style, with the source and a fix") do |v|
+          opts[:error_format] = v
+        end
       end
     end
 
@@ -99,7 +111,7 @@ module Protostar
         raise Failure, e.message
       end
       format = opts.fetch(:error_format, "gcc")
-      raise Failure, "Unknown error format: #{format}" unless %w[gcc msvs].include?(format)
+      raise Failure, "Unknown error format: #{format}" unless %w[gcc msvs rich].include?(format)
       @format = format.to_sym
       raise Failure, NO_STDIN if files.include?("-")
       raise Failure, "Missing input file." if files.empty?
@@ -114,11 +126,11 @@ module Protostar
       compiled = begin
         compiler.compile(names, source_info: true)
       rescue Compiler::Error => e
-        lines = e.diagnostics.map { |d| d.format(@format) }
+        lines = e.diagnostics.map { |d| show(d, compiler) }
         lines.concat(import_hints(e.diagnostics, include)) unless opts[:include]
         raise Failure, lines.join("\n")
       end
-      compiler.diagnostics.each { |d| @err.puts d.format(@format) }
+      compiler.diagnostics.each { |d| @err.puts show(d, compiler) }
       named = names.map { |n| compiled.find { |f| f.name == n } }.uniq
       return print_ruby(named.first) if outputs.empty?
       written = generate(opts, named, compiled, compiler)
@@ -127,6 +139,14 @@ module Protostar
         ::File.binwrite(path, content)
       end
       0
+    end
+
+    # protoc's one line, or with --error_format=rich, rustc's several
+    def show(diagnostic, compiler)
+      return diagnostic.format(@format) unless @format == :rich
+      @renderer ||= Diagnostics::Renderer.new(color: CLI.color?(@err),
+        source: ->(d) { (path = compiler.resolve(d.file)) && ::File.binread(path) })
+      @renderer.render(diagnostic)
     end
 
     def print_ruby(file)

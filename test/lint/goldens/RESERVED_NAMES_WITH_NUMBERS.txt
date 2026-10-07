@@ -1,0 +1,17 @@
+warning[W0106]: `User` reserves fields by number but not by name
+ --> acme/users/v1/user.proto:4:12
+  |
+4 |   reserved 2;
+  |            ^ number only
+  |
+  = help: reserve the deleted fields' names too
+  = note: rule RESERVED_NAMES_WITH_NUMBERS (minimal set)
+
+warning[W0106]: `Color` reserves values by name but not by number
+ --> acme/users/v1/user.proto:8:3
+  |
+8 |   reserved "COLOR_BLUE";
+  |   ^^^^^^^^^^^^^^^^^^^^^^ name only
+  |
+  = help: reserve the deleted values' numbers too
+  = note: rule RESERVED_NAMES_WITH_NUMBERS (minimal set)

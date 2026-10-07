@@ -1,0 +1,19 @@
+warning[W0204]: field `firstName` is not lower_snake_case
+ --> acme/users/v1/user.proto:4:10
+  |
+4 |   string firstName = 1;
+  |          ^^^^^^^^^ not lower_snake_case
+  |
+  = help: name it `first_name`
+  = note: rule FIELD_LOWER_SNAKE_CASE (default set)
+  = fix: rename `firstName` to `first_name`
+
+warning[W0204]: field `LastName` is not lower_snake_case
+ --> acme/users/v1/user.proto:5:10
+  |
+5 |   string LastName = 2;
+  |          ^^^^^^^^ not lower_snake_case
+  |
+  = help: name it `last_name`
+  = note: rule FIELD_LOWER_SNAKE_CASE (default set)
+  = fix: rename `LastName` to `last_name`

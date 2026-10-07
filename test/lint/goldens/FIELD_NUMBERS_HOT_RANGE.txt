@@ -1,0 +1,8 @@
+warning[W0305]: `Event` uses numbers above 15 with 3 to 15 free and deprecated `old` in the one-byte range
+ --> acme/users/v1/event.proto:3:9
+  |
+3 | message Event {
+  |         ^^^^^ 1 field above 15
+  |
+  = help: give new, frequently set fields numbers from 1 to 15; do not renumber existing ones
+  = note: rule FIELD_NUMBERS_HOT_RANGE (strict set)

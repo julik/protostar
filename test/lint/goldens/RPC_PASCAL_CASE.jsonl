@@ -1,0 +1,1 @@
+{"code":"W0211","severity":"warning","message":"rpc `get_user` is not PascalCase","file":"acme/users/v1/api.proto","path":null,"line":6,"column":7,"spans":[{"line":6,"column":7,"end_line":6,"end_column":15,"label":"not PascalCase","primary":true}],"help":["name it `GetUser`"],"notes":["rule RPC_PASCAL_CASE (default set)"],"fix":null,"rule":"RPC_PASCAL_CASE"}

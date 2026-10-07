@@ -1,0 +1,8 @@
+warning[W0405]: service `UserService` has no comment
+ --> acme/users/v1/api.proto:4:9
+  |
+4 | service UserService {}
+  |         ^^^^^^^^^^^ undocumented
+  |
+  = help: say what it is for in a `//` comment above it
+  = note: rule COMMENT_SERVICE (strict set)

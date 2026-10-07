@@ -1,0 +1,8 @@
+warning[W0209]: service `user_service` is not PascalCase
+ --> acme/users/v1/api.proto:3:9
+  |
+3 | service user_service {}
+  |         ^^^^^^^^^^^^ not PascalCase
+  |
+  = help: name it `UserService`
+  = note: rule SERVICE_PASCAL_CASE (default set)

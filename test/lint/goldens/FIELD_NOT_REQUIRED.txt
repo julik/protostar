@@ -1,0 +1,8 @@
+warning[W0101]: field `id` is required
+ --> acme/users/v1/user.proto:4:3
+  |
+4 |   required string id = 1;
+  |   ^^^^^^^^ required forever
+  |
+  = help: make it `optional` and check that it is set in code
+  = note: rule FIELD_NOT_REQUIRED (minimal set)

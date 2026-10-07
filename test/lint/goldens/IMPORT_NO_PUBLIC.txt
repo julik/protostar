@@ -1,0 +1,8 @@
+warning[W0108]: import of `google/protobuf/timestamp.proto` is public
+ --> acme/users/v1/user.proto:3:1
+  |
+3 | import public "google/protobuf/timestamp.proto";
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ re-exports `google/protobuf/timestamp.proto`
+  |
+  = help: import `google/protobuf/timestamp.proto` directly in the files that use it
+  = note: rule IMPORT_NO_PUBLIC (minimal set)

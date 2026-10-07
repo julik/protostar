@@ -1,0 +1,8 @@
+warning[W0212]: request of `GetUser` is `UserId`, not `GetUserRequest`
+ --> acme/users/v1/api.proto:6:15
+  |
+6 |   rpc GetUser(UserId) returns (GetUserResponse);
+  |               ^^^^^^ not `GetUserRequest`
+  |
+  = help: take a `GetUserRequest` message of its own
+  = note: rule RPC_REQUEST_STANDARD_NAME (default set)

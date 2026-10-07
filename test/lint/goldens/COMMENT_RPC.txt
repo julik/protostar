@@ -1,0 +1,8 @@
+warning[W0406]: rpc `GetUser` has no comment
+ --> acme/users/v1/api.proto:6:7
+  |
+6 |   rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  |       ^^^^^^^ undocumented
+  |
+  = help: say what it is for in a `//` comment above it
+  = note: rule COMMENT_RPC (strict set)

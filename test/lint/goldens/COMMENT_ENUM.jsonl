@@ -1,0 +1,1 @@
+{"code":"W0403","severity":"warning","message":"enum `Color` has no comment","file":"acme/users/v1/color.proto","path":null,"line":4,"column":6,"spans":[{"line":4,"column":6,"end_line":4,"end_column":11,"label":"undocumented","primary":true}],"help":["say what it is for in a `//` comment above it"],"notes":["rule COMMENT_ENUM (strict set)"],"fix":null,"rule":"COMMENT_ENUM"}

@@ -1,0 +1,8 @@
+warning[W0105]: `User` skips field numbers 2, 4 to 6 without reserving them
+ --> acme/users/v1/user.proto:3:9
+  |
+3 | message User {
+  |         ^^^^ gaps in the numbering
+  |
+  = help: if fields were deleted there, add `reserved 2, 4 to 6;` and reserve their names
+  = note: rule FIELD_NUMBER_REUSE_RISK (minimal set)

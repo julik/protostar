@@ -1,0 +1,8 @@
+warning[W0211]: rpc `get_user` is not PascalCase
+ --> acme/users/v1/api.proto:6:7
+  |
+6 |   rpc get_user(GetUserRequest) returns (GetUserResponse);
+  |       ^^^^^^^^ not PascalCase
+  |
+  = help: name it `GetUser`
+  = note: rule RPC_PASCAL_CASE (default set)

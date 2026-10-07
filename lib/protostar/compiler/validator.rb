@@ -109,12 +109,12 @@ module Protostar
         @linker.errors?
       end
 
-      def error(node, location, message)
-        @linker.error(node, location, message)
+      def error(node, location, message, related: [])
+        @linker.error(node, location, message, related: related)
       end
 
-      def warning(node, location, message)
-        @linker.warning(node, location, message)
+      def warning(node, location, message, related: [])
+        @linker.warning(node, location, message, related: related)
       end
 
       def each_element(&block)
@@ -266,10 +266,11 @@ module Protostar
           suffix = (name != match_name) ? " (\"#{match_name}\")" : ""
           text = "The #{custom ? "custom" : "default"} JSON name of field \"#{field.name}\" (\"#{name}\") conflicts " \
             "with the #{match_custom ? "custom" : "default"} JSON name of field \"#{match.name}\"#{suffix}."
+          related = [[match, :name, "`#{match.name}` has it too"]]
           if message.features.json_format == :LEGACY_BEST_EFFORT && (!custom || !match_custom)
-            warning(field, :name, text)
+            warning(field, :name, text, related: related)
           else
-            error(field, :name, text)
+            error(field, :name, text, related: related)
           end
         end
       end
@@ -558,15 +559,15 @@ module Protostar
         used = {}
         numbers = enum.values.map(&:number)
         enum.values.each_with_index do |value, i|
-          if (first = used[value.number])
+          if (first, first_index = used[value.number])
             next_value = value.number + 1
             next_value += 1 while numbers.include?(next_value)
             text = "\"#{value.full_name}\" uses the same enum value as \"#{first}\". If this is intended, set " \
               "'option allow_alias = true;' to the enum definition."
             text += " The next available enum value is #{next_value}." if next_value < INT32_MAX
-            error(node.value[i], :number, text)
+            error(node.value[i], :number, text, related: [[node.value[first_index], :number, "first used by `#{node.value[first_index].name}`"]])
           else
-            used[value.number] = value.full_name
+            used[value.number] = [value.full_name, i]
           end
         end
       end

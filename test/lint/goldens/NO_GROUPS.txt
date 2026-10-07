@@ -1,0 +1,8 @@
+warning[W0102]: field `tag` is a group
+ --> acme/users/v1/user.proto:4:12
+  |
+4 |   repeated group Tag = 1 {
+  |            ^^^^^ group
+  |
+  = help: declare `message Tag` and a field of that type
+  = note: rule NO_GROUPS (minimal set)

@@ -1,0 +1,8 @@
+warning[W0302]: files in `acme` declare packages `acme`, `acme.other`
+ --> acme/b.proto:2:1
+  |
+2 | package acme.other;
+  | ^^^^^^^^^^^^^^^^^^^ differs from `acme`
+  |
+  = help: keep one package per directory
+  = note: rule PACKAGE_SAME_DIRECTORY (default set)

@@ -1,0 +1,9 @@
+warning[W0103]: zero value `COLOR_RED` of `Color` does not end in `_UNSPECIFIED`
+ --> acme/users/v1/color.proto:4:3
+  |
+4 |   COLOR_RED = 0;
+  |   ^^^^^^^^^ read for every unset field
+  |
+  = help: name it `COLOR_UNSPECIFIED`
+  = note: rule ENUM_ZERO_VALUE_SUFFIX (minimal set)
+  = fix: rename `COLOR_RED` to `COLOR_UNSPECIFIED`

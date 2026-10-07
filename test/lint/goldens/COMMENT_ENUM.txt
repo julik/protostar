@@ -1,0 +1,8 @@
+warning[W0403]: enum `Color` has no comment
+ --> acme/users/v1/color.proto:4:6
+  |
+4 | enum Color {
+  |      ^^^^^ undocumented
+  |
+  = help: say what it is for in a `//` comment above it
+  = note: rule COMMENT_ENUM (strict set)

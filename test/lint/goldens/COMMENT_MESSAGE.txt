@@ -1,0 +1,8 @@
+warning[W0401]: message `User` has no comment
+ --> acme/users/v1/user.proto:4:9
+  |
+4 | message User {}
+  |         ^^^^ undocumented
+  |
+  = help: say what it is for in a `//` comment above it
+  = note: rule COMMENT_MESSAGE (strict set)

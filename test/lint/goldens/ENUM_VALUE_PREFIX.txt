@@ -1,0 +1,9 @@
+warning[W0208]: enum value `RED` is not prefixed with `TRAFFIC_LIGHT_`
+ --> acme/users/v1/color.proto:5:3
+  |
+5 |   RED = 1;
+  |   ^^^ no `TRAFFIC_LIGHT_` prefix
+  |
+  = help: name it `TRAFFIC_LIGHT_RED`
+  = note: rule ENUM_VALUE_PREFIX (default set)
+  = fix: rename `RED` to `TRAFFIC_LIGHT_RED`

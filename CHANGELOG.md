@@ -13,6 +13,7 @@ together and depend on each other's exact version.
 - `protostar compile` with protoc's flags: `--ruby_out` (protostar's classes), `--google_out` (byte for byte protoc's `--ruby_out`), `--rbs_out`, `--grpc_out` (byte for byte grpc-tools'), `--descriptor_set_out` (byte for byte protoc's, with `--include_imports` and `--include_source_info`).
 - `protostar file.proto` just works: `compile` is the default command, without `-I` each input's directory is the include path (the file is named by its basename), and one file with no `--*_out` prints its native Ruby to stdout. Explicit `-I` behaves as protoc's.
 - `protoc-gen-protostar`, the same outputs as a protoc plugin (`ruby`, `google`, `rbs`, `grpc`).
+- `protostar lint`: the compiler's errors explained the way rustc does (the source line, the span underlined, related spans, `help:` and a code `--explain` looks up), then 37 best-practice rules in `minimal`, `default` and `strict` sets under `buf lint`'s names, led by "`required` is forever"; `.protostar.yml`, comment directives, `--fix` for the safe renames, `--format json` and `github`. `compile --error_format=rich` prints compile errors the same way.
 
 ### Schema
 

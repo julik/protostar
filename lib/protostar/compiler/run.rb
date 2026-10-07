@@ -18,13 +18,16 @@ module Protostar
       # @param sources [Hash{String => String}] file contents to use instead of reading include paths
       # @param protoc_cli [Boolean] behave like protoc's command line (see {Linker#initialize});
       #   false behaves like a bare DescriptorPool, which loads no imports itself
-      def initialize(compiler, names, source_info, sources: {}, protoc_cli: true)
+      # @param all_direct [Boolean] check every file loaded as if it had been named, imports
+      #   included (unused imports, deprecated features), as `protostar lint` wants
+      def initialize(compiler, names, source_info, sources: {}, protoc_cli: true, all_direct: false)
         @compiler = compiler
         @pool = compiler.pool
         @names = names
         @source_info = source_info
         @sources = sources
         @protoc_cli = protoc_cli
+        @all_direct = all_direct
         @diagnostics = []
         @pending = []
         @done = {}
@@ -36,6 +39,11 @@ module Protostar
 
       def failed?
         @failed || @diagnostics.any?(&:error?)
+      end
+
+      # @return [Linker, nil] the linker of a file this run built
+      def linker(name)
+        @linkers[name]
       end
 
       # @return [Array<Schema::File>]
@@ -54,14 +62,35 @@ module Protostar
       end
 
       # Records a diagnostic with a 0-based position (nil for none)
-      def report(file, position, message, severity = :error)
+      # @param spans [Array<Diagnostics::Span>] where the renderer underlines, when known
+      def report(file, position, message, severity = :error, spans: [])
         line, column = position
         line = nil if line && line < 0
         path = @compiler.disk_path(file) if file && !@sources.key?(file) && @protoc_cli
-        @diagnostics << Diagnostic.new(file, line && line + 1, line && column + 1, message, severity, path: path)
+        @diagnostics << Diagnostic.new(file, line && line + 1, line && column + 1, message, severity, path: path,
+          spans: line ? spans : [])
       end
 
       private
+
+      # The problem's own span, as long as the source location that starts
+      # where it is reported, then the places it relates to
+      def spans(ast, problem, position)
+        return [] unless position
+        out = [span(ast, position, nil, true)]
+        problem.related.each do |node, kind, label|
+          at = node.position(kind)
+          out << span(ast, at, label, false) if at
+        end
+        out
+      end
+
+      def span(ast, position, label, primary)
+        line, column = position
+        end_line, end_column = SourceInfo.extent(ast.locations, line, column)
+        Diagnostics::Span.new(line + 1, column + 1, end_line && end_line + 1, end_column && end_column + 1,
+          label: label, primary: primary)
+      end
 
       # An extension number another file already uses is a warning the linker
       # reports as a diagnostic, so the pool is asked not to print it too
@@ -129,7 +158,7 @@ module Protostar
         # once the recursion has been reported
         return @done[name] = nil if ast.dependency.include?(name)
 
-        linker = Linker.new(ast, pool: @pool, missing: missing, direct: direct && @protoc_cli,
+        linker = Linker.new(ast, pool: @pool, missing: missing, direct: (direct || @all_direct) && @protoc_cli,
           options_fallback: ->(type) { @compiler.builtin_options_type(type) }, source_info: @source_info,
           protoc_cli: @protoc_cli)
         linker.link
@@ -140,7 +169,7 @@ module Protostar
           else
             problem.node&.position(problem.location)
           end
-          report(name, position, problem.message, problem.severity)
+          report(name, position, problem.message, problem.severity, spans: spans(ast, problem, position))
         end
         file = linker.errors? ? nil : linker.file
         file = add_to_pool(name, file) if file

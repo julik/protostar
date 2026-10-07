@@ -26,7 +26,8 @@ module Protostar
     autoload :Emitters, ::File.expand_path("compiler/emitters", __dir__)
 
     # One error or warning, with protoc's 1-based line and column (nil when
-    # protoc reports none)
+    # protoc reports none). {#to_s} and {#format} print it as protoc does; the
+    # rest is for {Diagnostics::Renderer}, which prints it as rustc would.
     class Diagnostic
       # @return [String] the file name as imported
       attr_reader :file
@@ -41,15 +42,59 @@ module Protostar
       # @return [String, nil] the file on disk, spelled as protoc prints it: the include
       #   path as given (canonicalized) joined with {#file}; nil for in-memory and bundled files
       attr_reader :path
+      # @return [Array<Diagnostics::Span>] the primary span first, then related ones; empty
+      #   when the compiler knows only {#line} and {#column}, or nothing
+      attr_reader :spans
+      # @return [Array<String>] `help:` lines, the concrete fix in words
+      attr_reader :help
+      # @return [Array<String>] `note:` lines
+      attr_reader :notes
+      # @return [Diagnostics::Fix, nil] a mechanical fix `protostar lint --fix` can apply
+      attr_reader :fix
+      # @return [String, nil] the lint rule that found it, e.g. "FIELD_NOT_REQUIRED"
+      attr_reader :rule
 
-      def initialize(file, line, column, message, severity = :error, path: nil)
+      def initialize(file, line, column, message, severity = :error, path: nil, spans: [], code: nil, title: nil,
+        help: [], notes: [], fix: nil, rule: nil)
         @file = file
         @line = line
         @column = column
         @message = message
         @severity = severity
         @path = path
+        @spans = spans.freeze
+        @code = code
+        @title = title
+        @help = help.freeze
+        @notes = notes.freeze
+        @fix = fix
+        @rule = rule
         freeze
+      end
+
+      # @return [String, nil] the stable code `protostar lint --explain` knows, e.g. "L0201";
+      #   for the compiler's messages, looked up in {Diagnostics::Codes}
+      def code
+        @code || Diagnostics::Codes.lookup(@message)&.code
+      end
+
+      # @return [String] the headline the renderer prints: a short rewording where the
+      #   catalogue has one, else {#message}
+      def title
+        @title || @message
+      end
+
+      # @return [Diagnostic] a copy with what {Diagnostics::Codes} knows about the message
+      #   filled in: code, title, span labels, help and notes
+      def annotated
+        @code ? self : Diagnostics::Codes.annotate(self)
+      end
+
+      # @return [Diagnostic] a copy with the given attributes replaced
+      def with(**changes)
+        attrs = {path: @path, spans: @spans, code: @code, title: @title, help: @help, notes: @notes, fix: @fix,
+                 rule: @rule}.merge(changes)
+        Diagnostic.new(@file, @line, @column, @message, @severity, **attrs)
       end
 
       def error?

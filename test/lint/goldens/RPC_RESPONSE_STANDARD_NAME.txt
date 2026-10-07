@@ -1,0 +1,8 @@
+warning[W0213]: response of `GetUser` is `User`, not `GetUserResponse`
+ --> acme/users/v1/api.proto:6:40
+  |
+6 |   rpc GetUser(GetUserRequest) returns (User);
+  |                                        ^^^^ not `GetUserResponse`
+  |
+  = help: return a `GetUserResponse` message of its own
+  = note: rule RPC_RESPONSE_STANDARD_NAME (default set)

@@ -1289,6 +1289,19 @@ prints the disk path the way protoc's `--error_format` does, for the CLI.
 `Compiler::Error#message` is the diagnostics joined by newlines, and `Error#diagnostics`
 the list.
 
+### Spans, codes and the rich renderer
+
+`Run#report` also gives each linker problem its `spans`: the primary one runs from the
+reported position to the end of the shortest source location that starts there (so
+`foo.Bar` in a field type is underlined whole), and the problem's `related` nodes add
+labelled secondary spans ("first used by `a`" for a duplicate field number, "first
+defined here" for a name defined twice). Parser errors carry only a position; the
+renderer underlines the token there. `Diagnostics::Codes` gives every message a code
+(`P` parser, `L` linker, `V` validator), a short title, a label and a `help:` line,
+matched by template; `test/diagnostics/codes_test.rb` reads the compiler's message
+strings with Ripper, so a new message without a code fails. `Diagnostics::Renderer`
+prints rustc's layout; `to_s` and `format` stay protoc's.
+
 ### Ordering and gating
 
 The order of diagnostics is part of the contract, and comes from running the phases in
