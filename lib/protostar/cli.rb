@@ -8,8 +8,16 @@ module Protostar
   # `protostar compile`, with protoc's flag names and protoc's messages
   #
   #   protostar compile -I proto --ruby_out=lib --grpc_out=lib acme/service.proto
+  #
+  # `compile` is the default command. Without `-I` every input's own directory
+  # is an include path, and one input with no `--*_out` prints its native Ruby:
+  #
+  #   protostar proto/acme/person.proto > person_pb.rb
   class CLI
-    USAGE = "Usage: protostar compile [OPTION] PROTO_FILES\n       protostar --version"
+    USAGE = "Usage: protostar [compile] [OPTION] PROTO_FILES\n       protostar --version"
+    DEFAULTS = "Without -I, the directory of each PROTO_FILE is an include path and the file is named by its\n" \
+      "basename. With one PROTO_FILE and no --*_out, what --ruby_out would write is printed to stdout."
+    NO_STDIN = "Reading a .proto from stdin (-) is not supported; pass the file's path."
     Emitters = Compiler::Emitters
     RBS_EDITIONS = "is an editions file, but code generator --rbs_out hasn't been updated to support editions yet.  " \
       "Please ask the owner of this code generator to add support or switch back to proto2/proto3.\n\n" \
@@ -43,12 +51,13 @@ module Protostar
         @out.puts "protostar #{VERSION}"
         0
       when "--help", "-h", nil
-        @out.puts USAGE, "", parser({}).summarize
+        @out.puts USAGE, "", DEFAULTS, "", parser({}).summarize
         argv.empty? ? 1 : 0
       when "compile"
         argv.shift
         compile(argv)
       else
+        return compile(argv) unless command?(argv.first)
         @err.puts "Unknown command: #{argv.first}", USAGE
         1
       end
@@ -59,6 +68,11 @@ module Protostar
     end
 
     private
+
+    # A bare word that is not a file is a mistyped command, not a missing input
+    def command?(arg)
+      !arg.start_with?("-") && !arg.end_with?(".proto") && !::File.exist?(arg)
+    end
 
     def parser(opts)
       OptionParser.new do |o|
@@ -87,25 +101,79 @@ module Protostar
       format = opts.fetch(:error_format, "gcc")
       raise Failure, "Unknown error format: #{format}" unless %w[gcc msvs].include?(format)
       @format = format.to_sym
-      outputs = %i[ruby google rbs grpc descriptor_set].select { |k| opts[k] }
-      raise Failure, "Missing output directives." if outputs.empty?
+      raise Failure, NO_STDIN if files.include?("-")
       raise Failure, "Missing input file." if files.empty?
-      include = opts[:include] || ["."]
+      outputs = %i[ruby google rbs grpc descriptor_set].select { |k| opts[k] }
+      if outputs.empty?
+        raise Failure, "--include_imports writes a set of files; add --descriptor_set_out=FILE." if opts[:include_imports]
+        raise Failure, "#{files.size} files cannot share stdout; add --ruby_out=DIR to write a _pb.rb for each." if files.size > 1
+      end
+      include = opts[:include] || default_include(files)
       compiler = Compiler.new(include_paths: include)
-      names = files.map { |f| virtual_name(f, include, compiler) }
+      names = files.map { |f| opts[:include] ? virtual_name(f, include, compiler) : default_name(f, include, compiler) }
       compiled = begin
         compiler.compile(names, source_info: true)
       rescue Compiler::Error => e
-        raise Failure, e.diagnostics.map { |d| d.format(@format) }.join("\n")
+        lines = e.diagnostics.map { |d| d.format(@format) }
+        lines.concat(import_hints(e.diagnostics, include)) unless opts[:include]
+        raise Failure, lines.join("\n")
       end
       compiler.diagnostics.each { |d| @err.puts d.format(@format) }
       named = names.map { |n| compiled.find { |f| f.name == n } }.uniq
+      return print_ruby(named.first) if outputs.empty?
       written = generate(opts, named, compiled, compiler)
       written.each do |path, content|
         FileUtils.mkdir_p(::File.dirname(path))
         ::File.binwrite(path, content)
       end
       0
+    end
+
+    def print_ruby(file)
+      @out.write(Emitters::Ruby.new.file(file))
+      0
+    rescue Emitters::Error => e
+      raise Failure, "#{file.name}: #{e.message}"
+    end
+
+    # The directories of the inputs on disk, in the order given. Each input is
+    # named by its basename then, so two inputs of one name cannot both be
+    def default_include(files)
+      seen = {}
+      files.select { |f| ::File.file?(f) }.map do |f|
+        other = seen[::File.basename(f)] ||= f
+        unless ::File.expand_path(other) == ::File.expand_path(f)
+          raise Failure, "#{other} and #{f} are both #{::File.basename(f)}; pass -I with a directory above both to tell them apart."
+        end
+        ::File.dirname(f)
+      end.uniq { |dir| ::File.expand_path(dir) }
+    end
+
+    def default_name(arg, include, compiler)
+      return virtual_name(arg, include, compiler) unless ::File.file?(arg)
+      name = ::File.basename(arg)
+      found = compiler.resolve(name)
+      return name if found == ::File.expand_path(arg)
+      raise Failure, "#{arg}: Input is shadowed by #{shorten(found)}, which is next to another input. Pass -I to choose one."
+    end
+
+    # An import not found, but one directory above an input's, was most
+    # likely meant relative to that parent
+    def import_hints(diagnostics, include)
+      missing = diagnostics.select { |d| d.line.nil? && d.message == "File not found." }.map(&:file).uniq
+      missing.filter_map do |name|
+        parent = include.map { |dir| ::File.dirname(::File.expand_path(dir)) }
+          .find { |dir| ::File.file?(::File.join(dir, name)) }
+        next unless parent
+        shown = shorten(parent)
+        "#{name} is in #{shown}/, which is not an include path. Add -I #{shown} to find it there."
+      end
+    end
+
+    def shorten(dir)
+      cwd = ::Dir.pwd
+      return "." if dir == cwd
+      dir.delete_prefix("#{cwd}/")
     end
 
     # Every output, generated before anything is written, as protoc does
