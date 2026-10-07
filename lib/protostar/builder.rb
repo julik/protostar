@@ -70,6 +70,7 @@ module Protostar
     WRAPPERS = %w[
       DoubleValue FloatValue Int64Value UInt64Value Int32Value UInt32Value BoolValue StringValue BytesValue
     ].to_h { |n| ["google.protobuf.#{n}", :wrapper] }
+    # Why a second write raises: the start of the message's second half
     NO_OVERWRITES = "this builder promises its reader that no field repeats (overwrites: false, the default), " \
       "which is what lets it stream. Pass overwrites: true to let"
     WELL_KNOWN = WRAPPERS.merge("google.protobuf.Timestamp" => :timestamp, "google.protobuf.Duration" => :duration).freeze

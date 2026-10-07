@@ -45,4 +45,21 @@ class BuilderRactorTest < Minitest::Test
     assert_equal 5, value
     refute kept, "a builder class made in another Ractor is not kept on the message class"
   end
+
+  def test_streaming_in_another_ractor
+    Protostar::Builder.for(Root)
+    chunks, each, enum = in_ractor(Root) do |klass|
+      out = []
+      Protostar::Builder.write(out, klass, buffer: 0, chunk_nested_at: 64) do |pb|
+        pb.name "r"
+        pb.node { 10.times { |i| pb.lines "line #{i} #{"x" * 20}" } }
+      end
+      seq = Protostar::Builder.each(nil, klass, [1, 2]) { |pb, i| pb.name i.to_s }
+      [out, seq, Protostar::Builder.each_chunk(klass) { |pb| pb.name "e" }.to_a]
+    end
+    assert_operator chunks.size, :>, 2
+    assert_equal Root.new(name: "r", node: {lines: (0..9).map { |i| "line #{i} #{"x" * 20}" }}), Root.decode(chunks.join)
+    assert_equal Root.new(name: "1").encode_delimited + Root.new(name: "2").encode_delimited, each
+    assert_equal [Root.new(name: "e").encode], enum
+  end
 end

@@ -201,17 +201,40 @@ module Protostar
     type options = {
       ?cache_store: _CacheStore?,
       ?overwrites: bool,
-      ?repeated: :append | :replace
+      ?repeated: :append | :replace,
+      ?buffer: ::Integer,
+      ?chunk_nested_at: ::Integer?
     }
 
-    def self.build: (untyped klass, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace) { (Builder pb) -> void } -> ::String
-    def self.message: (untyped klass, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace) { (Builder pb) -> void } -> Message
-    def self.write: [T] (T io, untyped klass, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace) { (Builder pb) -> void } -> T
-    def self.new: (untyped klass, ?(::String | ::IO)? target, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace) -> Builder
+    # Anything that takes bytes: `write` (an IO, a socket, a Rack stream), `<<` (an Array) or `call` (a Proc)
+    type sink = ::String | _Write | _Append | ^(::String bytes) -> untyped
+
+    interface _Write
+      def write: (::String bytes) -> untyped
+    end
+
+    interface _Append
+      def <<: (::String bytes) -> untyped
+    end
+
+    def self.build: (untyped klass, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace,
+                     ?buffer: ::Integer, ?chunk_nested_at: ::Integer?) { (Builder pb) -> void } -> ::String
+    def self.message: (untyped klass, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace,
+                       ?buffer: ::Integer, ?chunk_nested_at: ::Integer?) { (Builder pb) -> void } -> Message
+    def self.write: [T < sink] (T io, untyped klass, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace,
+                                ?buffer: ::Integer, ?chunk_nested_at: ::Integer?) { (Builder pb) -> void } -> T
+    def self.each: [T < sink, E] (T io, untyped klass, _Each[E] collection, ?cache_store: _CacheStore?, ?overwrites: bool,
+                                  ?repeated: :append | :replace, ?buffer: ::Integer, ?chunk_nested_at: ::Integer?) { (Builder pb, E element) -> void } -> T
+                 | [E] (nil io, untyped klass, _Each[E] collection, ?cache_store: _CacheStore?, ?overwrites: bool,
+                        ?repeated: :append | :replace, ?buffer: ::Integer, ?chunk_nested_at: ::Integer?) { (Builder pb, E element) -> void } -> ::String
+    def self.each_chunk: (untyped klass, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace,
+                          ?buffer: ::Integer, ?chunk_nested_at: ::Integer?) { (Builder pb) -> void } -> ::Enumerator[::String, nil]
+    def self.new: (untyped klass, ?sink? target, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace,
+                   ?buffer: ::Integer, ?chunk_nested_at: ::Integer?) -> Builder
     def self.for: (untyped klass) -> singleton(Builder)
     def self.resolve: (untyped klass) -> singleton(Message)
 
-    def target!: () -> (::String | ::IO)
+    def target!: () -> untyped
     def message_class: () -> singleton(Message)
     def set!: (::String | ::Symbol name, *untyped value_and_attributes) ?{ (?untyped element) -> void } -> self
     def extract!: (untyped object, *(::String | ::Symbol) names) -> self
