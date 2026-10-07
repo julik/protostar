@@ -92,8 +92,8 @@ class CompilerParserCasesTest < Minitest::Test
         assert found, "no location #{path} with span #{expected}, have #{candidates.map(&:span)}"
         candidates.delete_at(candidates.index(found))
         leading, trailing, detached = span["comments"]
-        assert_equal leading, found.leading_comments, "leading comments of #{path}"
-        assert_equal trailing, found.trailing_comments, "trailing comments of #{path}"
+        assert_comment leading, found.leading_comments, "leading comments of #{path}"
+        assert_comment trailing, found.trailing_comments, "trailing comments of #{path}"
         assert_equal detached.to_s, found.leading_detached_comments.join("\n"), "detached comments of #{path}"
       end
       leftover = remaining.values.flatten.map { |l| [l.path, l.span] }
@@ -209,6 +209,16 @@ class CompilerParserCasesTest < Minitest::Test
       assert_errors c, CompilerSupport.zero_based(diagnostics.select(&:error?))
     else
       flunk "unknown case kind #{c["kind"]}"
+    end
+  end
+
+  # cases.json has nil where protoc expects no comment, and Minitest wants
+  # assert_nil for that
+  def assert_comment(expected, actual, message)
+    if expected.nil?
+      assert_nil actual, message
+    else
+      assert_equal expected, actual, message
     end
   end
 
