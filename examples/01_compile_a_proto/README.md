@@ -60,11 +60,20 @@ enum Status {
 ## Compile it
 
 ```console
+$ bundle exec protostar orders.proto > orders_pb.rb
+```
+
+protostar prints the Ruby for one file, and `>` puts it in `orders_pb.rb` next to
+the proto. Errors, if any, go to the terminal and leave the file empty.
+
+If you know protoc, its flags work too, and write the same file:
+
+```console
 $ bundle exec protostar compile -I . --ruby_out=. orders.proto
 ```
 
-It prints nothing and writes `orders_pb.rb` next to the proto. `-I` is where
-imports are looked up, `--ruby_out` is where the Ruby goes. The flags are protoc's.
+It prints nothing. `-I` is where imports are looked up, `--ruby_out` is where the
+Ruby goes, and it takes several protos at once.
 
 ## Read what it wrote
 
