@@ -63,6 +63,45 @@ module BuilderSupport
     files.each_with_object({}) { |f, h| h.merge!(registry.define(f)) }.freeze
   end
 
+  # Editions, for the streaming tests: a delimited (group-encoded) message
+  # field, a chain of nested messages, packed and expanded repeated scalars
+  STREAMING_PROTO = <<~PROTO
+    edition = "2023";
+    package streamtest;
+
+    message Node {
+      string text = 1;
+      Node child = 2;
+      repeated string lines = 3;
+      repeated int32 nums = 4;
+      repeated Node kids = 5;
+      map<string, Node> named = 6;
+      oneof pick {
+        Node left = 7;
+        string right = 8;
+      }
+      Node flat = 9 [features.message_encoding = DELIMITED];
+    }
+
+    message Root {
+      repeated string lines = 1;
+      Node node = 2;
+      repeated Node nodes = 3;
+      Node flat = 4 [features.message_encoding = DELIMITED];
+      repeated int32 nums = 5;
+      repeated int32 loose = 6 [features.repeated_field_encoding = EXPANDED];
+      string name = 7;
+    }
+  PROTO
+
+  STREAMING = begin
+    files = Protostar::Compiler.new.compile(["streamtest.proto"], sources: {"streamtest.proto" => STREAMING_PROTO})
+    registry = Protostar::Types::Registry.new
+    files.each_with_object({}) { |f, h| h.merge!(registry.define(f)) }.freeze
+  end
+
+  Root = STREAMING.fetch("streamtest.Root")
+  Node = STREAMING.fetch("streamtest.Node")
   Person = TYPES.fetch("buildertest.Person")
   Address = TYPES.fetch("buildertest.Address")
   Timestamp = TYPES.fetch("google.protobuf.Timestamp")
@@ -97,5 +136,30 @@ module BuilderSupport
 
   def decode(bytes, klass = Person)
     klass.decode(bytes)
+  end
+
+  module_function
+
+  # Writes a field hash as a template would: field methods where the builder
+  # has them, set! where it does not, blocks for nested and repeated messages
+  def replay(pb, klass, hash)
+    hash.each do |name, value|
+      info = klass.__by_name.fetch(name)
+      if info.message? && !info.map && info.repeated
+        call(pb, name, value) { |h| replay(pb, info.message_class, h) }
+      elsif info.message? && !info.map
+        call(pb, name) { replay(pb, info.message_class, value) }
+      else
+        call(pb, name, value)
+      end
+    end
+  end
+
+  def call(pb, name, *args, &block)
+    if pb.class.public_method_defined?(name, false)
+      pb.public_send(name, *args, &block)
+    else
+      pb.set!(name, *args, &block)
+    end
   end
 end

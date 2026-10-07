@@ -79,16 +79,19 @@ class BuilderErrorTest < Minitest::Test
     assert_equal "merge! takes a Hash, got Array", error { |pb| pb.merge!([]) }.message
   end
 
+  NO = Protostar::Builder::NO_OVERWRITES
+
   def test_writing_a_singular_field_twice
-    assert_equal "name: is already set; pass overwrites: true to let the last value win",
+    assert_equal "name: is already set; this builder promises its reader that no field repeats " \
+      "(overwrites: false, the default), which is what lets it stream. Pass overwrites: true to let the last value win",
       error { |pb| pb.name("a").name("b") }.message
-    assert_equal "name: is already set; pass overwrites: true to let the last value win",
+    assert_equal "name: is already set; #{NO} the last value win",
       error { |pb| pb.name("").name("b") }.message
-    assert_equal "address: is already set; pass overwrites: true to let the last value win",
+    assert_equal "address: is already set; #{NO} the last value win",
       error { |pb| pb.address { pb.street "a" }.address { pb.city "b" } }.message
-    assert_equal "phone: oneof contact already has a value; pass overwrites: true to let the last one win",
+    assert_equal "phone: oneof contact already has a value; #{NO} the last one win",
       error { |pb| pb.email("a").phone("b") }.message
-    assert_equal "postal: oneof contact already has a value; pass overwrites: true to let the last one win",
+    assert_equal "postal: oneof contact already has a value; #{NO} the last one win",
       error { |pb| pb.email("a").postal { pb.city "b" } }.message
   end
 
