@@ -1,0 +1,216 @@
+# protostar lint and the rustc-style diagnostics it prints. The compiler
+# itself has no signatures yet; its Diagnostic is described here because the
+# renderer takes it.
+module Protostar
+  class Compiler
+    class Diagnostic
+      attr_reader file: ::String
+      attr_reader line: ::Integer?
+      attr_reader column: ::Integer?
+      attr_reader message: ::String
+      attr_reader severity: :error | :warning
+      attr_reader path: ::String?
+      attr_reader spans: ::Array[Diagnostics::Span]
+      attr_reader help: ::Array[::String]
+      attr_reader notes: ::Array[::String]
+      attr_reader fix: Diagnostics::Fix?
+      attr_reader rule: ::String?
+
+      def initialize: (::String file, ::Integer? line, ::Integer? column, ::String message, ?(:error | :warning) severity,
+                      ?path: ::String?, ?spans: ::Array[Diagnostics::Span], ?code: ::String?, ?title: ::String?,
+                      ?help: ::Array[::String], ?notes: ::Array[::String], ?fix: Diagnostics::Fix?, ?rule: ::String?) -> void
+      def code: () -> ::String?
+      def title: () -> ::String
+      def annotated: () -> Diagnostic
+      def with: (**untyped changes) -> Diagnostic
+      def error?: () -> bool
+      def warning?: () -> bool
+      def to_s: () -> ::String
+      def format: (?(:gcc | :msvs) error_format) -> ::String
+    end
+  end
+
+  module Diagnostics
+    class Span
+      attr_reader line: ::Integer
+      attr_reader column: ::Integer
+      attr_reader end_line: ::Integer?
+      attr_reader end_column: ::Integer?
+      attr_reader label: ::String?
+
+      def initialize: (::Integer line, ::Integer column, ?::Integer? end_line, ?::Integer? end_column, ?label: ::String?, ?primary: bool) -> void
+      def primary?: () -> bool
+      def with_label: (::String? label) -> Span
+      def to_h: () -> ::Hash[::Symbol, untyped]
+    end
+
+    class Edit
+      attr_reader line: ::Integer
+      attr_reader column: ::Integer
+      attr_reader end_line: ::Integer
+      attr_reader end_column: ::Integer
+      attr_reader text: ::String
+
+      def initialize: (::Integer line, ::Integer column, ::Integer end_line, ::Integer end_column, ::String text) -> void
+      def to_h: () -> ::Hash[::Symbol, untyped]
+    end
+
+    class Fix
+      attr_reader description: ::String
+      attr_reader edits: ::Array[Edit]
+
+      def initialize: (::String description, ::Array[Edit] edits) -> void
+      def to_h: () -> ::Hash[::Symbol, untyped]
+    end
+
+    class Source
+      attr_reader lines: ::Array[::String]
+
+      def initialize: (::String text) -> void
+      def line: (::Integer number) -> ::String
+      def size: () -> ::Integer
+      def display: (::Integer number) -> ::String
+      def display_column: (::Integer number, ::Integer column) -> ::Integer
+      def token_end: (::Integer number, ::Integer column) -> ::Integer
+      def first_column: (::Integer number) -> ::Integer?
+      def end_column: (::Integer number) -> ::Integer
+      def resolve: (Span span) -> Span
+      def apply: (::String text, ::Array[Edit] edits) -> ::String
+    end
+
+    class Renderer
+      def initialize: (?color: bool, ?source: (^(Compiler::Diagnostic) -> ::String?)?) -> void
+      def render: (Compiler::Diagnostic diagnostic) -> ::String
+      def source_for: (Compiler::Diagnostic diagnostic) -> Source?
+    end
+
+    module Formats
+      def self.record: (Compiler::Diagnostic diagnostic, ?source: Source?) -> ::Hash[::Symbol, untyped]
+      def self.json: (Compiler::Diagnostic diagnostic, ?source: Source?) -> ::String
+      def self.github: (Compiler::Diagnostic diagnostic, ?source: Source?) -> ::String
+    end
+
+    module Codes
+      class Entry
+        attr_reader code: ::String
+        attr_reader summary: ::String
+        attr_reader templates: ::Array[::String]
+        attr_reader explanation: ::String
+      end
+
+      class Match
+        attr_reader entry: Entry
+        attr_reader captures: ::Hash[::Symbol, ::String]
+        def code: () -> ::String
+      end
+
+      ENTRIES: ::Array[Entry]
+
+      def self.lookup: (::String message) -> Match?
+      def self.[]: (::String code) -> Entry?
+      def self.annotate: (Compiler::Diagnostic diagnostic) -> Compiler::Diagnostic
+      def self.pattern: (::String template) -> ::Regexp
+    end
+  end
+
+  module Lint
+    class Error < Protostar::Error
+    end
+
+    TIERS: ::Array[::Symbol]
+    RULES: ::Hash[::String, [::String, ::Symbol, ::Symbol]]
+
+    def self.categories: () -> ::Array[::Symbol]
+    def self.rule_class: (::String id) -> singleton(Rule)
+    def self.rule_id: (::String id_or_code) -> ::String?
+    def self.select: (::Array[::String] names, ?except: ::Array[::String]) -> ::Array[::String]
+
+    class Rule
+      CLAIMS: ::Array[::String]
+
+      def self.id: () -> ::String
+      def self.code: () -> ::String
+      def self.tier: () -> ::Symbol
+      def self.category: () -> ::Symbol
+      def self.reason: () -> ::String
+      def self.explanation: () -> ::String
+
+      attr_reader context: Context
+      attr_reader diagnostics: ::Array[Compiler::Diagnostic]
+
+      def initialize: (Context context) -> void
+      def check: () -> void
+    end
+
+    class Context
+      attr_reader name: ::String
+      attr_reader path: ::String?
+      attr_reader disk_path: ::String?
+      attr_reader file: untyped
+      attr_reader ast: untyped
+      attr_reader text: ::String
+      attr_reader warnings: ::Array[Compiler::Diagnostic]
+      attr_reader all: ::Array[Context]
+
+      def source: () -> Diagnostics::Source
+      def each: (::Symbol kind) { (untyped node, untyped descriptor) -> void } -> void
+      def descriptor: (untyped node) -> untyped
+      def span: (untyped node, ::Symbol kind, ?label: ::String?, ?primary: bool) -> Diagnostics::Span?
+      def span_at: (::Array[::Integer] path, ?label: ::String?, ?primary: bool) -> Diagnostics::Span?
+      def comment: (untyped node) -> ::String?
+      def renamable?: (::String from, ::String to) -> bool
+    end
+
+    class Runner
+      class Result
+        attr_reader diagnostics: ::Array[Compiler::Diagnostic]
+        attr_reader contexts: ::Array[Context]
+        attr_reader names: ::Array[::String]
+        def errors?: () -> bool
+        def warnings?: () -> bool
+      end
+
+      attr_reader compiler: Compiler
+
+      def initialize: (include_paths: ::Array[::String], rules: ::Array[::String], ?except: ::Array[::String], ?directives: bool) -> void
+      def run: (::Array[::String] names, ?sources: ::Hash[::String, ::String]) -> Result
+      def text: (::String name) -> ::String?
+    end
+
+    class Config
+      attr_reader rules: ::Array[::String]
+      attr_reader except: ::Array[::String]
+      attr_reader ignore: ::Array[::String]
+      attr_reader root: ::String
+      attr_reader file: ::String?
+
+      def self.find: (::Array[::String] inputs, ?cwd: ::String) -> Config
+      def self.load: (::String path) -> Config
+      def allow_comment_directives?: () -> bool
+      def ignored?: (::String path) -> bool
+    end
+
+    class Directives
+      def initialize: (::String text) -> void
+      def suppressed?: (Compiler::Diagnostic diagnostic) -> bool
+    end
+
+    class Fixer
+      class Change
+        attr_reader name: ::String
+        attr_reader path: ::String?
+        attr_reader before: ::String
+        attr_reader after: ::String
+        attr_reader fixed: ::Array[Compiler::Diagnostic]
+      end
+
+      def self.plan: (::Array[Compiler::Diagnostic] diagnostics, text: ^(::String) -> ::String?, path: ^(::String) -> ::String?) -> ::Array[Change]
+      def self.diff: (Change change) -> ::String
+    end
+
+    class Command
+      def initialize: (untyped out, untyped err) -> void
+      def run: (::Array[::String] argv) -> ::Integer
+    end
+  end
+end

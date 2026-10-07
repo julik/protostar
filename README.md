@@ -194,6 +194,80 @@ person_class.new(name: "Ada")               # => #<acme.Person name: "Ada">
 
 Classes defined this way are anonymous; they live in the registry, not in constants.
 
+## Lint a `.proto`
+
+`protostar lint` compiles files (or every `*.proto` under a directory) and explains
+what is wrong the way `rustc` does, then checks what compiled against best-practice
+rules, under `buf lint`'s names:
+
+```console
+$ bundle exec protostar lint proto/
+warning[W0214]: `Person` is the response of `Find` and already the request of `Find`
+  --> proto/acme/person.proto:27:29
+   |
+27 |   rpc Find(Person) returns (Person);
+   |            ------           ^^^^^^ used again
+   |            |
+   |            first used here
+   |
+   = help: give `Find` a `FindResponse` of its own
+   = note: rule RPC_REQUEST_RESPONSE_UNIQUE (default set)
+```
+
+Compiler errors get the same treatment, with a code to look up (here with `id = 1`):
+
+```console
+error[L0301]: field number 1 is already used in `acme.Person`
+  --> proto/acme/person.proto:10:14
+   |
+ 9 |   string name = 1;
+   |                 - first used by `name`
+10 |   int32 id = 1;
+   |              ^ reused here
+   |
+   = help: the next available field number is 2
+```
+
+`protostar lint --explain L0301` (or a rule, `--explain FIELD_NOT_REQUIRED`) says why
+and how to fix it; `--list-rules` lists the rules. They come in three sets, each
+including the one before:
+
+- `minimal` (11 rules): the longevity ones, led by "`required` is forever"
+  (`FIELD_NOT_REQUIRED`), plus groups, enum zero values, unreserved gaps in field
+  numbers, imports and a missing `syntax` line
+- `default` (28, what runs unless told otherwise): naming and package layout
+- `strict` (37): comments on everything, version suffixes, field numbers 1 to 15, editions
+
+Pick with `--rules default,documentation` (sets, categories or rule ids) and
+`--except FIELD_NOT_REQUIRED`, or in a `.protostar.yml` next to the inputs or in the
+current directory:
+
+```yaml
+lint:
+  rules: [default]
+  except: [PACKAGE_VERSION_SUFFIX]
+  ignore: ["vendor/**"]
+  allow_comment_directives: true
+```
+
+A comment switches a rule off for the next line, or for a stretch of the file:
+
+```proto
+// protostar-lint: disable-next-line FIELD_NOT_REQUIRED
+required string id = 1;
+```
+
+`// protostar-lint: disable COMMENT_FIELD` ... `// protostar-lint: enable COMMENT_FIELD`
+does the same for everything between. `--fix` applies the fixes that are mechanical
+(renaming a field, oneof or enum value nothing else in the file mentions, adding the
+missing `syntax` line) and prints the diff; `--diff` prints it without writing.
+`--format json` prints one object per finding, `--format github` workflow annotations
+for pull requests. The exit status is 0 when clean, 1 with warnings (unless
+`--warnings-ok`) and 2 with errors.
+
+`protostar compile --error_format=rich` prints compile errors this way too; without it,
+`compile` prints protoc's one-liners, as before.
+
 ## Use the classes
 
 ```ruby
