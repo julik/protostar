@@ -122,6 +122,27 @@ class CliTest < Minitest::Test
     end
   end
 
+  def test_rich_error_format
+    tmpdir do |dir|
+      _, err, status = protostar("-I./broken/", "--error_format=rich", "--ruby_out=#{dir}", "bad.proto")
+      assert_equal <<~TEXT, err
+        error[L0301]: field number 1 is already used in `A`
+         --> broken/bad.proto:5:13
+          |
+        4 |   int32 x = 1;
+          |             - first used by `x`
+        5 |   int32 y = 1;
+          |             ^ reused here
+          |
+          = help: the next available field number is 2
+      TEXT
+      assert_equal 1, status
+      _, err, status = protostar("-Iproto", "--error_format=rich", "--ruby_out=#{dir}", "acme/unused.proto")
+      assert_equal 0, status
+      assert_equal "warning[V0703]: unused import `acme/person.proto`", err.lines.first.chomp
+    end
+  end
+
   def test_warnings_go_to_stderr_and_succeed
     tmpdir do |dir|
       _, err, status = protostar("-Iproto", "--ruby_out=#{dir}", "acme/unused.proto")

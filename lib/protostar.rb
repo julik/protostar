@@ -34,6 +34,7 @@ module Protostar
   autoload :View, File.expand_path("protostar/view", __dir__)
   autoload :Builder, File.expand_path("protostar/builder", __dir__)
   autoload :Compiler, File.expand_path("protostar/compiler", __dir__)
+  autoload :Diagnostics, File.expand_path("protostar/diagnostics", __dir__)
   autoload :CLI, File.expand_path("protostar/cli", __dir__)
   autoload :Plugin, File.expand_path("protostar/plugin", __dir__)
 
