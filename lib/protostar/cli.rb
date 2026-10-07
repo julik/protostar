@@ -14,7 +14,8 @@ module Protostar
   #
   #   protostar proto/acme/person.proto > person_pb.rb
   class CLI
-    USAGE = "Usage: protostar [compile] [OPTION] PROTO_FILES\n       protostar --version"
+    USAGE = "Usage: protostar [compile] [OPTION] PROTO_FILES\n       protostar lint [OPTION] PROTO_FILES_OR_DIRS\n" \
+      "       protostar --version"
     DEFAULTS = "Without -I, the directory of each PROTO_FILE is an include path and the file is named by its\n" \
       "basename. With one PROTO_FILE and no --*_out, what --ruby_out would write is printed to stdout."
     NO_STDIN = "Reading a .proto from stdin (-) is not supported; pass the file's path."
@@ -62,6 +63,9 @@ module Protostar
       when "compile"
         argv.shift
         compile(argv)
+      when "lint"
+        argv.shift
+        Lint::Command.new(@out, @err).run(argv)
       else
         return compile(argv) unless command?(argv.first)
         @err.puts "Unknown command: #{argv.first}", USAGE
