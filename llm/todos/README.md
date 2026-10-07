@@ -18,3 +18,4 @@ gets picked up.
 - `generated-code-linter-guards.md`: rubocop and standard disable wrappers, frozen string literals stay on
 - `lint-command.md`: `protostar lint`, Rust-style diagnostics with spans, codes and help, plus best-practice rules led by "required is forever"
 - `builder-streaming-to-appendables.md`: Builder writes to any appendable or IO, and streams as far as the wire format allows, measured
+- `diagnostics-twice-as-good.md`: did-you-mean suggestions, teaching notes, cross-file spans and fixes, lint reports everything, lint per input
