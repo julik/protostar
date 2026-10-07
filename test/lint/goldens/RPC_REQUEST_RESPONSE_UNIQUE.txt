@@ -1,0 +1,10 @@
+warning[W0214]: `UserRequest` is the request of `DeleteUser` and already the request of `GetUser`
+ --> acme/users/v1/api.proto:8:18
+  |
+7 |   rpc GetUser(UserRequest) returns (GetUserResponse);
+  |               ----------- first used here
+8 |   rpc DeleteUser(UserRequest) returns (DeleteUserResponse);
+  |                  ^^^^^^^^^^^ used again
+  |
+  = help: give `DeleteUser` a `DeleteUserRequest` of its own
+  = note: rule RPC_REQUEST_RESPONSE_UNIQUE (default set)

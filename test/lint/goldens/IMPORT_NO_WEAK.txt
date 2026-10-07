@@ -1,0 +1,8 @@
+warning[W0109]: import of `google/protobuf/timestamp.proto` is weak
+ --> acme/users/v1/user.proto:3:1
+  |
+3 | import weak "google/protobuf/timestamp.proto";
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ weak
+  |
+  = help: use a plain `import`
+  = note: rule IMPORT_NO_WEAK (minimal set)

@@ -1,0 +1,8 @@
+warning[W0301]: package `acme.users.v1` is not in a `acme/users/v1` directory
+ --> acme/user.proto:2:1
+  |
+2 | package acme.users.v1;
+  | ^^^^^^^^^^^^^^^^^^^^^^ expects `acme/users/v1/`
+  |
+  = help: move the file into a `acme/users/v1/` directory
+  = note: rule PACKAGE_DIRECTORY_MATCH (default set)

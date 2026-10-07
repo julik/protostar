@@ -1,0 +1,1 @@
+{"code":"W0201","severity":"warning","message":"file name `UserProfile.proto` is not lower_snake_case","file":"acme/users/v1/UserProfile.proto","path":null,"line":null,"column":null,"spans":[],"help":["rename the file `user_profile.proto`"],"notes":["rule FILE_LOWER_SNAKE_CASE (default set)"],"fix":null,"rule":"FILE_LOWER_SNAKE_CASE"}

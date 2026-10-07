@@ -100,6 +100,12 @@ module Protostar
           notes: [note], fix: fix, rule: self.class.id)
       end
 
+      # @param numbers [Array<Integer>] sorted
+      # @return [String] "2, 4 to 6"
+      def numbers_text(numbers)
+        numbers.slice_when { |a, b| b != a + 1 }.map { |run| (run.size == 1) ? run[0].to_s : "#{run[0]} to #{run[-1]}" }.join(", ")
+      end
+
       # A rename of the identifier under a span, offered only when the old
       # name appears once in the file (no reference, option or comment would
       # be left behind) and the new one not at all

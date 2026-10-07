@@ -1,0 +1,8 @@
+warning[W0501]: file uses `syntax = "proto3"` rather than an edition
+ --> acme/users/v1/user.proto:1:1
+  |
+1 | syntax = "proto3";
+  | ^^^^^^^^^^^^^^^^^^ proto3
+  |
+  = help: move to `edition = "2023";` with the features that keep proto3's behaviour
+  = note: rule EDITION_RECOMMENDED (strict set)

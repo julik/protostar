@@ -31,7 +31,7 @@ module Protostar
             stale = message.fields.select { |f| f.number <= 15 && f.options.deprecated? }
             next if free.empty? && stale.empty?
             parts = []
-            parts << "#{free.join(", ")} free" unless free.empty?
+            parts << "#{numbers_text(free)} free" unless free.empty?
             parts << "deprecated #{stale.map { |f| "`#{f.name}`" }.join(", ")}" unless stale.empty?
             report(node, :name, "`#{message.name}` uses numbers above 15 with #{parts.join(" and ")} in the one-byte range",
               label: "#{high.size} #{(high.size == 1) ? "field" : "fields"} above 15",

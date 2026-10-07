@@ -78,6 +78,8 @@ module Protostar
       # @return [Diagnostics::Span, nil] from the position to the end of the element that starts there
       def span(node, kind, label: nil, primary: true)
         line, column = node.position(kind)
+        # oneofs record no position; every element's name is field 1 of its descriptor
+        return span_at(node.path + [1], label: label, primary: primary) if line.nil? && kind == :name && node.path
         return nil unless line
         end_line, end_column = @extents[[line, column]]
         Diagnostics::Span.new(line + 1, column + 1, end_line && end_line + 1, end_column && end_column + 1,

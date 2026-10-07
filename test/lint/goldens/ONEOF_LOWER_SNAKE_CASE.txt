@@ -1,0 +1,9 @@
+warning[W0205]: oneof `PaymentMethod` is not lower_snake_case
+ --> acme/users/v1/user.proto:4:9
+  |
+4 |   oneof PaymentMethod {
+  |         ^^^^^^^^^^^^^ not lower_snake_case
+  |
+  = help: name it `payment_method`
+  = note: rule ONEOF_LOWER_SNAKE_CASE (default set)
+  = fix: rename `PaymentMethod` to `payment_method`

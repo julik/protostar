@@ -1,0 +1,8 @@
+warning[W0104]: first value `COLOR_RED` of `Color` is not zero
+ --> acme/users/v1/color.proto:4:15
+  |
+4 |   COLOR_RED = 1;
+  |               ^ not 0
+  |
+  = help: add `COLOR_UNSPECIFIED = 0;` as the first value
+  = note: rule ENUM_FIRST_VALUE_ZERO (minimal set)

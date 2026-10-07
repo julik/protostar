@@ -1,0 +1,8 @@
+warning[W0110]: import `google/protobuf/timestamp.proto` is unused
+ --> acme/users/v1/user.proto:4:1
+  |
+4 | import "google/protobuf/timestamp.proto";
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ unused
+  |
+  = help: remove the import
+  = note: rule IMPORT_USED (minimal set)

@@ -1,0 +1,8 @@
+warning[W0206]: enum `order_status` is not PascalCase
+ --> acme/users/v1/user.proto:3:6
+  |
+3 | enum order_status {
+  |      ^^^^^^^^^^^^ not PascalCase
+  |
+  = help: name it `OrderStatus` and update what refers to it
+  = note: rule ENUM_PASCAL_CASE (default set)

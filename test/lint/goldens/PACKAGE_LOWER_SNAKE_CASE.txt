@@ -1,0 +1,8 @@
+warning[W0202]: package `Acme.Users` is not lower_snake_case
+ --> Acme/Users/user.proto:2:1
+  |
+2 | package Acme.Users;
+  | ^^^^^^^^^^^^^^^^^^^ not lower_snake_case
+  |
+  = help: use `acme.users`
+  = note: rule PACKAGE_LOWER_SNAKE_CASE (default set)

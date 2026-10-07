@@ -46,8 +46,9 @@ module Protostar
       "FIELD_LOWER_SNAKE_CASE" => ["W0204", :default, :naming],
       "ONEOF_LOWER_SNAKE_CASE" => ["W0205", :default, :naming],
       "ENUM_PASCAL_CASE" => ["W0206", :default, :naming],
-      "ENUM_VALUE_UPPER_SNAKE_CASE" => ["W0207", :default, :naming],
+      # before UPPER_SNAKE_CASE: when both rename a value, the prefixed name fixes both
       "ENUM_VALUE_PREFIX" => ["W0208", :default, :naming],
+      "ENUM_VALUE_UPPER_SNAKE_CASE" => ["W0207", :default, :naming],
       "SERVICE_PASCAL_CASE" => ["W0209", :default, :naming],
       "SERVICE_SUFFIX" => ["W0210", :default, :naming],
       "RPC_PASCAL_CASE" => ["W0211", :default, :naming],

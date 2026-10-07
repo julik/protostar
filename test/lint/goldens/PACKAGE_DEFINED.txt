@@ -1,0 +1,8 @@
+warning[W0107]: file `user.proto` has no package
+ --> user.proto:1:1
+  |
+1 | syntax = "proto3";
+  | ^^^^^^^^^^^^^^^^^^ no `package` follows
+  |
+  = help: add a `package` statement, e.g. `package acme.v1;`
+  = note: rule PACKAGE_DEFINED (minimal set)

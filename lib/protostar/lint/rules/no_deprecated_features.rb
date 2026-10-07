@@ -22,9 +22,27 @@ module Protostar
             next unless warning.code == "V0507"
             name, edition, reason = warning.message.match(/\A(.*) has been deprecated in edition (\w+): (.*)\z/m)&.captures
             next unless name
-            spans = warning.spans.map { |s| s.primary? ? s.with_label("deprecated") : s }
+            spans = option_span(name.split(".").last) ||
+              warning.spans.map { |s| s.primary? ? s.with_label("deprecated") : s }
             add("`#{name}` is deprecated since edition #{edition}", spans, help: reason)
           end
+        end
+
+        private
+
+        # protoc reports against the element; the option that sets the
+        # feature is the more useful place to point
+        def option_span(feature)
+          pattern = /\bfeatures\b[^;=\]]*\b#{Regexp.escape(feature)}\b[^;,\]]*/
+          context.source.lines.each_with_index do |line, i|
+            match = line.match(pattern)
+            next unless match
+            before = line[0, match.begin(0)]
+            return nil if before.include?("\t")
+            from = before.bytesize + 1
+            return [Diagnostics::Span.new(i + 1, from, i + 1, from + match[0].rstrip.bytesize, label: "deprecated")]
+          end
+          nil
         end
       end
     end

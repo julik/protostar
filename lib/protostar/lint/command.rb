@@ -33,17 +33,22 @@ module Protostar
         raise Error, "Missing input file or directory.\n#{USAGE}" if inputs.empty?
         config = opts[:config] ? Config.load(opts[:config]) : Config.find(inputs)
         rules = Lint.select(opts[:rules] || config.rules, except: (opts[:except] || []) + config.except)
-        except = (opts[:except] || []) + config.except
+        except = ((opts[:except] || []) + config.except).map { |e| Lint.rule_id(e) }
         format = opts.fetch(:format, "text")
         raise Error, "Unknown format: #{format} (#{FORMATS.join(", ")})" unless FORMATS.include?(format)
         include, names = targets(inputs, opts[:include], config)
         raise Error, "No .proto files in #{inputs.join(", ")}." if names.empty?
-        runner = Runner.new(include_paths: include, rules: rules, except: except.map { |e| Lint.rule_id(e) },
-          directives: config.allow_comment_directives?)
+        lint = -> { Runner.new(include_paths: include, rules: rules, except: except, directives: config.allow_comment_directives?) }
+        runner = lint.call
         result = runner.run(names)
-        fixed = fix(result, runner, write: opts[:fix], show: opts[:fix] || opts[:diff],
+        changed = fix(result, runner, write: opts[:fix], show: opts[:fix] || opts[:diff],
           diff_io: (format == "text") ? nil : @err)
-        remaining = result.diagnostics.reject { |d| fixed.include?(d) }
+        # what is left is what the fixed files say now
+        if changed
+          runner = lint.call
+          result = runner.run(names)
+        end
+        remaining = result.diagnostics
         show(remaining, runner, format, opts, result)
         return 2 if remaining.any?(&:error?)
         return 1 if remaining.any?(&:warning?) && !opts[:warnings_ok]
@@ -141,14 +146,14 @@ module Protostar
       # The diff goes to stdout with text output, to stderr when stdout is JSON
       # or annotations
       def fix(result, runner, write:, show:, diff_io: nil)
-        return [] unless show
+        return false unless show
         changes = Fixer.plan(result.diagnostics, text: ->(n) { runner.text(n) },
           path: ->(n) { result.contexts.find { |c| c.name == n }&.disk_path })
         changes.each do |change|
           (diff_io || @out).write(Fixer.diff(change))
           ::File.binwrite(change.path, change.after) if write && change.path
         end
-        write ? changes.flat_map(&:fixed) : []
+        write && !changes.empty?
       end
 
       def show(diagnostics, runner, format, opts, result)

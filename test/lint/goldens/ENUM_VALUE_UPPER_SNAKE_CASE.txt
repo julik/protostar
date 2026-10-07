@@ -1,0 +1,9 @@
+warning[W0207]: enum value `color_red` is not UPPER_SNAKE_CASE
+ --> acme/users/v1/color.proto:5:3
+  |
+5 |   color_red = 1;
+  |   ^^^^^^^^^ not UPPER_SNAKE_CASE
+  |
+  = help: name it `COLOR_RED`
+  = note: rule ENUM_VALUE_UPPER_SNAKE_CASE (default set)
+  = fix: rename `color_red` to `COLOR_RED`
