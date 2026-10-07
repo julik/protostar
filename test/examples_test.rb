@@ -71,6 +71,9 @@ class ExamplesTest < Minitest::Test
         actual =
           case command.line
           when /\Aruby (\S+)\z/ then ruby(dir, $1)
+          when /\Abundle exec protostar (.+) > (\S+)\z/
+            args, target = $1.split, $2
+            in_copy_without_generated_code(dir) { |tmp| protostar(tmp, args, stdout: target) }
           when /\Abundle exec protostar (.+)\z/ then in_copy_without_generated_code(dir) { |tmp| protostar(tmp, $1.split) }
           when "bundle exec rake protos" then in_copy_without_generated_code(dir) { |tmp| rake_protos(tmp) }
           else flunk "examples/#{dir}/README.md shows `#{command.line}`, which this test does not know how to run"
@@ -153,8 +156,15 @@ class ExamplesTest < Minitest::Test
     run_ok(RbConfig.ruby, "-I", File.join(ROOT, "lib"), script, chdir: File.join(EXAMPLES, dir), env: env)
   end
 
-  def protostar(dir, args)
-    run_ok(RbConfig.ruby, File.join(ROOT, "exe", "protostar"), *args, chdir: dir)
+  # With stdout: a file name, what it prints goes there as the shell's `>`
+  # would put it, and only stderr is the terminal's
+  def protostar(dir, args, stdout: nil)
+    cmd = [RbConfig.ruby, File.join(ROOT, "exe", "protostar"), *args]
+    return run_ok(*cmd, chdir: dir) unless stdout
+    out, err, status = Open3.capture3(bundler_env, *cmd, chdir: dir)
+    assert status.success?, "#{cmd.join(" ")} > #{stdout} failed in #{dir}:\n#{err}"
+    File.write(File.join(dir, stdout), out)
+    err
   end
 
   # The Rakefile shells out to `protostar`, so one goes first on the PATH

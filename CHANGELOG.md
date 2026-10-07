@@ -11,6 +11,7 @@ together and depend on each other's exact version.
 - Errors and warnings as protoc prints them (gcc or msvs format), with protoc's wording for 239 parser and 116 validation cases.
 - The well-known types and `descriptor.proto` are bundled, so their imports need no include path.
 - `protostar compile` with protoc's flags: `--ruby_out` (protostar's classes), `--google_out` (byte for byte protoc's `--ruby_out`), `--rbs_out`, `--grpc_out` (byte for byte grpc-tools'), `--descriptor_set_out` (byte for byte protoc's, with `--include_imports` and `--include_source_info`).
+- `protostar file.proto` just works: `compile` is the default command, without `-I` each input's directory is the include path (the file is named by its basename), and one file with no `--*_out` prints its native Ruby to stdout. Explicit `-I` behaves as protoc's.
 - `protoc-gen-protostar`, the same outputs as a protoc plugin (`ruby`, `google`, `rbs`, `grpc`).
 
 ### Schema

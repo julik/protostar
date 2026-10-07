@@ -133,7 +133,8 @@ class CliTest < Minitest::Test
 
   def test_command_line_mistakes
     {
-      ["-Iproto", "acme/person.proto"] => "Missing output directives.\n",
+      ["-Iproto", "acme/person.proto", "acme/directory.proto"] =>
+        "2 files cannot share stdout; add --ruby_out=DIR to write a _pb.rb for each.\n",
       ["-Iproto", "--ruby_out=."] => "Missing input file.\n",
       ["-Iproto", "--error_format=xml", "--ruby_out=.", "acme/person.proto"] => "Unknown error format: xml\n",
       ["-Iproto", "--ruby_out=nowhere", "acme/person.proto"] => "nowhere/: No such file or directory\n",
