@@ -5,7 +5,8 @@ require_relative "builder_support"
 # For random messages of every corpus golden's own file: a builder block replayed from the message's field
 # hash, with a nested block for every message and a collection block for
 # every repeated message, produces bytes that decode to an equal message;
-# so does merge! of the same hash.
+# so does merge! of the same hash, and the block with every nested message
+# chunked at every field.
 class BuilderPropertyTest < Minitest::Test
   INSTANCES = Integer(ENV.fetch("PROTOSTAR_PROPERTY_INSTANCES", "4"))
 
@@ -33,33 +34,13 @@ class BuilderPropertyTest < Minitest::Test
     klass = message.class
     hash = message.__to_h
     name = klass.descriptor.full_name
-    replayed = Protostar::Builder.build(klass) { |pb| replay(pb, klass, hash) }
+    replayed = Protostar::Builder.build(klass) { |pb| BuilderSupport.replay(pb, klass, hash) }
     assert_equal message, klass.decode(replayed), "replayed block for #{name}: #{hash.inspect[0, 300]}"
     merged = Protostar::Builder.build(klass) { |pb| pb.merge!(hash) }
     assert_equal message, klass.decode(merged), "merge! for #{name}"
     assert_equal replayed, merged
-  end
-
-  # Writes a field hash as a template would: field methods where the builder
-  # has them, set! where it does not, blocks for nested and repeated messages
-  def replay(pb, klass, hash)
-    hash.each do |name, value|
-      info = klass.__by_name.fetch(name)
-      if info.message? && !info.map && info.repeated
-        call(pb, name, value) { |h| replay(pb, info.message_class, h) }
-      elsif info.message? && !info.map
-        call(pb, name) { replay(pb, info.message_class, value) }
-      else
-        call(pb, name, value)
-      end
-    end
-  end
-
-  def call(pb, name, *args, &block)
-    if pb.class.public_method_defined?(name, false)
-      pb.public_send(name, *args, &block)
-    else
-      pb.set!(name, *args, &block)
-    end
+    # every nested message split at every field: readers merge the pieces back
+    chunked = Protostar::Builder.build(klass, chunk_nested_at: 1) { |pb| BuilderSupport.replay(pb, klass, hash) }
+    assert_equal message, klass.decode(chunked), "chunk_nested_at: 1 for #{name}"
   end
 end

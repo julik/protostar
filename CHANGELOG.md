@@ -32,6 +32,7 @@ together and depend on each other's exact version.
 - Well-known types with google-protobuf's helpers and short names (`Protostar::Timestamp`, `Any.pack`, `Struct.from_hash`, ...); `Time` assigns to a Timestamp field and a number to a Duration field.
 - `Klass.reflection`: read and write fields by descriptor, name or number.
 - `Protostar::Builder` and `Klass.build`: write a message's bytes as a block runs, with streaming to an IO and fragment caching.
+- `Protostar::Builder` streams to any sink (`write`, `<<` or `call`) with a `buffer:` size, hands nested messages larger than the buffer to the sink without a copy, splits large nested messages into merged pieces with `chunk_nested_at:` (100 MB held 0.13 MB instead of 256 MB), writes length-prefixed sequences with `Builder.each` and Enumerators with `Builder.each_chunk`, and holds packed varint runs as bytes (116 MB down to 32 MB for 10 M int32). See [docs/concepts/streaming.md](docs/concepts/streaming.md).
 - `Protostar::DSL`: the generated `_pb.rb` format, readable and writable by hand; RBS for the generated classes.
 - Passes protobuf's conformance suite: 6,557 of 6,558 tests (binary, JSON and text format); the one failure needs extensions as fields.
 

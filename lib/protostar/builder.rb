@@ -57,6 +57,8 @@ module Protostar
 
     # Stands for "no value given" in field methods, as nil is a value (it writes nothing)
     NONE = Object.new.freeze
+    # A nested message at least this large is handed to a sink as it is
+    BIG = Wire::Writer::FLUSH_AT
     EMPTY = [].freeze
     F = Message::FieldInfo
     RANGES = Message::Coercion::RANGES
@@ -68,6 +70,9 @@ module Protostar
     WRAPPERS = %w[
       DoubleValue FloatValue Int64Value UInt64Value Int32Value UInt32Value BoolValue StringValue BytesValue
     ].to_h { |n| ["google.protobuf.#{n}", :wrapper] }
+    # Why a second write raises: the start of the message's second half
+    NO_OVERWRITES = "this builder promises its reader that no field repeats (overwrites: false, the default), " \
+      "which is what lets it stream. Pass overwrites: true to let"
     WELL_KNOWN = WRAPPERS.merge("google.protobuf.Timestamp" => :timestamp, "google.protobuf.Duration" => :duration).freeze
 
     class << self
@@ -88,18 +93,57 @@ module Protostar
         klass.decode(build(klass, **options, &block))
       end
 
-      # Streams the message to `io` as it is built, through a 64 KiB buffer.
-      # Only the top level streams; each nested message is written once it is complete.
-      # @param io [#write]
-      # @return [#write] io
+      # Streams the message to a sink as it is built. Top-level fields go out
+      # as they complete, through a buffer of `buffer:` bytes (64 KiB unless
+      # told otherwise); a nested message goes out once it is complete, or in
+      # pieces with `chunk_nested_at:`. See docs/concepts/streaming.md.
+      # @param io [#write, #<<, #call, String] the sink (see {#initialize})
+      # @return [Object] io, after its `flush` when it has one
       def write(io, klass, **options)
         b = new(klass, io, **options)
         yield b
         b.target!
       end
 
+      # Writes a sequence of messages, each with its length as a varint
+      # before it, as {Message#encode_delimited} does; read them back with
+      # `decode_delimited`. Each message goes to the sink once it is complete.
+      #
+      #   Protostar::Builder.each(file, Acme::Event, rows) do |pb, row|
+      #     pb.name row.name
+      #   end
+      #
+      # @param io [#write, #<<, #call, String, nil] the sink; nil for a new String
+      # @param collection [#each] one message per element
+      # @yieldparam pb [Builder] the same builder for every message
+      # @yieldparam element [Object]
+      # @return [Object] io, or the String when io is nil
+      def each(io, klass, collection, **options, &block)
+        raise ArgumentError, "needs a collection (something with #each), got #{collection.class}" unless collection.respond_to?(:each)
+        b = new(klass, io, **options)
+        b.__send__(:__sequence, collection, &block)
+        b.target!
+      end
+
+      # The message's bytes as an Enumerator of binary Strings, made as the
+      # Enumerator is iterated: a Rack body, or anything that pulls. Each
+      # iteration runs the block again.
+      #
+      #   body = Protostar::Builder.each_chunk(Acme::Person, buffer: 16_384) { |pb| ... }
+      #   body.each { |bytes| socket.write(bytes) }
+      #
+      # @return [Enumerator<String>]
+      def each_chunk(klass, **options, &block)
+        raise ArgumentError, "each_chunk needs a block that writes the message" unless block
+        resolve(klass)
+        Enumerator.new do |y|
+          write(y, klass, **options, &block)
+          nil
+        end
+      end
+
       # @param klass [Class, Schema::Message]
-      # @param target [String, IO, nil] where the bytes go: nil for a new String
+      # @param target [String, #write, #<<, #call, nil] where the bytes go: nil for a new String
       # @return [Builder] an instance of the builder class for `klass`
       def new(klass, target = nil, **options)
         return super if superclass.equal?(Builder)
@@ -132,7 +176,14 @@ module Protostar
     end
 
     # @param klass [Class, Schema::Message] the message class, or its descriptor
-    # @param target [String, IO, nil] a String to append to, an IO, or nil for a new String
+    # @param target [String, #write, #<<, #call, nil] a String to append to
+    #   (switched to binary encoding), nil for a new String, or a sink: anything
+    #   answering `write` (an IO, a socket, a Rack or ActionController::Live
+    #   stream), `<<` (an Array, an Enumerator::Yielder) or `call` (a Proc).
+    #   Every chunk a sink gets is a binary String; an IO or StringIO is handed
+    #   the builder's buffer, anything else a copy it may keep. A sink's `flush`
+    #   is called by {#target!}. An error the sink raises is re-raised with
+    #   the field being written added to its message.
     # @param cache_store [#fetch, nil] where {#cache!} keeps fragments, such as
     #   `Rails.cache`; without one, {#cache!} just runs its block
     # @param overwrites [Boolean] let a singular field be written again in the
@@ -141,11 +192,35 @@ module Protostar
     #   adds elements. `:replace`: assigning a list (or one value without a block)
     #   replaces what earlier assignments in the same message gave; those lists
     #   are held until the message ends. Elements built with a block always stream.
-    def initialize(klass, target = nil, cache_store: nil, overwrites: false, repeated: :append)
+    # @param buffer [Integer] bytes collected before a sink is written to.
+    #   0 writes each top-level field as it completes, for sinks that buffer
+    #   on their own. A nested message larger than the buffer is handed to the
+    #   sink as it is, not copied into the buffer first.
+    # @param chunk_nested_at [Integer, nil] write a singular nested message
+    #   that grows past this many bytes as several occurrences of its field,
+    #   which readers merge into one, so that memory is bounded by this size
+    #   rather than by the message. Needs `overwrites: false` and
+    #   `repeated: :append`. Repeated and map fields are never split.
+    def initialize(klass, target = nil, cache_store: nil, overwrites: false, repeated: :append,
+      buffer: Wire::Writer::FLUSH_AT, chunk_nested_at: nil)
       raise ArgumentError, "repeated: must be :append or :replace" unless repeated == :append || repeated == :replace
+      raise ArgumentError, "buffer: must be an Integer >= 0, got #{buffer.inspect}" unless buffer.is_a?(Integer) && buffer >= 0
+      if !chunk_nested_at.nil? && !(chunk_nested_at.is_a?(Integer) && chunk_nested_at > 0)
+        raise ArgumentError, "chunk_nested_at: must be a positive Integer or nil, got #{chunk_nested_at.inspect}"
+      end
+      if chunk_nested_at && (overwrites || repeated == :replace)
+        raise ArgumentError, "chunk_nested_at: splits a nested message into pieces that readers merge, which " \
+          "is only sound when no field is written twice; it needs overwrites: false and repeated: :append"
+      end
       @root = self.class::CLASSES[0]
-      @w = Wire::Writer.new(target)
+      @w = @top = (target.nil? || target.is_a?(String)) ? Wire::Writer.new(target) : Sink.new(target, buffer, self)
       @buf = @w.string
+      @chunk = chunk_nested_at
+      # [own writer or nil, parent writer, field, written out yet] per open nested message
+      @open = []
+      @capturing = 0
+      # with a buffer, write_raw flushes it when full; field ends matter only for these two
+      @boundary = (!@top.io.nil? && buffer == 0) || !@chunk.nil?
       @k = 0
       @written = 0
       @pending = nil
@@ -162,12 +237,16 @@ module Protostar
     # @return [String, IO] the bytes, or the IO after flushing it
     def target!
       __flush_pending if @pending
-      if @w.io
-        @w.flush
-        @w.io
-      else
-        @buf
+      top = @top
+      return top.string unless top.io
+      top.flush
+      io = top.io
+      begin
+        io.flush if io.respond_to?(:flush)
+      rescue => e
+        raise top.annotate(e)
       end
+      io
     end
 
     # @return [Class] the class of the message being written: the top-level
@@ -254,6 +333,7 @@ module Protostar
       raise __error(nil, "the cache store returned a #{bytes.class} for #{key.inspect}, not bytes") unless bytes.is_a?(String)
       __mark_fragment(bytes) unless missed
       @w.write_raw(bytes)
+      __boundary if @boundary
       self
     end
 
@@ -320,6 +400,7 @@ module Protostar
       else
         again = __mark(info)
         __scalar(info, value, !again && !info.presence)
+        __boundary if @boundary
       end
     end
 
@@ -330,10 +411,9 @@ module Protostar
       if @written.anybits?(bit)
         return true if @overwrites
         if info.siblings && info.descriptor.real_oneof
-          raise __error(info, "oneof #{info.descriptor.real_oneof.name} already has a value; " \
-            "pass overwrites: true to let the last one win")
+          raise __error(info, "oneof #{info.descriptor.real_oneof.name} already has a value; #{NO_OVERWRITES} the last one win")
         end
-        raise __error(info, "is already set; pass overwrites: true to let the last value win")
+        raise __error(info, "is already set; #{NO_OVERWRITES} the last value win")
       end
       @written |= bit
       info.siblings&.each { |i| @written |= 1 << i }
@@ -351,9 +431,14 @@ module Protostar
       if info.packed
         run = (@pending ||= {}.compare_by_identity)[info]
         if run.nil? || @replace
-          run = @pending[info] = []
+          # varints are kept as their bytes, a fraction of what an Array of Integers takes
+          run = @pending[info] = PACK[info.kind] ? [] : Wire::Writer.new
         end
-        list.each { |e| run << __packed_value(info, e) }
+        if run.is_a?(Array)
+          list.each { |e| run << __packed_value(info, e) }
+        else
+          list.each { |e| run.write_varint(__packed_value(info, e)) }
+        end
       elsif @replace
         (@pending ||= {}.compare_by_identity)[info] = list.dup
       else
@@ -364,6 +449,17 @@ module Protostar
     def __elements(info, list)
       if info.message?
         list.each_with_index { |e, i| __message(info, e, i) }
+      elsif @boundary
+        list.each do |e|
+          __scalar(info, e, false)
+          __boundary
+        end
+      elsif @top.io && info.kind != F::STRING && info.kind != F::BYTES
+        # numbers are written without write_raw, which is what flushes a full buffer
+        list.each do |e|
+          __scalar(info, e, false)
+          @w.flush_if_full
+        end
       else
         list.each { |e| __scalar(info, e, false) }
       end
@@ -410,6 +506,7 @@ module Protostar
       __varint(bytes.bytesize) unless group
       @w.write_raw(bytes)
       @buf << info.end_tag if group
+      __boundary if @boundary
     end
 
     # @return [Boolean] whether `v` was a Ruby form of the well-known type and got written
@@ -457,6 +554,8 @@ module Protostar
       @path << index if index
       if info.kind == F::GROUP
         @buf << info.tag
+        # the enclosing buffer holds an open group from here on, so it cannot be split
+        @open.push(nil, nil, info, false) if @chunk
         begin
           @k = k
           @written = 0
@@ -469,13 +568,20 @@ module Protostar
           @pending = saved_pending
           @path.pop
           @path.pop if index
+          @open.pop(4) if @chunk
         end
         @buf << info.end_tag
+        __boundary if @boundary
         return
       end
       saved_w = @w
       saved_buf = @buf
       child = @spare.pop || Wire::Writer.new
+      if @chunk
+        # map values and repeated elements must stay whole; so must anything cached
+        own = (info.index && !info.repeated && @capturing == 0) ? child : nil
+        @open.push(own, saved_w, info, false)
+      end
       begin
         @w = child
         @buf = child.string
@@ -484,6 +590,10 @@ module Protostar
         @pending = nil
         yield
         __flush_pending if @pending
+        @w = saved_w
+        @buf = saved_buf
+        # still inside the path, so that a sink failing here names this field
+        __emit(saved_w, info, child.string) unless @chunk && @open[-1] && child.string.empty?
       ensure
         @w = saved_w
         @buf = saved_buf
@@ -492,13 +602,94 @@ module Protostar
         @pending = saved_pending
         @path.pop
         @path.pop if index
+        @open.pop(4) if @chunk
       end
-      bytes = child.string
-      @buf << info.tag
-      __varint(bytes.bytesize)
-      @w.write_raw(bytes)
-      bytes.clear
       @spare << child
+      __boundary if @boundary
+    end
+
+    # Writes tag, length and `bytes` (then cleared) into `w`. Bytes larger
+    # than a sink's buffer go to the sink as they are, not through the buffer.
+    def __emit(w, info, bytes)
+      w.string << info.tag
+      size = bytes.bytesize
+      if size < 0x80
+        w.string << size
+      else
+        w.write_varint(size)
+      end
+      if w.io && size >= BIG && size >= w.flush_at
+        w.write_through(bytes)
+      else
+        w.write_raw(bytes)
+      end
+      bytes.clear
+    end
+
+    # After a field of the current message is complete: a sink's buffer is
+    # written when full, and with chunk_nested_at a nested message past the
+    # size is written out as one occurrence of its field
+    def __boundary
+      if @w.equal?(@top)
+        @top.flush_if_full
+      elsif @chunk && @open[-4].equal?(@w) && @buf.bytesize >= @chunk
+        __chunk_out
+      end
+    end
+
+    # Writes the current nested message's bytes so far into its parent, and
+    # so on outwards while each parent is also past the size and may be split
+    def __chunk_out
+      __flush_pending if @pending
+      open = @open
+      chunk = @chunk
+      i = open.size - 4
+      parent = nil
+      while i >= 0
+        own = open[i]
+        parent = open[i + 1]
+        __emit(parent, open[i + 2], own.string)
+        open[i + 3] = true
+        i -= 4
+        break unless i >= 0 && open[i].equal?(parent) && parent.string.bytesize >= chunk
+      end
+      @top.flush_if_full if parent.equal?(@top)
+    end
+
+    # One length-prefixed message per element, each the top-level message
+    def __sequence(collection)
+      top = @top
+      child = Wire::Writer.new
+      @open.push(nil, nil, nil, false) if @chunk
+      i = 0
+      collection.each do |e|
+        @path << i
+        begin
+          @w = child
+          @buf = child.string
+          @written = 0
+          @pending = nil
+          yield self, e
+          __flush_pending if @pending
+          @w = top
+          @buf = top.string
+          bytes = child.string
+          top.write_varint(bytes.bytesize)
+          if top.io && bytes.bytesize >= BIG && bytes.bytesize >= top.flush_at
+            top.write_through(bytes)
+          else
+            top.write_raw(bytes)
+          end
+          bytes.clear
+          top.flush_if_full
+        ensure
+          @w = top
+          @buf = top.string
+          @path.pop
+        end
+        i += 1
+      end
+      @open.pop(4) if @chunk
     end
 
     def __map(info, value)
@@ -530,6 +721,7 @@ module Protostar
         @w.write_raw(bytes)
         bytes.clear
         @spare << child
+        __boundary if @boundary
       end
     end
 
@@ -595,7 +787,7 @@ module Protostar
       end
     end
 
-    # A packed element as the run will hold it: an Integer (enum numbers
+    # A packed element as it goes into the run: an Integer (enum numbers
     # resolved, sint zigzagged), a Float, or 1 or 0 for bools
     def __packed_value(info, v)
       case info.kind
@@ -621,30 +813,33 @@ module Protostar
       fields.each do |info|
         list = pending[info]
         if info.packed
-          __packed(info, list) unless list.empty?
+          __packed(info, list) unless list.is_a?(Array) ? list.empty? : list.string.empty?
         else
           __elements(info, list)
         end
       end
     end
 
-    def __packed(info, list)
+    # A packed run: an Array of fixed-width values, or a writer holding varints
+    def __packed(info, run)
       @buf << info.packed_tag
-      if (format = PACK[info.kind])
-        __varint(F::FIXED.fetch(info.kind)[0] * list.size)
-        if info.kind == F::FLOAT
-          @buf << Wire.pack_floats(list)
+      if run.is_a?(Wire::Writer)
+        bytes = run.string
+        __varint(bytes.bytesize)
+        if @w.io && bytes.bytesize >= BIG && bytes.bytesize >= @w.flush_at
+          @w.write_through(bytes)
         else
-          list.pack(format, buffer: @buf)
+          @w.write_raw(bytes)
         end
-      elsif info.kind == F::BOOL
-        __varint(list.size)
-        list.each { |b| @buf << b }
       else
-        __varint(list.sum { |n| Wire.varint_size(n) })
-        list.each { |n| __varint(n) }
+        __varint(F::FIXED.fetch(info.kind)[0] * run.size)
+        if info.kind == F::FLOAT
+          @buf << Wire.pack_floats(run)
+        else
+          run.pack(PACK[info.kind], buffer: @buf)
+        end
+        @w.flush_if_full
       end
-      @w.flush_if_full
     end
 
     def __int(info, v)
@@ -696,6 +891,7 @@ module Protostar
       saved_buf = @buf
       saved_pending = @pending
       child = @spare.pop || Wire::Writer.new
+      @capturing += 1
       begin
         @w = child
         @buf = child.string
@@ -706,6 +902,7 @@ module Protostar
         @w = saved_w
         @buf = saved_buf
         @pending = saved_pending
+        @capturing -= 1
       end
       bytes = child.string.dup.freeze
       child.string.clear
@@ -731,6 +928,12 @@ module Protostar
     def __show(v)
       s = v.inspect
       (s.length > 64) ? "#{s[0, 60]}..." : s
+    end
+
+    # Where the builder is, for an error from the sink
+    def __where
+      path = __path(nil)
+      path.empty? ? "the top level of #{@root.descriptor.full_name}" : path
     end
 
     def __error(info, message, index = nil)
@@ -759,3 +962,4 @@ module Protostar
 end
 
 require_relative "builder/generator"
+require_relative "builder/sink"

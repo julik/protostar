@@ -3,7 +3,7 @@
 module Protostar
   module Wire
     # Writes wire-format values into a binary String, or through a small
-    # buffer straight into an IO.
+    # buffer into a sink: an IO, or anything that takes bytes.
     #
     #   w = Protostar::Wire::Writer.new
     #   w.write_tag(1, Protostar::Wire::VARINT).write_varint(150)
@@ -11,17 +11,26 @@ module Protostar
     #
     #   Protostar::Wire::Writer.new(io).write_bytes("hi").flush
     class Writer
-      # Bytes buffered before an IO target is written to
+      # Bytes buffered before a sink is written to, by default
       FLUSH_AT = 64 * 1024
 
-      # @return [String] the bytes written so far (for an IO target, those not yet flushed)
+      # @return [String] the bytes written so far (for a sink, those not yet flushed)
       attr_reader :string
-      # @return [IO, nil]
+      # @return [Object, nil] the sink, or nil for a String target
       attr_reader :io
+      # @return [Integer] bytes buffered before the sink is written to
+      attr_reader :flush_at
 
-      # @param target [String, IO, nil] a String to append to (it is switched
-      #   to binary encoding), anything responding to `write`, or nil for a new String
-      def initialize(target = nil)
+      # @param target [String, #write, #<<, #call, nil] a String to append to
+      #   (it is switched to binary encoding), a sink, or nil for a new String.
+      #   A sink is anything answering `write` (an IO, a socket, a Rack or
+      #   ActionController::Live stream), `<<` (an Array, an Enumerator::Yielder)
+      #   or `call` (a Proc). An IO or StringIO is given the buffer itself and
+      #   anything else a copy, since a sink may keep what it is given.
+      # @param flush_at [Integer] bytes to collect before writing to the sink;
+      #   0 writes on every {#flush_if_full}
+      def initialize(target = nil, flush_at: FLUSH_AT)
+        @flush_at = flush_at
         if target.nil?
           @string = String.new(encoding: BINARY)
           @io = nil
@@ -29,8 +38,23 @@ module Protostar
           @string = target.force_encoding(BINARY)
           @io = nil
         else
-          @string = String.new(capacity: FLUSH_AT, encoding: BINARY)
+          @string = String.new(capacity: (flush_at > 0) ? flush_at : 256, encoding: BINARY)
           @io = target
+          @push = Writer.push_method(target)
+          @copy = !(target.is_a?(IO) || (defined?(::StringIO) && target.is_a?(::StringIO)))
+        end
+      end
+
+      # @return [Symbol] how bytes are handed to `sink`: :write, :<< or :call
+      # @raise [ArgumentError] when it takes none of them
+      def self.push_method(sink)
+        # Proc#<< composes, so a callable is called before anything else is tried
+        if sink.is_a?(Proc) || sink.is_a?(Method) then :call
+        elsif sink.respond_to?(:write) then :write
+        elsif sink.respond_to?(:<<) then :<<
+        elsif sink.respond_to?(:call) then :call
+        else
+          raise ArgumentError, "#{sink.class} is not a sink: it answers none of write, << and call"
         end
       end
 
@@ -126,21 +150,51 @@ module Protostar
         end
       end
 
-      # Writes the buffer to the IO target once it holds {FLUSH_AT} bytes
+      # Writes the buffer to the sink once it holds {#flush_at} bytes
       # @return [self]
       def flush_if_full
-        flush if @io && @string.bytesize >= FLUSH_AT
+        flush if @io && @string.bytesize >= @flush_at
         self
       end
 
-      # Writes whatever is buffered to the IO target. A no-op for a String target.
+      # Writes whatever is buffered to the sink. A no-op for a String target.
       # @return [self]
       def flush
         if @io && !@string.empty?
-          @io.write(@string)
+          deliver(@copy ? @string.dup : @string)
           @string.clear
         end
         self
+      end
+
+      # Writes the buffer and then `bytes` to the sink, without copying
+      # `bytes` into the buffer first. For a String target, appends them.
+      # @return [self]
+      def write_through(bytes)
+        return write_raw(bytes) unless @io
+        if @copy
+          flush
+          deliver(bytes.b)
+        else
+          # IO#write and StringIO#write take several Strings in one call
+          deliver_all(@string, bytes)
+          @string.clear
+        end
+        self
+      end
+
+      private
+
+      def deliver_all(*chunks)
+        @io.write(*chunks)
+      end
+
+      def deliver(bytes)
+        case @push
+        when :write then @io.write(bytes)
+        when :<< then @io << bytes
+        else @io.call(bytes)
+        end
       end
     end
   end
