@@ -381,6 +381,17 @@ relies on the reader applying protobuf's merge rules (every conforming one does)
 Building 1,000 nested elements this way takes a third (YJIT) to a half of the time and a fifth of the
 objects of `new` and `encode` (see the [benchmarks](docs/benchmarks.md)).
 
+`Builder.write` takes any sink: an IO or socket, a Rack or `ActionController::Live` stream,
+an Array, a Proc. Top-level fields go out through a 64 KiB buffer (`buffer: 0` writes each
+one as it completes), and only one nested message per level is held, until it closes. For a
+nested message too large to hold, `chunk_nested_at: 64 * 1024` writes it in pieces that
+every reader merges back into one; that relies on the default `overwrites: false`, the
+promise that no field is written twice. `Builder.each(io, Klass, rows) { |pb, row| ... }`
+writes a length-prefixed sequence for `decode_delimited`, and `Builder.each_chunk(Klass) {
+|pb| ... }` is an Enumerator of chunks for a Rack body.
+[docs/concepts/streaming.md](docs/concepts/streaming.md) measures what streams and what has
+to be held.
+
 ## The DSL, by hand
 
 The generated files are plain Ruby. You can write one yourself:
