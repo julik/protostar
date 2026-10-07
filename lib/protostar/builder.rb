@@ -218,7 +218,8 @@ module Protostar
       # [own writer or nil, parent writer, field, written out yet] per open nested message
       @open = []
       @capturing = 0
-      @boundary = !@top.io.nil? || !@chunk.nil?
+      # with a buffer, write_raw flushes it when full; field ends matter only for these two
+      @boundary = (!@top.io.nil? && buffer == 0) || !@chunk.nil?
       @k = 0
       @written = 0
       @pending = nil
@@ -446,6 +447,12 @@ module Protostar
         list.each do |e|
           __scalar(info, e, false)
           __boundary
+        end
+      elsif @top.io && info.kind != F::STRING && info.kind != F::BYTES
+        # numbers are written without write_raw, which is what flushes a full buffer
+        list.each do |e|
+          __scalar(info, e, false)
+          @w.flush_if_full
         end
       else
         list.each { |e| __scalar(info, e, false) }
