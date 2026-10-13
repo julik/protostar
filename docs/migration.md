@@ -21,7 +21,7 @@ The two mix: native files for your own schemas, the shim for the gems that need
 
 ```ruby
 # Gemfile
-gem "protostar"
+gem "protostar", "0.1.0.beta1"
 ```
 
 Wherever you ran protoc, run protostar with the same flags:

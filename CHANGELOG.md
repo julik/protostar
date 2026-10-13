@@ -1,9 +1,9 @@
 # Changelog
 
-## 0.1.0
+## 0.1.0.beta1
 
-The first release. protostar and the `google-protobuf` shim (4.36.2.1) are released
-together and depend on each other's exact version.
+The first release, as a prerelease. The `google-protobuf` shim (4.36.2.1) ships inside it, and
+from git as a gem of its own that depends on this exact protostar version.
 
 ### Compiler
 

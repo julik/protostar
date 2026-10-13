@@ -45,8 +45,10 @@ there: what you want, why, what it would take. That is the fastest way to get it
 
 ## Installation
 
+protostar is in prerelease, so name the version (or `gem install protostar --pre`):
+
 ```ruby
-gem "protostar"
+gem "protostar", "0.1.0.beta1"
 ```
 
 ## Compile a `.proto`

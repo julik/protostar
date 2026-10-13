@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.authors = ["Julik Tarkhanov"]
   spec.email = ["me@julik.nl"]
 
-  spec.summary = "Pure Ruby protocol buffers: compiler, encoder, decoder and a google-protobuf replacement"
+  spec.summary = "(Slightly unhinged) pure Ruby protobufs"
   spec.description = "Compiles .proto files to Ruby, encodes and decodes protobuf messages, and can stand in for the google-protobuf gem. No protoc, no native extensions."
   spec.homepage = "https://github.com/julik/protostar"
   spec.license = "MIT"
