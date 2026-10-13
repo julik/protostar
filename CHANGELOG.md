@@ -40,6 +40,7 @@ together and depend on each other's exact version.
 ### The google-protobuf shim
 
 - `shims/google-protobuf`: a gem named `google-protobuf` providing Google's `Google::Protobuf` API on protostar, so `grpc`, `googleapis-common-protos-types` and protoc's generated files run unchanged. Google's own Ruby tests pass against it.
+- The shim ships inside protostar too, off the load path: `require "protostar/google_protobuf_shim"` makes every later `require "google/protobuf"` load it, ahead of Google's gem if that is installed, and raises if Google's gem got loaded first.
 - Its own descriptor pool, so native and Google-format generated code can be loaded side by side.
 
 ### Development

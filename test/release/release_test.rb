@@ -122,6 +122,23 @@ class ReleaseTest < Minitest::Test
       "Google::Protobuf::RepeatedField"], out.lines.map(&:chomp)
   end
 
+  # The shim gem is installed here too, so this proves the copy inside protostar is the one used
+  def test_the_shim_bundled_in_protostar_loads_a_google_format_file
+    sh(File.join(@gem_home, "bin", "protostar"), "compile", "-I", ".", "--google_out=.", "note.proto")
+    out = ruby(<<~RUBY)
+      $LOAD_PATH.unshift(Dir.pwd)
+      require "protostar/google_protobuf_shim"
+      require "note_pb"
+      note = Release::Note.new(text: "hi", marks: [1, 2])
+      raise "round trip" unless Release::Note.decode(Release::Note.encode(note)) == note
+      puts Google::Protobuf::IMPLEMENTATION
+      puts $LOADED_FEATURES.grep(%r{/google/protobuf\\.rb\\z})
+      puts Gem.loaded_specs.key?("google-protobuf")
+    RUBY
+    shim = File.join(@gem_home, "gems", "protostar-#{Protostar::VERSION}", "shims", "google-protobuf", "lib", "google", "protobuf.rb")
+    assert_equal ["PROTOSTAR", shim, "false"], out.lines.map(&:chomp)
+  end
+
   def test_the_protoc_plugin_is_installed
     plugin = File.join(@gem_home, "bin", "protoc-gen-protostar")
     assert File.executable?(plugin)

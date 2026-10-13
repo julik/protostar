@@ -18,7 +18,7 @@ class LicenceTest < Minitest::Test
     end
     notices = File.read(File.join(ROOT, "THIRD_PARTY_NOTICES.md"))
     assert_includes notices, File.read(File.join(ROOT, "lib/protostar/compiler/include/LICENSE"))
-    %w[lib/protostar/compiler/include/ test/corpus/ lib/protostar/google/protobuf/].each { |p| assert_includes notices, p }
+    %w[lib/protostar/compiler/include/ test/corpus/ lib/protostar/google/protobuf/ shims/google-protobuf/lib/].each { |p| assert_includes notices, p }
     assert_includes File.read(File.join(ROOT, "README.md")), "THIRD_PARTY_NOTICES.md"
   end
 

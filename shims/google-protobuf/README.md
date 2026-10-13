@@ -17,9 +17,20 @@ googleapis-common-protos-types).
 
 ## Installation
 
-rubygems.org's `google-protobuf` is Google's, so this one does not come from there.
-There are three routes. Each ends with every `require "google/protobuf"` in the process
-loading this gem.
+The shim ships inside the protostar gem, off its load path. Require it before anything
+requires `google/protobuf`, and Google's gem, even if installed, is never loaded:
+
+```ruby
+require "protostar/google_protobuf_shim"
+require "grpc"
+Google::Protobuf::IMPLEMENTATION # => :PROTOSTAR
+```
+
+That needs no Gemfile changes, but Google's gem stays installed when something (grpc)
+depends on it. To replace it in the bundle, install the shim as a gem named
+`google-protobuf`. rubygems.org's `google-protobuf` is Google's, so this one does not come
+from there. There are three routes. Each ends with every `require "google/protobuf"` in the
+process loading this gem.
 
 ### 1. With Bundler, from git
 

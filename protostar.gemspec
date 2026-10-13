@@ -19,7 +19,9 @@ Gem::Specification.new do |spec|
   spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/main/CHANGELOG.md"
   spec.metadata["rubygems_mfa_required"] = "true"
 
+  # The shim's lib/ stays off require_paths: protostar/google_protobuf_shim puts it on
   spec.files = Dir["lib/**/*.rb", "lib/protostar/compiler/include/**/*", "sig/**/*.rbs", "exe/*", "LICENSE.txt",
+    "shims/google-protobuf/lib/**/*.rb",
     "THIRD_PARTY_NOTICES.md", "README.md",
     "CHANGELOG.md"]
   spec.bindir = "exe"

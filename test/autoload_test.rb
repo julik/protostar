@@ -13,7 +13,7 @@ class AutoloadTest < Minitest::Test
 
   # Parts a bare require must leave alone, relative to lib/
   OPTIONAL = %r{\Aprotostar/(?:compiler|json|text|view|builder|well_known|google|short_names)(?:/|\.rb\z)|
-    \Aprotostar/(?:dsl|types|cli|plugin)\.rb\z|\Aprotostar/schema/(?:proto|draft)(?:/|\.rb\z)}x
+    \Aprotostar/(?:dsl|types|cli|plugin|google_protobuf_shim)\.rb\z|\Aprotostar/schema/(?:proto|draft)(?:/|\.rb\z)}x
 
   def run_ruby(script)
     out, err, status = Open3.capture3(RbConfig.ruby, "-I", LIB, "-e", script)
@@ -65,7 +65,8 @@ class AutoloadTest < Minitest::Test
       Protostar::Text Protostar::View Protostar::Builder Protostar::WellKnown Protostar::Schema::Proto
       Protostar::Codec::DecodeGenerator Protostar::Google::Protobuf::FileDescriptorProto Protostar::Timestamp
     ].each { |name| assert_includes result["resolved"], name }
-    files = Dir.glob("**/*.rb", base: LIB)
+    # The shim swaps out google/protobuf for the whole process, so only a require may load it
+    files = Dir.glob("**/*.rb", base: LIB) - ["protostar/google_protobuf_shim.rb"]
     assert_empty files - result["loaded"], "files no autoload reaches"
   end
 end

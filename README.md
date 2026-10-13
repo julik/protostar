@@ -541,15 +541,29 @@ defined?(Google::Protobuf)               # => nil
 ```
 
 The `grpc` gem depends on `google-protobuf`, so Bundler installs it, but with protostar's
-classes it is never loaded. Replace it with the shim (below) and the C extension is gone
-from the bundle too.
+classes it is never loaded. Install the shim as that gem (below) and the C extension is
+gone from the bundle too.
 
 ## Replacing google-protobuf
 
-`shims/google-protobuf` is a gem named `google-protobuf` that provides Google's
-`Google::Protobuf` API on protostar. Point Bundler at it, and every gem that depends on
-`google-protobuf` gets it instead of Google's, and the `_pb.rb` files protoc generated load
-unchanged:
+protostar ships a shim that provides Google's `Google::Protobuf` API on protostar, so
+`grpc`, `googleapis-common-protos-types` and the `_pb.rb` files protoc generated run
+unchanged. It is off until you ask for it. Require it before anything requires
+`google/protobuf`:
+
+```ruby
+require "protostar/google_protobuf_shim"
+require "grpc"
+Google::Protobuf::IMPLEMENTATION # => :PROTOSTAR
+```
+
+From then on every `require "google/protobuf"` in the process loads the shim, even with
+Google's gem installed alongside (grpc's dependency makes Bundler install it). If Google's
+gem was loaded first, the require raises `LoadError`.
+
+To keep Google's gem out of the bundle entirely, use the shim as a gem named
+`google-protobuf`, from git. Every gem that depends on `google-protobuf` then gets it
+instead of Google's:
 
 ```ruby
 gem "protostar", github: "julik/protostar"

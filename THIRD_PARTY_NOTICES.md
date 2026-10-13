@@ -10,13 +10,18 @@ In the gem:
   well-known types, `plugin.proto`, the feature sets), unchanged, with their `LICENSE`.
 - `lib/protostar/google/protobuf/*_pb.rb` and `sig/protostar/google/protobuf/*_pb.rbs` are
   generated from those files and carry their comments.
+- `shims/google-protobuf/lib/` is the google-protobuf shim, which
+  `require "protostar/google_protobuf_shim"` loads. Its `google/protobuf/*_pb.rb` are generated
+  from Google's `.proto` files and embed their serialized descriptors; `well_known_types.rb`,
+  `message_exts.rb` and `internal/well_known.rb` follow the behaviour, and in places the code,
+  of the `google-protobuf` gem's Ruby sources.
 
 In the repository only:
 
 - `test/corpus/protobuf/` is a vendored slice of the protobuf repository at v36.2 (see its
   `PIN` and `LICENSE`); `test/corpus/goldens/` and `test/corpus/text_format/` were produced
   from it by protoc, and `test/corpus/generated/` and `conformance/generated/` by protostar.
-- `shims/google-protobuf/` lists what it carries in its own `THIRD_PARTY_NOTICES.md`.
+- The rest of `shims/google-protobuf/` (its tests) is listed in its own `THIRD_PARTY_NOTICES.md`.
 
 ## Protocol Buffers licence
 
