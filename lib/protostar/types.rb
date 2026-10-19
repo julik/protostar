@@ -17,8 +17,11 @@ module Protostar
       # @param open_enums [Boolean] treat every enum as open: numbers without a
       #   name are kept in the field on decode and accepted on assignment, as
       #   google-protobuf's Ruby gem does, instead of going to unknown fields
-      def initialize(open_enums: false)
+      # @param base [Class] what message classes subclass: {Message} or a subclass of it
+      def initialize(open_enums: false, base: Message)
+        raise ArgumentError, "base must be Protostar::Message or a subclass of it" unless base.is_a?(Class) && base <= Message
         @open_enums = open_enums
+        @base = base
         @mutex = Mutex.new
         @types = {}
         @files = {}
@@ -50,7 +53,7 @@ module Protostar
             return defined.last if defined.first.equal?(file)
             raise Error, "file \"#{file.name}\" is already defined from another descriptor"
           end
-          types = Definer.new(file, @types, open_enums: @open_enums).define
+          types = Definer.new(file, @types, open_enums: @open_enums, base: @base).define
           types.each_key do |full_name|
             raise Error, "\"#{full_name}\" is already defined by \"#{@types[full_name].descriptor.file.name}\"" if @types.key?(full_name)
           end
@@ -98,8 +101,9 @@ module Protostar
     # Makes the classes and modules of one file
     # @api private
     class Definer
-      def initialize(file, known, open_enums: false)
+      def initialize(file, known, open_enums: false, base: Message)
         @file = file
+        @base = base
         @known = known
         @open_enums = open_enums
         @types = {}
@@ -109,7 +113,7 @@ module Protostar
       def define
         messages = @file.all_messages.reject(&:map_entry?)
         @file.all_enums.each { |e| @types[e.full_name] = Enum.build(e) }
-        messages.each { |m| @types[m.full_name] = Class.new(Message) }
+        messages.each { |m| @types[m.full_name] = Class.new(@base) }
         messages.each { |m| setup(@types[m.full_name], m) }
         @types.freeze
       end

@@ -10,7 +10,7 @@ module Google
       module MessageClass
         module_function
 
-        # @param klass [Class] a subclass of Protostar::Message
+        # @param klass [Class] a subclass of AbstractMessage
         # @param descriptor [Descriptor]
         def setup(klass, descriptor)
           descriptor.__msgclass = klass
@@ -23,9 +23,7 @@ module Google
           klass.instance_variable_set(:@__gnames, plan.to_h { |fd| [fd.name, fd] }.freeze)
           klass.instance_variable_set(:@__goneof_setters, oneofs.to_h { |o| [:"#{o.name}=", true] }.freeze)
           klass.instance_variable_set(:@__gnested, klass.__fields.select { |i| i.map ? i.value.message? : i.message? }.freeze)
-          klass.include(MessageExts)
           klass.include(MessageMethods)
-          klass.extend(MessageExts::ClassMethods)
           klass.extend(ClassMethods)
           accessors = Module.new
           taken = reserved.dup

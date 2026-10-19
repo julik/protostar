@@ -30,11 +30,10 @@ module Google
       end
     end
 
-    # What the gem's message classes inherit from. Classes here inherit from
-    # Protostar::Message instead and include MessageExts directly.
-    class AbstractMessage
+    # What every message class inherits from, as in the gem, where tools
+    # such as tapioca look for its descendants. Private there too.
+    class AbstractMessage < Protostar::Message
       include MessageExts
-      extend MessageExts::ClassMethods
     end
     private_constant :AbstractMessage
   end

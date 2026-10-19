@@ -470,8 +470,8 @@ module Protostar
 
   module Types
     class Registry
-      sig { params(open_enums: T::Boolean).void }
-      def initialize(open_enums: T.unsafe(nil)); end
+      sig { params(open_enums: T::Boolean, base: T.class_of(Protostar::Message)).void }
+      def initialize(open_enums: T.unsafe(nil), base: T.unsafe(nil)); end
 
       sig { params(full_name: String).returns(T.nilable(T.any(T.class_of(Message), T::Module[T.anything]))) }
       def find(full_name); end

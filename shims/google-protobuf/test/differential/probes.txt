@@ -1195,3 +1195,11 @@ def chain(n); deep = BasicTest::Recursive1.new; node = deep; n.times { c = Basic
 [3, 4, 5].map { |l| (BasicTest::Recursive1.decode(BasicTest::Recursive1.encode(chain(2)), recursion_limit: l) && :ok rescue $!.class) }
 ---
 [3, 4, 5, 6].map { |l| (BasicTest::Recursive1.encode(chain(2), recursion_limit: l) && :ok rescue $!.class) }
+---
+Google::Protobuf.const_defined?(:AbstractMessage)
+---
+[M, BasicTest::MapMessage.descriptor.lookup("map_string_int32").subtype.msgclass, Google::Protobuf::Timestamp].map { |k| k.superclass.name }
+---
+a = Google::Protobuf.const_get(:AbstractMessage); [M, P2, T, Google::Protobuf::Timestamp].map { |k| ObjectSpace.each_object(a.singleton_class).include?(k) }
+---
+Google::Protobuf.const_get(:AbstractMessage).include?(Google::Protobuf::MessageExts)

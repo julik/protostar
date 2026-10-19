@@ -1149,3 +1149,11 @@ false
 [Google::Protobuf::ParseError, :ok, :ok]
 ---
 [RuntimeError, RuntimeError, :ok, :ok]
+---
+true
+---
+["Google::Protobuf::AbstractMessage", "Google::Protobuf::AbstractMessage", "Google::Protobuf::AbstractMessage"]
+---
+[true, true, true, true]
+---
+true

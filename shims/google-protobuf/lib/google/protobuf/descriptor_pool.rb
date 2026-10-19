@@ -19,7 +19,7 @@ module Google
 
       def initialize
         @schema_pool = Protostar::Schema::Pool.new
-        @registry = Protostar::Types::Registry.new(open_enums: true)
+        @registry = Protostar::Types::Registry.new(open_enums: true, base: AbstractMessage)
         @wrappers = {}.compare_by_identity
         @classes = {}.compare_by_identity
         @monitor = Monitor.new
@@ -142,7 +142,7 @@ module Google
         @monitor.synchronize do
           @classes[schema] ||= begin
             known = Hash.new { |_, full_name| @registry.find(full_name) }
-            klass = Class.new(Protostar::Message)
+            klass = Class.new(AbstractMessage)
             Protostar::Types::Definer.new(schema.file, known, open_enums: true).send(:setup, klass, schema)
             Internal::MessageClass.setup(klass, __wrap(schema))
             klass

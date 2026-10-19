@@ -229,7 +229,7 @@ module Protostar
 
   module Types
     class Registry
-      def initialize: (?open_enums: bool) -> void
+      def initialize: (?open_enums: bool, ?base: singleton(Message)) -> void
       def find: (::String full_name) -> (singleton(Message) | Module)?
       def file: (::String file_name) -> ::Hash[::String, singleton(Message) | Module]?
       def define: (untyped file, ?name: Module?) -> ::Hash[::String, singleton(Message) | Module]
