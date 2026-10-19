@@ -1,0 +1,94 @@
+// A library's catalogue, for the codec benchmarks: four levels of nesting,
+// repeated sub-messages, strings, unsigned integers, doubles, bools, enums and
+// one proto3 optional message field.
+
+syntax = "proto3";
+
+package bench.library;
+
+message Location {
+  uint32 aisle = 1;
+  uint32 bay = 2;
+  uint32 level = 3;
+}
+
+message Note {
+  enum Kind {
+    COMMENT = 0;
+    CORRECTION = 1;
+    CITATION = 2;
+    QUESTION = 3;
+    SUMMARY = 4;
+  }
+
+  enum Language {
+    ENGLISH = 0;
+    DUTCH = 1;
+    GERMAN = 2;
+    FRENCH = 3;
+  }
+
+  string id = 1;
+  string author = 2;
+  Language language = 3;
+  uint64 page = 4;
+  uint64 line = 5;
+  uint64 written_at = 6;
+  bool pinned = 7;
+  Location found_at = 8;
+  bool resolved = 9;
+  double relevance = 10;
+  Kind kind = 11;
+}
+
+message Book {
+  enum Binding {
+    PAPERBACK = 0;
+    HARDCOVER = 1;
+    SPIRAL = 2;
+    LEATHER = 3;
+    BOARD = 4;
+  }
+
+  uint64 id = 1;
+  string title = 2;
+  string author = 3;
+  uint64 publisher_id = 4;
+  uint32 year = 5;
+  Binding binding = 6;
+  bool illustrated = 7;
+  uint32 pages = 8;
+  uint32 chapters = 9;
+  uint32 edition = 10;
+  uint64 isbn = 11;
+  uint64 weight_grams = 12;
+  double price = 13;
+  repeated Note notes = 14;
+  bool signed = 15;
+}
+
+message Slot {
+  Location location = 1;
+  bool lit = 2;
+  bool reserved = 3;
+  optional Book book = 4;
+}
+
+message Shelf {
+  uint64 id = 1;
+  uint32 lamps = 2;
+  uint32 sensors = 3;
+  double length_cm = 4;
+  uint32 height_cm = 5;
+  repeated Slot slots = 6;
+}
+
+message Library {
+  string name = 1;
+  string city = 2;
+  string phone = 3;
+  uint64 id = 4;
+  uint32 floors = 5;
+  uint32 staff = 6;
+  repeated Shelf shelves = 7;
+}
