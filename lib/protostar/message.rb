@@ -317,13 +317,11 @@ module Protostar
       copy
     end
 
-    # Freezes the message and everything it holds, after which it is Ractor.shareable?
-    #: () -> self
-    def freeze
-      return self if frozen?
-      __freeze_slots
-      super
-    end
+    ##
+    # :method: freeze
+    # Freezes the message and everything it holds, after which it is
+    # Ractor.shareable?. Each message class has its own, generated with its
+    # accessors.
 
     # Merges `other` into this message: singular fields set in `other`
     # replace ours, messages merge recursively, repeated fields append, maps

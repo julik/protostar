@@ -97,7 +97,7 @@ module Protostar
       end
 
       # `Klass.__empty`, `__reset`, `__load_slots`, `__slot`, `__set_slot`,
-      # `__slots`, `__copy_slots` and `__freeze_slots`
+      # `__slots`, `__copy_slots` and `freeze`
       def slots_source(fields)
         ivars = fields.map(&:ivar)
         src = +"# frozen_string_literal: true\n"
@@ -129,19 +129,20 @@ module Protostar
           src << "#{f.ivar} = Protostar::Message.__copy_value(#{f.ivar}) unless #{f.ivar}.nil?\n"
         end
         src << "@unknown = @unknown&.dup&.freeze\nend\n"
-        src << "def __freeze_slots\n"
+        # per class rather than in Message, so each call inside sees one class
+        src << "def freeze\nreturn self if frozen?\n"
         fields.each { |f| src << freeze_source(f) }
-        src << "@unknown&.freeze\nend\n"
+        src << "@unknown&.freeze\nsuper\nend\n"
       end
 
       def freeze_source(f)
         iv = f.ivar
         if f.map
           deep = f.value.message? || f.value.kind == FieldInfo::STRING || f.value.kind == FieldInfo::BYTES
-          "#{iv}&.#{"each_value(&:freeze)&." if deep}freeze\n"
+          "#{iv}&.#{"each_value { |e| e.freeze }&." if deep}freeze\n"
         elsif f.repeated
           deep = f.message? || f.kind == FieldInfo::STRING || f.kind == FieldInfo::BYTES
-          "#{iv}&.#{"each(&:freeze)&." if deep}freeze\n"
+          "#{iv}&.#{"each { |e| e.freeze }&." if deep}freeze\n"
         elsif f.message?
           "#{iv}&.freeze\n"
         else
