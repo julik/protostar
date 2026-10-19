@@ -2,7 +2,7 @@
 
 module Protostar
   # A pure-Ruby protoc front end: turns `.proto` source into
-  # Protostar::Schema::Files whose `to_proto` is what protoc 36.2 puts in a
+  # Protostar::Schema::File objects whose `to_proto` is what protoc 36.2 puts in a
   # `FileDescriptorProto`, and rejects what protoc rejects with protoc's
   # `file:line:col: message` diagnostics.
   #
@@ -130,7 +130,7 @@ module Protostar
     # Raises Error with every diagnostic when a file cannot be compiled.
     def compile: (Array[String] names, ?source_info: bool, ?retain_options: bool, ?sources: Hash[String, String], ?protoc_cli: bool) -> Array[Schema::File]
 
-    # **Deprecated:** Goes away in 0.2.0. Use #compile and read the Schema::Files, or
+    # **Deprecated:** Goes away in 0.2.0. Use #compile and read the Schema::File objects, or
     # `compile(names).map { |f| f.to_proto.to_h }` for the same Hashes.
     #
     # Same as #compile, each file as `to_proto.to_h`, for reading

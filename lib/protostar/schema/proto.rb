@@ -342,7 +342,7 @@ module Protostar
         Draft.visibility(proto)
       end
 
-      # Message values to and from wire bytes, driven by Schema::Messages:
+      # Message values to and from wire bytes, driven by Schema::Message descriptors:
       # fields in number order with extensions among them, unknown fields
       # last; packed repeated fields per features; MessageSet items for
       # `message_set_wire_format` types; proto3 zero values left out.
