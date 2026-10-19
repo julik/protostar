@@ -2,17 +2,20 @@
 
 module Protostar
   module Codec
-    # Writes the two encoding passes of one message class as Ruby source and
-    # evals them into the class: `__size(sizes)`, which returns the encoded
-    # size and records it (and every packed run's) in `sizes`, and
-    # `__write(w, buf, sizes)`, which appends the fields to the Writer's
-    # buffer. Fields come in ascending number order, tags are literal bytes,
-    # one-byte varints are appended inline, and enum names map to numbers
-    # through a literal `case`. Maps, packed runs and unknown fields go to
+    # Writes the encoders of one message class as Ruby source and evals them
+    # into the class. Fields come in ascending number order, tags are literal
+    # bytes, one- and two-byte varints are appended inline, and enum names
+    # map to numbers through a literal `case`. Maps and unknown fields go to
     # Sizer and Encoder.
     #
-    # The generic loop over field descriptors this replaces spent most of
-    # its time on method calls into the field table.
+    # `__encode(w, buf)` makes one pass into a String: a nested message or
+    # packed run gets one byte for its length, written once its bytes are,
+    # and more bytes are spliced in only when it is over 127 bytes long.
+    #
+    # A sink cannot take back what it was given, so Encoder.encode_to
+    # makes two passes: `__size(sizes)` returns the encoded size and records
+    # it (and every packed run's) in `sizes`, and `__write(w, buf, sizes)`
+    # appends the fields to the Writer's buffer, flushing as it fills.
     module EncodeGenerator # :nodoc: all
       F = Message::FieldInfo
 
@@ -50,7 +53,59 @@ module Protostar
             Protostar::Codec::Encoder.unknown(w, @unknown) if @unknown
             w.flush_if_full
           end
+
+          def __encode(w, buf)
+            #{fields.map { |f| encode_field(f) }.join}
+            Protostar::Codec::Encoder.unknown(w, @unknown) if @unknown
+            buf
+          end
         RUBY
+      end
+
+      def encode_field(f)
+        body = if f.map
+          "Protostar::Codec::Encoder.map_into(#{info(f)}, v, w, buf)\n"
+        elsif f.packed
+          packed_encode(f)
+        elsif f.repeated
+          src = f.message? ? "k = #{info(f)}.message_class\n" : +""
+          src << each_element("#{check(f)}#{append(tag_bytes(f))}#{encode_value(f, "e")}")
+        else
+          "#{append(tag_bytes(f))}#{encode_value(f, "v")}"
+        end
+        "# #{f.name}\n#{present(f)}\n#{body}end\n"
+      end
+
+      # What the sizing pass checks of each element of a repeated field
+      def check(f)
+        return "" if f.kind == F::ENUM
+        "Protostar::Codec::Sizer.invalid(#{info(f)}, e) unless #{valid(f, "e")}\n"
+      end
+
+      def encode_value(f, var)
+        case f.kind
+        when F::MESSAGE then "at = buf.bytesize\nbuf << 0\n#{var}.__encode(w, buf)\n#{patch_length}"
+        when F::GROUP then "#{var}.__encode(w, buf)\n#{append(tag_bytes(f, Wire::END_GROUP))}"
+        else write_value(f, var)
+        end
+      end
+
+      # Writes the length of what was appended after the byte reserved at `at`
+      def patch_length
+        "if (n = buf.bytesize - at - 1) < 0x80\nbuf.setbyte(at, n)\nelse\n" \
+          "Protostar::Codec::Encoder.patch_length(buf, at, n)\nend\n"
+      end
+
+      def packed_encode(f)
+        src = append(tag_bytes(f, Wire::LENGTH_DELIMITED))
+        case f.kind
+        when *VARINT_KINDS, F::SINT32, F::SINT64, F::ENUM
+          src << "at = buf.bytesize\nbuf << 0\n"
+          src << each_element("#{check(f)}#{write_value(f, "e")}") << patch_length
+        else
+          width = (f.kind == F::BOOL) ? 1 : F::FIXED.fetch(f.kind).first
+          each_element(check(f)) << src << write_varint("#{width} * v.size") << packed_write(f)
+        end
       end
 
       def info(f)

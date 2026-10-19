@@ -98,6 +98,30 @@ class EncodeTest < Minitest::Test
     assert_operator bytes.bytesize, :>, 50 * 200
   end
 
+  # The one-pass encoder reserves one byte for each length and splices in
+  # more; the two-pass one knows lengths before it writes them
+  def test_lengths_at_varint_boundaries
+    nested = @unittest["proto2_unittest.NestedTestAllTypes"]
+    map = CodecFixtures.load("google/protobuf/map_unittest.proto")["proto2_unittest.TestMap"]
+    packed = @unittest["proto2_unittest.TestPackedTypes"]
+    [120..135, 16_370..16_390, 2_097_140..2_097_155].each do |sizes|
+      sizes.step((sizes.size > 20) ? 5 : 1).each do |n|
+        messages = [
+          nested.new(child: {payload: {optional_bytes: "x" * n}}),
+          packed.new(packed_int32: [1] * n, packed_double: [0.5] * n),
+          map.new(map_int32_foreign_message: {1 => {c: 1}}, map_string_string: {"k" => "v" * n})
+        ]
+        messages.each do |m|
+          bytes = m.encode
+          assert_equal bytes, m.encode_to(StringIO.new(+"".b)).string, "at #{n}"
+          assert_equal W.varint(bytes.bytesize) + bytes, m.encode_delimited
+          assert_equal m.encode_delimited, m.encode_delimited(StringIO.new(+"".b)).string
+          assert_equal m, m.class.decode(bytes)
+        end
+      end
+    end
+  end
+
   def test_encode_to_io
     m = @all.new(optional_string: "x" * 100_000, repeated_int32: [1, 2])
     io = StringIO.new(+"".b)

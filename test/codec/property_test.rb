@@ -31,6 +31,7 @@ class PropertyTest < Minitest::Test
     klass = message.class
     bytes = message.encode
     assert_equal bytes.bytesize, message.__size({}.compare_by_identity), "sizer and writer disagree"
+    assert_equal bytes, message.encode_to(StringIO.new(+"".b)).string, "one pass and two passes disagree"
     decoded = klass.decode(bytes)
     assert_equal message, decoded, "decode(encode(m)) differs for #{klass.descriptor.full_name}"
     assert_equal message.unknown_fields, decoded.unknown_fields
