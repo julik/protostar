@@ -27,6 +27,9 @@ module Protostar
       autoload :Rbs, ::File.expand_path("emitters/rbs", __dir__)
       autoload :ProtostarRbs, ::File.expand_path("emitters/protostar_rbs", __dir__)
       autoload :Grpc, ::File.expand_path("emitters/grpc", __dir__)
+      autoload :FieldTypes, ::File.expand_path("emitters/field_types", __dir__)
+      autoload :ProtostarRbi, ::File.expand_path("emitters/protostar_rbi", __dir__)
+      autoload :Rbi, ::File.expand_path("emitters/rbi", __dir__)
 
       # protoc's Ruby generator naming rules (ruby_generator.cc), which grpc
       # stubs and application code depend on
@@ -123,6 +126,38 @@ module Protostar
 
         def upcase(c)
           c.between?("a", "z") ? c.upcase : c
+        end
+      end
+
+      # Constant paths and comments for the signature emitters of protostar's
+      # own classes, which put the bootstrap under `Protostar::`
+      # @api private
+      module NativeNames
+        private
+
+        def module_path(file)
+          namespace = @namespaces[file.name]
+          namespace ||= "Protostar::#{Naming.module_path(file).join("::")}" if BOOTSTRAP.include?(file.name)
+          Naming.module_path(file, namespace)
+        end
+
+        def constant(descriptor)
+          prefix = module_path(descriptor.file).map { |m| "::#{m}" }.join
+          "#{prefix}::#{Naming.relative_constant(descriptor)}"
+        end
+
+        def blank(p, first)
+          if first[0]
+            first[0] = false
+          else
+            p.print("\n")
+          end
+        end
+
+        def comment(p, path)
+          text = @source&.location(path)&.leading_comments
+          return if text.nil? || text.empty?
+          text.split("\n").reject(&:empty?).each { |line| p.print("##{line}\n") }
         end
       end
 
