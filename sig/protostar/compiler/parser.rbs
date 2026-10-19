@@ -215,7 +215,7 @@ module Protostar
       def record_warning_at: (untyped line, untyped column, untyped message) -> untyped
 
       # Runs the block with a location that is finished however the block exits
-      def scoped: (untyped recorder) -> untyped
+      def scoped: [T] (untyped recorder) { (untyped) -> T } -> T
 
       def skip_statement: () -> untyped
 
@@ -254,7 +254,7 @@ module Protostar
 
       def generate_map_entry: (untyped map_field, untyped field, untyped messages) -> untyped
 
-      def map_entry_field: (untyped name, untyped number) -> untyped
+      def map_entry_field: (String name, Integer number, [ Symbol?, String? ]) -> untyped
 
       def parse_field_options: (untyped field, untyped field_location) -> untyped
 
@@ -318,7 +318,7 @@ module Protostar
       def parse_import: (untyped file, untyped root) -> untyped
 
       # Returns success and the visibility, if any.
-      def parse_visibility: (untyped file) -> [ bool, Symbol ]
+      def parse_visibility: (untyped file) -> [ bool, Symbol? ]
     end
   end
 end

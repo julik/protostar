@@ -65,7 +65,7 @@ end
 
 module Protostar
   # The process-wide pool generated `_pb.rb` files build into.
-  attr_reader generated_pool: Schema::Pool
+  attr_reader self.generated_pool: Schema::Pool
 
   # Builds every file of a serialized `FileDescriptorSet` into a pool, in
   # order. Custom options are decoded against the extensions the pool (and

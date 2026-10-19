@@ -102,7 +102,7 @@ module Protostar
 
     private
 
-    def __each_segment: () -> untyped
+    def __each_segment: () { (Integer, Integer) -> void } -> void
 
     def __nested: (untyped i, untyped o, untyped n) -> untyped
 

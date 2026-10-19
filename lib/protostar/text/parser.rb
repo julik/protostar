@@ -162,6 +162,7 @@ module Protostar
         t.type == :symbol && CLOSE.key?(t.text)
       end
 
+      #: () { () -> void } -> void
       def list
         out = []
         return out if accept("]")

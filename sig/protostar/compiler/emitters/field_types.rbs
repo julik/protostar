@@ -72,32 +72,32 @@ module Protostar
         # - `dialect`: RBS or Sorbet
         # - `google`: google-protobuf's classes rather than protostar's
         # - `constant`: the constant path of a Schema::Message or Schema::Enum
-        def self?.initialize: (Module dialect, ?google: bool) ?{ (?) -> untyped } -> void
+        def initialize: (Module dialect, ?google: bool) ?{ (?) -> untyped } -> void
 
         # Returns what the reader returns for one value.
-        def self?.read_one: (untyped field) -> String
+        def read_one: (untyped field) -> String
 
         # Returns what the writer takes for one value.
-        def self?.write_one: (untyped field) -> String
+        def write_one: (untyped field) -> String
 
         # Returns the reader's type.
-        def self?.read_type: (untyped field) -> String
+        def read_type: (untyped field) -> String
 
         # Returns the writer's type.
-        def self?.write_type: (untyped field) -> String
+        def write_type: (untyped field) -> String
 
         # Returns what `new` takes for the field.
-        def self?.init_type: (untyped field) -> String
+        def init_type: (untyped field) -> String
 
-        def self?.message?: (untyped field) -> bool
+        def message?: (untyped field) -> bool
 
         private
 
-        def self?.container: (untyped field) -> untyped
+        def container: (Schema::Field field) { (Schema::Field) -> String } -> String
 
-        def self?.message_write: (untyped field, untyped coerced) -> untyped
+        def message_write: (untyped field, untyped coerced) -> untyped
 
-        def self?.google_write_one: (untyped field) -> untyped
+        def google_write_one: (untyped field) -> untyped
       end
     end
   end

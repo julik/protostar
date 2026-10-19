@@ -98,33 +98,47 @@ module TypesGen
     private
 
     def fix(rbs)
-      by_name = {}
+      by_name = Hash.new { |h, k| h[k] = [] }
       index = lambda do |decls, prefix|
-        decls.each do |d|
-          next unless d.is_a?(RBS::AST::Declarations::Class) || d.is_a?(RBS::AST::Declarations::Module)
+        decls.grep(RBS::AST::Declarations::Class).chain(decls.grep(RBS::AST::Declarations::Module)).each do |d|
           name = [prefix, d.name.to_s].compact.join("::")
-          by_name[name] ||= d
+          by_name[name] << d
           index.call(d.members, name)
         end
       end
       index.call(rbs, nil)
+      # rbs-inline lets a module_function leak into the classes and modules after it
+      functions = RubyFacts.module_functions(@parsed)
+      by_name.each do |name, decls|
+        replace(decls) do |m|
+          next unless m.is_a?(RBS::AST::Members::MethodDefinition) && m.kind == :singleton_instance
+          next if functions.include?("#{name}##{m.name}")
+          RBS::AST::Members::MethodDefinition.new(name: m.name, kind: :instance, overloads: m.overloads, annotations: m.annotations,
+            location: nil, comment: m.comment, overloading: m.overloading?, visibility: m.visibility)
+        end
+      end
       RubyFacts.each_in(@parsed) do |scope, singleton, node|
-        decl = by_name[scope] or next
+        decls = by_name.fetch(scope, nil) or next
         case node.name
         when :alias_method
           new_name, old_name = node.arguments.arguments.map { |a| a.unescaped.to_sym }
-          decl.members << RBS::AST::Members::Alias.new(new_name: new_name, old_name: old_name, kind: singleton ? :singleton : :instance,
-            annotations: [], location: nil, comment: nil)
+          decls.first.members << RBS::AST::Members::Alias.new(new_name: new_name, old_name: old_name,
+            kind: singleton ? :singleton : :instance, annotations: [], location: nil, comment: nil)
         when :attr_reader, :attr_writer, :attr_accessor
           next unless singleton
           names = node.arguments.arguments.map { |a| a.unescaped.to_sym }
-          decl.members.map! do |m|
-            next m unless m.is_a?(RBS::AST::Members::Attribute) && m.kind == :instance && names.include?(m.name)
+          replace(decls) do |m|
+            next unless m.is_a?(RBS::AST::Members::Attribute) && m.kind == :instance && names.include?(m.name)
             m.class.new(name: m.name, type: m.type, ivar_name: m.ivar_name, kind: :singleton, annotations: m.annotations,
               location: nil, comment: m.comment, visibility: m.visibility)
           end
         end
       end
+    end
+
+    # Swaps each member for what the block returns, when it returns one
+    def replace(decls)
+      decls.each { |d| d.members.map! { |m| yield(m) || m } }
     end
   end
 
@@ -133,6 +147,32 @@ module TypesGen
     # yields [scope, singleton?, CallNode] for alias_method and attr_* in class bodies
     def self.each_in(parsed, &block)
       walk(parsed.value, nil, false, &block)
+    end
+
+    # "Scope#name" of every method `module_function` makes a module function
+    def self.module_functions(parsed)
+      out = []
+      visit = lambda do |node, scope|
+        case node
+        when Prism::ModuleNode, Prism::ClassNode
+          inner = [scope, node.constant_path.slice.delete_prefix("::")].compact.join("::")
+          on = false
+          body = node.body.is_a?(Prism::StatementsNode) ? node.body.body : [node.body].compact
+          body.each do |stmt|
+            if stmt.is_a?(Prism::CallNode) && stmt.name == :module_function && stmt.receiver.nil?
+              names = stmt.arguments&.arguments&.grep(Prism::SymbolNode)&.map(&:unescaped)
+              names ? names.each { |n| out << "#{inner}##{n}" } : (on = true)
+            elsif stmt.is_a?(Prism::DefNode) && stmt.receiver.nil? && on
+              out << "#{inner}##{stmt.name}"
+            end
+            visit.call(stmt, inner)
+          end
+        when Prism::ProgramNode, Prism::StatementsNode
+          node.compact_child_nodes.each { |c| visit.call(c, scope) }
+        end
+      end
+      visit.call(parsed.value, nil)
+      out
     end
 
     def self.walk(node, scope, singleton, &block)

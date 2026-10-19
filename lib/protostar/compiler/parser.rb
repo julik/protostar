@@ -348,6 +348,7 @@ module Protostar
       end
 
       # Runs the block with a location that is finished however the block exits
+      #: [T] (untyped recorder) { (untyped) -> T } -> T
       def scoped(recorder)
         yield recorder
       ensure
@@ -778,6 +779,7 @@ module Protostar
         end
       end
 
+      #: (String name, Integer number, [Symbol?, String?]) -> untyped
       def map_entry_field(name, number, (type, type_name))
         f = AST::Field.new
         f.name = name
@@ -1683,7 +1685,7 @@ module Protostar
       end
 
       # Returns success and the visibility, if any.
-      #: (untyped file) -> [bool, Symbol]
+      #: (untyped file) -> [bool, Symbol?]
       def parse_visibility(file)
         return [true, nil] if Schema::Features::EDITIONS.fetch(file.edition, 0) <= 1000
         visibility = if try_consume("export")

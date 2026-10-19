@@ -159,6 +159,7 @@ module Protostar
 
         private
 
+        #: (Schema::Field field) { (Schema::Field) -> String } -> String
         def container(field)
           if field.map?
             @d.hash(yield(field.map_key), yield(field.map_value))

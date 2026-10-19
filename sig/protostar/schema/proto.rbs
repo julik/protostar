@@ -70,34 +70,34 @@ module Protostar
       # A FileDescriptorProto message read into a draft
       class Reader
         # :nodoc: all
-        def self?.initialize: (untyped proto, untyped pool) -> untyped
+        def initialize: (untyped proto, untyped pool) -> untyped
 
-        def self?.call: () -> untyped
+        def call: () -> untyped
 
         private
 
-        def self?.record: (untyped descriptor, untyped proto) -> untyped
+        def record: (untyped descriptor, untyped proto) -> untyped
 
         # Extensions from the pool, then those the file defines itself
-        def self?.extension_lookup: (untyped file) -> untyped
+        def extension_lookup: (untyped file) -> untyped
 
-        def self?.message: (untyped scope, untyped proto) -> untyped
+        def message: (untyped scope, untyped proto) -> untyped
 
-        def self?.field: (untyped scope, untyped proto, untyped oneofs) -> untyped
+        def field: (untyped scope, untyped proto, untyped oneofs) -> untyped
 
-        def self?.extension: (untyped scope, untyped proto) -> untyped
+        def extension: (untyped scope, untyped proto) -> untyped
 
-        def self?.field_attributes: (untyped proto) -> untyped
+        def field_attributes: (untyped proto) -> untyped
 
-        def self?.enum: (untyped scope, untyped proto) -> untyped
+        def enum: (untyped scope, untyped proto) -> untyped
 
-        def self?.source_info: (untyped proto) -> untyped
+        def source_info: (untyped proto) -> untyped
       end
 
       # descriptor.proto's SymbolVisibility for Message#visibility and Enum#visibility
-      def self?.visibility: (untyped symbol) -> untyped
+      def visibility: (untyped symbol) -> untyped
 
-      def self?.visibility_symbol: (untyped proto) -> untyped
+      def visibility_symbol: (untyped proto) -> untyped
 
       # Message values to and from wire bytes, driven by Schema::Messages:
       # fields in number order with extensions among them, unknown fields

@@ -236,7 +236,7 @@ module Protostar
 
     # Everything a field method or set! can be given. The block is only
     # yielded to, never made into a Proc, which would cost an object per call.
-    def __set: (untyped info, untyped value, untyped attributes) -> untyped
+    def __set: (Message::FieldInfo info, untyped value, Array[String | Symbol] attributes) ?{ (?) -> untyped } -> void
 
     # One value for a field, without a block
     def __put: (untyped info, untyped value) -> untyped
@@ -252,7 +252,7 @@ module Protostar
 
     def __elements: (untyped info, untyped list) -> untyped
 
-    def __each: (untyped info, untyped collection) -> untyped
+    def __each: (Message::FieldInfo info, untyped collection) { (untyped) -> untyped } -> void
 
     def __hash: (untyped hash) -> untyped
 
@@ -269,7 +269,7 @@ module Protostar
     # Runs the block with a buffer of its own as the current message, then
     # writes tag, length and the buffer. Groups need no length and are
     # written in place between their tags.
-    def __nested: (untyped info, ?untyped index) -> untyped
+    def __nested: (Message::FieldInfo info, ?Integer? index) { () -> untyped } -> void
 
     # Writes tag, length and `bytes` (then cleared) into `w`. Bytes larger
     # than a sink's buffer go to the sink as they are, not through the buffer.
@@ -285,7 +285,7 @@ module Protostar
     def __chunk_out: () -> untyped
 
     # One length-prefixed message per element, each the top-level message
-    def __sequence: (untyped collection) -> untyped
+    def __sequence: (untyped collection) { (Builder, untyped) -> untyped } -> void
 
     def __map: (untyped info, untyped value) -> untyped
 

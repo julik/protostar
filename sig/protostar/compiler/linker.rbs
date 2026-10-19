@@ -138,7 +138,7 @@ module Protostar
 
       def visit_message: (untyped message) ?{ (?) -> untyped } -> untyped
 
-      def visit_enum: (untyped enum) -> untyped
+      def visit_enum: (untyped enum) { (untyped, Symbol) -> void } -> void
 
       def setup_edition: () -> untyped
 

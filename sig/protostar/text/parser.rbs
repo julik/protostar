@@ -56,7 +56,7 @@ module Protostar
 
       def open?: () -> untyped
 
-      def list: () -> untyped
+      def list: () { () -> void } -> void
 
       def assign: (untyped msg, untyped info, untyped values, untyped token) -> untyped
 

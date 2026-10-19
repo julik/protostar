@@ -55,27 +55,27 @@ module Protostar
       module NativeNames
         private
 
-        def self?.module_path: (untyped file) -> untyped
+        def module_path: (untyped file) -> untyped
 
-        def self?.constant: (untyped descriptor) -> untyped
+        def constant: (untyped descriptor) -> untyped
 
-        def self?.blank: (untyped p, untyped first) -> untyped
+        def blank: (untyped p, untyped first) -> untyped
 
-        def self?.comment: (untyped p, untyped path) -> untyped
+        def comment: (untyped p, untyped path) -> untyped
       end
 
       # protoc's io::Printer: text is indented at the start of every line
       # that is not empty
       class Printer
-        def self?.initialize: () -> untyped
+        def initialize: () -> untyped
 
-        def self?.print: (untyped text) -> untyped
+        def print: (untyped text) -> untyped
 
-        def self?.indent: () -> untyped
+        def indent: () -> untyped
 
-        def self?.outdent: () -> untyped
+        def outdent: () -> untyped
 
-        def self?.to_s: () -> untyped
+        def to_s: () -> untyped
       end
 
       # Ruby source for literal values: Strings as UTF-8 text or binary with

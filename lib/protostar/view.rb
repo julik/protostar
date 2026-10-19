@@ -258,6 +258,7 @@ module Protostar
 
     private
 
+    #: () { (Integer, Integer) -> void } -> void
     def __each_segment
       segs = @segs
       if segs.nil?

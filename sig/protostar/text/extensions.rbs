@@ -28,7 +28,7 @@ module Protostar
       #
       # Returns the values as the field's reader would give them, or nil
       # when the bytes do not read as the extension's type.
-      def read: (Message::FieldInfo info, Array[UnknownField] unknown) -> Array[untyped]
+      def read: (Message::FieldInfo info, Array[UnknownField] unknown) -> Array[untyped]?
 
       # Returns the fields the binary codec would have kept.
       def write: (Message::FieldInfo info, Array[untyped] values) -> Array[UnknownField]

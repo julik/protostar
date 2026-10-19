@@ -54,7 +54,7 @@ module Protostar
       #
       # Returns the values as the field's reader would give them, or nil
       # when the bytes do not read as the extension's type.
-      #: (Message::FieldInfo info, Array[UnknownField] unknown) -> Array[untyped]
+      #: (Message::FieldInfo info, Array[UnknownField] unknown) -> Array[untyped]?
       def read(info, unknown)
         values = []
         unknown.each do |u|

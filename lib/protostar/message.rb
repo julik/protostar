@@ -39,7 +39,7 @@ module Protostar
       # Raises DecodeError.
       #: (String | IO::Buffer bytes, ?recursion_limit: Integer, ?frozen: bool) -> instance
       def decode(bytes, recursion_limit: Codec::Decoder::RECURSION_LIMIT, frozen: false)
-        Codec::Decoder.decode(self, bytes, recursion_limit: recursion_limit, frozen: frozen)
+        Codec::Decoder.decode(self, bytes, recursion_limit: recursion_limit, frozen: frozen) #: instance
       end
 
       # Reads one message prefixed by its varint length
@@ -51,7 +51,7 @@ module Protostar
       # Raises DecodeError.
       #: (String | IO::Buffer | IO source, ?recursion_limit: Integer, ?frozen: bool) -> instance?
       def decode_delimited(source, **options)
-        Codec::Decoder.decode_delimited(self, source, **options)
+        Codec::Decoder.decode_delimited(self, source, **options) #: instance?
       end
 
       # - `message`: an instance of this class
@@ -70,7 +70,7 @@ module Protostar
       # Raises JSON::ParseError.
       #: (String json, ?ignore_unknown_fields: bool, ?registry: Types::Registry?) -> instance
       def decode_json(json, **options)
-        JSON.decode(self, json, **options)
+        JSON.decode(self, json, **options) #: instance
       end
 
       # - `message`: an instance of this class
@@ -117,12 +117,14 @@ module Protostar
       # - `fields`: field names to values, as #initialize takes them
       #: (?Hash[Symbol | String, untyped]? fields, **untyped) ?{ (Builder pb) -> void } -> instance
       def build(fields = nil, **more, &block)
-        return new(fields, **more) unless block
+        unless block
+          return new(fields, **more) #: instance
+        end
         Builder.message(self, overwrites: true) do |pb|
           pb.merge!(fields) if fields
           pb.merge!(more) unless more.empty?
           block.call(pb)
-        end
+        end #: instance
       end
 
       # Returns a new message with `b` merged into a copy of `a`.
@@ -246,7 +248,7 @@ module Protostar
     #: () -> String
     #: [T] (T io) -> T
     def encode_delimited(io = nil)
-      Codec::Encoder.encode_delimited(self, io)
+      Codec::Encoder.encode_delimited(self, io) #: untyped
     end
 
     # Returns Symbol keys, every field that is set or not at its

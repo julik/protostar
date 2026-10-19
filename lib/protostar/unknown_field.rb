@@ -32,7 +32,7 @@ module Protostar
       when Wire::FIXED32 then r.read_fixed32
       when Wire::FIXED64 then r.read_fixed64
       when Wire::LENGTH_DELIMITED then r.read_bytes
-      else @bytes.byteslice(0, @bytes.bytesize - Wire.varint_size(Wire.tag(@number, Wire::END_GROUP)))
+      else @bytes.byteslice(0, @bytes.bytesize - Wire.varint_size(Wire.tag(@number, Wire::END_GROUP))) #: String
       end
     end
 

@@ -127,6 +127,11 @@ namespace :rbs do
   end
 end
 
+desc "Typecheck lib/ against the signatures in sig/ with Steep (Steepfile; Ruby 3.3 and later)"
+task :steep do
+  sh "steep", "check"
+end
+
 namespace :shim do
   desc "Run the google-protobuf shim's tests from its directory, with its own bundle"
   task :test do

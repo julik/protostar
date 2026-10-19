@@ -184,7 +184,8 @@ module Protostar
       def resolve(klass)
         return klass if klass.is_a?(Class) && klass < Message && klass.__fields
         if klass.is_a?(Schema::Message)
-          return Types.find(klass.full_name) || raise(ArgumentError, "#{klass.full_name} has no class in Protostar::Types.registry")
+          found = Types.find(klass.full_name) #: singleton(Message)?
+          return found || raise(ArgumentError, "#{klass.full_name} has no class in Protostar::Types.registry")
         end
         return resolve(klass.msgclass) if klass.respond_to?(:msgclass)
         raise ArgumentError, "#{klass.inspect} is not a protostar message class or descriptor"
@@ -383,6 +384,7 @@ module Protostar
 
     # Everything a field method or set! can be given. The block is only
     # yielded to, never made into a Proc, which would cost an object per call.
+    #: (Message::FieldInfo info, untyped value, Array[String | Symbol] attributes) ?{ (?) -> untyped } -> void
     def __set(info, value, attributes)
       if block_given?
         unless info.message? && !info.map
@@ -490,6 +492,7 @@ module Protostar
       end
     end
 
+    #: (Message::FieldInfo info, untyped collection) { (untyped) -> untyped } -> void
     def __each(info, collection)
       raise __error(info, "needs a collection (something with #each), got #{collection.class}") unless collection.respond_to?(:each)
       i = 0
@@ -571,6 +574,7 @@ module Protostar
     # Runs the block with a buffer of its own as the current message, then
     # writes tag, length and the buffer. Groups need no length and are
     # written in place between their tags.
+    #: (Message::FieldInfo info, ?Integer? index) { () -> untyped } -> void
     def __nested(info, index = nil)
       k = self.class::INDEX[info.message_class]
       saved_k = @k
@@ -683,6 +687,7 @@ module Protostar
     end
 
     # One length-prefixed message per element, each the top-level message
+    #: (untyped collection) { (Builder, untyped) -> untyped } -> void
     def __sequence(collection)
       top = @top
       child = Wire::Writer.new

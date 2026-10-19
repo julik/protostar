@@ -116,6 +116,7 @@ module Protostar
 
       private
 
+      #: (Integer number) { (String, Integer, Integer, Integer) -> void } -> void
       def each_char(number)
         protoc = 0
         display = 0

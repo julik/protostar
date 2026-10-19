@@ -9,7 +9,7 @@ module Protostar
   def self.deprecated(old, replacement); end
 
   sig { returns(Protostar::Schema::Pool) }
-  def generated_pool; end
+  def self.generated_pool; end
 
   sig { params(bytes: String, pool: Protostar::Schema::Pool).returns(T::Array[Protostar::Schema::File]) }
   def self.load_descriptor_set(bytes, pool:); end
@@ -104,8 +104,8 @@ class Protostar::Builder
   sig { params(name: T.untyped).returns(T.untyped) }
   def __no_field(name); end
 
-  sig { params(info: T.untyped, value: T.untyped, attributes: T.untyped).returns(T.untyped) }
-  def __set(info, value, attributes); end
+  sig { params(info: Protostar::Message::FieldInfo, value: T.untyped, attributes: T::Array[T.any(String, Symbol)], blk: T.nilable(T.proc.params(args: T.untyped).returns(T.untyped))).void }
+  def __set(info, value, attributes, &blk); end
 
   sig { params(info: T.untyped, value: T.untyped).returns(T.untyped) }
   def __put(info, value); end
@@ -122,8 +122,8 @@ class Protostar::Builder
   sig { params(info: T.untyped, list: T.untyped).returns(T.untyped) }
   def __elements(info, list); end
 
-  sig { params(info: T.untyped, collection: T.untyped).returns(T.untyped) }
-  def __each(info, collection); end
+  sig { params(info: Protostar::Message::FieldInfo, collection: T.untyped, blk: T.proc.params(arg0: T.untyped).returns(T.untyped)).void }
+  def __each(info, collection, &blk); end
 
   sig { params(hash: T.untyped).returns(T.untyped) }
   def __hash(hash); end
@@ -140,8 +140,8 @@ class Protostar::Builder
   sig { params(info: T.untyped, v: T.untyped, index: T.untyped).returns(T.untyped) }
   def __duration(info, v, index); end
 
-  sig { params(info: T.untyped, index: T.untyped).returns(T.untyped) }
-  def __nested(info, index = T.unsafe(nil)); end
+  sig { params(info: Protostar::Message::FieldInfo, index: T.nilable(Integer), blk: T.proc.returns(T.untyped)).void }
+  def __nested(info, index = T.unsafe(nil), &blk); end
 
   sig { params(w: T.untyped, info: T.untyped, bytes: T.untyped).returns(T.untyped) }
   def __emit(w, info, bytes); end
@@ -152,8 +152,8 @@ class Protostar::Builder
   sig { returns(T.untyped) }
   def __chunk_out; end
 
-  sig { params(collection: T.untyped).returns(T.untyped) }
-  def __sequence(collection); end
+  sig { params(collection: T.untyped, blk: T.proc.params(arg0: Protostar::Builder, arg1: T.untyped).returns(T.untyped)).void }
+  def __sequence(collection, &blk); end
 
   sig { params(info: T.untyped, value: T.untyped).returns(T.untyped) }
   def __map(info, value); end
@@ -213,7 +213,7 @@ class Protostar::Builder::Error < Protostar::Error
 end
 
 module Protostar::Builder::Generator
-  sig { params(root: T::Class[T.anything]).returns(T::Class[T.anything]) }
+  sig { params(root: T.class_of(Protostar::Message)).returns(T.class_of(Protostar::Builder)) }
   def self.generate(root); end
 
   sig { params(root: T.untyped).returns(T.untyped) }
@@ -1178,35 +1178,35 @@ class Protostar::Compiler::Emitters::FieldTypes
 
   GOOGLE_COERCED = T.let(T.unsafe(nil), T.untyped)
 
-  sig { params(dialect: T::Module[T.anything], google: T::Boolean, blk: T.nilable(T.proc.params(args: T.untyped).returns(T.untyped))).void }
-  def self.initialize(dialect, google: T.unsafe(nil), &blk); end
+  sig { params(dialect: T::Module[T.anything], google: T::Boolean, constant: T.nilable(T.proc.params(args: T.untyped).returns(T.untyped))).void }
+  def initialize(dialect, google: T.unsafe(nil), &constant); end
 
   sig { params(field: T.untyped).returns(String) }
-  def self.read_one(field); end
+  def read_one(field); end
 
   sig { params(field: T.untyped).returns(String) }
-  def self.write_one(field); end
+  def write_one(field); end
 
   sig { params(field: T.untyped).returns(String) }
-  def self.read_type(field); end
+  def read_type(field); end
 
   sig { params(field: T.untyped).returns(String) }
-  def self.write_type(field); end
+  def write_type(field); end
 
   sig { params(field: T.untyped).returns(String) }
-  def self.init_type(field); end
+  def init_type(field); end
 
   sig { params(field: T.untyped).returns(T::Boolean) }
-  def self.message?(field); end
+  def message?(field); end
 
-  sig { params(field: T.untyped).returns(T.untyped) }
-  def self.container(field); end
+  sig { params(field: Protostar::Schema::Field, blk: T.proc.params(arg0: Protostar::Schema::Field).returns(String)).returns(String) }
+  def container(field, &blk); end
 
   sig { params(field: T.untyped, coerced: T.untyped).returns(T.untyped) }
-  def self.message_write(field, coerced); end
+  def message_write(field, coerced); end
 
   sig { params(field: T.untyped).returns(T.untyped) }
-  def self.google_write_one(field); end
+  def google_write_one(field); end
 end
 
 module Protostar::Compiler::Emitters::FieldTypes::RBS
@@ -1397,33 +1397,33 @@ end
 
 module Protostar::Compiler::Emitters::NativeNames
   sig { params(file: T.untyped).returns(T.untyped) }
-  def self.module_path(file); end
+  def module_path(file); end
 
   sig { params(descriptor: T.untyped).returns(T.untyped) }
-  def self.constant(descriptor); end
+  def constant(descriptor); end
 
   sig { params(p: T.untyped, first: T.untyped).returns(T.untyped) }
-  def self.blank(p, first); end
+  def blank(p, first); end
 
   sig { params(p: T.untyped, path: T.untyped).returns(T.untyped) }
-  def self.comment(p, path); end
+  def comment(p, path); end
 end
 
 class Protostar::Compiler::Emitters::Printer
   sig { void }
-  def self.initialize; end
+  def initialize; end
 
   sig { params(text: T.untyped).returns(T.untyped) }
-  def self.print(text); end
+  def print(text); end
 
   sig { returns(T.untyped) }
-  def self.indent; end
+  def indent; end
 
   sig { returns(T.untyped) }
-  def self.outdent; end
+  def outdent; end
 
   sig { returns(T.untyped) }
-  def self.to_s; end
+  def to_s; end
 end
 
 class Protostar::Compiler::Emitters::ProtostarRbi
@@ -2038,8 +2038,8 @@ class Protostar::Compiler::Linker
   sig { params(message: T.untyped, block: T.nilable(T.proc.params(args: T.untyped).returns(T.untyped))).returns(T.untyped) }
   def visit_message(message, &block); end
 
-  sig { params(enum: T.untyped).returns(T.untyped) }
-  def visit_enum(enum); end
+  sig { params(enum: T.untyped, blk: T.proc.params(arg0: T.untyped, arg1: Symbol).void).void }
+  def visit_enum(enum, &blk); end
 
   sig { returns(T.untyped) }
   def setup_edition; end
@@ -2461,8 +2461,8 @@ class Protostar::Compiler::Parser
   sig { params(line: T.untyped, column: T.untyped, message: T.untyped).returns(T.untyped) }
   def record_warning_at(line, column, message); end
 
-  sig { params(recorder: T.untyped).returns(T.untyped) }
-  def scoped(recorder); end
+  sig { type_parameters(:T).params(recorder: T.untyped, blk: T.proc.params(arg0: T.untyped).returns(T.type_parameter(:T))).returns(T.type_parameter(:T)) }
+  def scoped(recorder, &blk); end
 
   sig { returns(T.untyped) }
   def skip_statement; end
@@ -2518,8 +2518,8 @@ class Protostar::Compiler::Parser
   sig { params(map_field: T.untyped, field: T.untyped, messages: T.untyped).returns(T.untyped) }
   def generate_map_entry(map_field, field, messages); end
 
-  sig { params(name: T.untyped, number: T.untyped).returns(T.untyped) }
-  def map_entry_field(name, number); end
+  sig { params(name: String, number: Integer, arg2: [T.nilable(Symbol), T.nilable(String)]).returns(T.untyped) }
+  def map_entry_field(name, number, arg2); end
 
   sig { params(field: T.untyped, field_location: T.untyped).returns(T.untyped) }
   def parse_field_options(field, field_location); end
@@ -2608,7 +2608,7 @@ class Protostar::Compiler::Parser
   sig { params(file: T.untyped, root: T.untyped).returns(T.untyped) }
   def parse_import(file, root); end
 
-  sig { params(file: T.untyped).returns([T::Boolean, Symbol]) }
+  sig { params(file: T.untyped).returns([T::Boolean, T.nilable(Symbol)]) }
   def parse_visibility(file); end
 end
 
@@ -3485,8 +3485,8 @@ class Protostar::Diagnostics::Source
   sig { params(text: String, edits: T::Array[Protostar::Diagnostics::Edit]).returns(String) }
   def apply(text, edits); end
 
-  sig { params(number: T.untyped).returns(T.untyped) }
-  def each_char(number); end
+  sig { params(number: Integer, blk: T.proc.params(arg0: String, arg1: Integer, arg2: Integer, arg3: Integer).void).void }
+  def each_char(number, &blk); end
 
   sig { params(number: T.untyped, column: T.untyped).returns(T.untyped) }
   def char_index(number, column); end
@@ -6036,10 +6036,10 @@ module Protostar::Schema::Proto
   def self.each_file(bytes); end
 
   sig { params(symbol: T.untyped).returns(T.untyped) }
-  def self.visibility(symbol); end
+  def visibility(symbol); end
 
   sig { params(proto: T.untyped).returns(T.untyped) }
-  def self.visibility_symbol(proto); end
+  def visibility_symbol(proto); end
 end
 
 module Protostar::Schema::Proto::Codec
@@ -6088,34 +6088,34 @@ end
 
 class Protostar::Schema::Proto::Reader
   sig { params(proto: T.untyped, pool: T.untyped).void }
-  def self.initialize(proto, pool); end
+  def initialize(proto, pool); end
 
   sig { returns(T.untyped) }
-  def self.call; end
+  def call; end
 
   sig { params(descriptor: T.untyped, proto: T.untyped).returns(T.untyped) }
-  def self.record(descriptor, proto); end
+  def record(descriptor, proto); end
 
   sig { params(file: T.untyped).returns(T.untyped) }
-  def self.extension_lookup(file); end
+  def extension_lookup(file); end
 
   sig { params(scope: T.untyped, proto: T.untyped).returns(T.untyped) }
-  def self.message(scope, proto); end
+  def message(scope, proto); end
 
   sig { params(scope: T.untyped, proto: T.untyped, oneofs: T.untyped).returns(T.untyped) }
-  def self.field(scope, proto, oneofs); end
+  def field(scope, proto, oneofs); end
 
   sig { params(scope: T.untyped, proto: T.untyped).returns(T.untyped) }
-  def self.extension(scope, proto); end
+  def extension(scope, proto); end
 
   sig { params(proto: T.untyped).returns(T.untyped) }
-  def self.field_attributes(proto); end
+  def field_attributes(proto); end
 
   sig { params(scope: T.untyped, proto: T.untyped).returns(T.untyped) }
-  def self.enum(scope, proto); end
+  def enum(scope, proto); end
 
   sig { params(proto: T.untyped).returns(T.untyped) }
-  def self.source_info(proto); end
+  def source_info(proto); end
 end
 
 module Protostar::Schema::Proto::Writer
@@ -6279,7 +6279,7 @@ class Protostar::Text::Extensions
   sig { params(field: Protostar::Schema::Field).returns(T.nilable(Protostar::Message::FieldInfo)) }
   def info(field); end
 
-  sig { params(info: Protostar::Message::FieldInfo, unknown: T::Array[Protostar::UnknownField]).returns(T::Array[T.untyped]) }
+  sig { params(info: Protostar::Message::FieldInfo, unknown: T::Array[Protostar::UnknownField]).returns(T.nilable(T::Array[T.untyped])) }
   def read(info, unknown); end
 
   sig { params(info: Protostar::Message::FieldInfo, values: T::Array[T.untyped]).returns(T::Array[Protostar::UnknownField]) }
@@ -6361,8 +6361,8 @@ class Protostar::Text::Parser
   sig { returns(T.untyped) }
   def open?; end
 
-  sig { returns(T.untyped) }
-  def list; end
+  sig { params(blk: T.proc.void).void }
+  def list(&blk); end
 
   sig { params(msg: T.untyped, info: T.untyped, values: T.untyped, token: T.untyped).returns(T.untyped) }
   def assign(msg, info, values, token); end
@@ -6718,8 +6718,8 @@ class Protostar::View
   sig { returns(T::Array[[Integer, Integer]]) }
   def __segments; end
 
-  sig { returns(T.untyped) }
-  def __each_segment; end
+  sig { params(blk: T.proc.params(arg0: Integer, arg1: Integer).void).void }
+  def __each_segment(&blk); end
 
   sig { params(i: T.untyped, o: T.untyped, n: T.untyped).returns(T.untyped) }
   def __nested(i, o, n); end

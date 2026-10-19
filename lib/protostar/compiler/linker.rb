@@ -215,6 +215,7 @@ module Protostar
         message.extension_range.each { |r| yield r, :extension_range }
       end
 
+      #: (untyped enum) { (untyped, Symbol) -> void } -> void
       def visit_enum(enum)
         yield enum, :enum
         enum.value.each { |v| yield v, :enum_value }

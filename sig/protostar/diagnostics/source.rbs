@@ -54,7 +54,7 @@ module Protostar
 
       private
 
-      def each_char: (untyped number) -> untyped
+      def each_char: (Integer number) { (String, Integer, Integer, Integer) -> void } -> void
 
       def char_index: (untyped number, untyped column) -> untyped
 
