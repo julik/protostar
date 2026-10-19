@@ -6,12 +6,11 @@ module Google
       # Turns a class protostar's registry made into a google-protobuf
       # message class: the gem's class and instance methods are mixed in,
       # and the field accessors are defined in a module prepended to the class.
-      # @api private
-      module MessageClass
+      module MessageClass # :nodoc: all
         module_function
 
-        # @param klass [Class] a subclass of AbstractMessage
-        # @param descriptor [Descriptor]
+        # - `klass`: a subclass of AbstractMessage
+        #: (Class klass, Descriptor descriptor) -> untyped
         def setup(klass, descriptor)
           descriptor.__msgclass = klass
           plan = Array.new(klass.__fields.size)
@@ -115,22 +114,21 @@ module Google
       end
 
       # Class methods of every message class
-      # @api private
-      module ClassMethods
+      module ClassMethods # :nodoc: all
         MAX_INPUT = 0x7FFF_FFFF
 
-        # @return [Descriptor]
+        #: () -> Descriptor
         def descriptor
           @__gdescriptor
         end
 
-        # @api private
-        attr_reader :__gplan, :__gnames, :__goneof_setters, :__gnested
+        attr_reader :__gplan, :__gnames, :__goneof_setters, :__gnested # :nodoc:
 
-        # @param data [String] protobuf wire format
-        # @param options [Hash] `recursion_limit:` how deep messages may nest (default 100)
-        # @return [Message]
-        # @raise [ParseError]
+        # - `data`: protobuf wire format
+        # - `options`: `recursion_limit:` how deep messages may nest (default 100)
+        #
+        # Raises ParseError.
+        #: (String data, ?Hash[untyped, untyped] options) -> Protostar::Message
         def decode(data, options = {})
           raise ArgumentError, "Expected hash arguments." unless options.is_a?(Hash)
           raise ArgumentError, "Expected string for binary protobuf data." unless data.is_a?(String)
@@ -143,9 +141,11 @@ module Google
           raise ParseError, "Error occurred during parsing"
         end
 
-        # @param message [Message] an instance of this class
-        # @param options [Hash] `recursion_limit:` how deep messages may nest (default 100)
-        # @return [String] binary, frozen
+        # - `message`: an instance of this class
+        # - `options`: `recursion_limit:` how deep messages may nest (default 100)
+        #
+        # Returns binary, frozen.
+        #: (Protostar::Message message, ?Hash[untyped, untyped] options) -> String
         def encode(message, options = {})
           raise ArgumentError, "Message of wrong type." unless message.is_a?(self)
           raise ArgumentError, "Expected hash arguments." unless options.is_a?(Hash)
@@ -157,10 +157,11 @@ module Google
           raise TypeError, e.message
         end
 
-        # @param data [String] JSON
-        # @param options [Hash] `ignore_unknown_fields:`
-        # @return [Message]
-        # @raise [ParseError]
+        # - `data`: JSON
+        # - `options`: `ignore_unknown_fields:`
+        #
+        # Raises ParseError.
+        #: (String data, ?Hash[untyped, untyped] options) -> Protostar::Message
         def decode_json(data, options = {})
           raise ArgumentError, "Expected hash arguments." unless options.is_a?(Hash)
           raise ArgumentError, "Expected string for JSON data." unless data.is_a?(String)
@@ -170,36 +171,37 @@ module Google
           Internal::Json.decode(self, data, options)
         end
 
-        # @param message [Message] an instance of this class
-        # @param options [Hash] `preserve_proto_fieldnames:`, `emit_defaults:`, `format_enums_as_integers:`
-        # @return [String] UTF-8, frozen
+        # - `message`: an instance of this class
+        # - `options`: `preserve_proto_fieldnames:`, `emit_defaults:`, `format_enums_as_integers:`
+        #
+        # Returns UTF-8, frozen.
+        #: (Protostar::Message message, ?Hash[untyped, untyped] options) -> String
         def encode_json(message, options = {})
           Internal::Json.encode(message, Internal.options_hash(options))
         end
 
-        # @api private
-        def __gpool
+        def __gpool # :nodoc:
           @__gdescriptor.descriptor_pool
         end
       end
 
       # The options Hash the gem's methods take, from a Hash or anything with to_h
-      # @api private
-      def self.options_hash(options)
+      def self.options_hash(options) # :nodoc:
         return options if options.is_a?(Hash)
         return options.to_h if options.respond_to?(:to_h)
         raise ArgumentError, "Expected hash arguments."
       end
 
       # Instance methods of every message class
-      # @api private
-      module MessageMethods
+      module MessageMethods # :nodoc: all
         NOTHING = Object.new.freeze
         private_constant :NOTHING
 
-        # @param initial_value [Hash, nil] field names (Strings or Symbols) to values;
+        # - `initial_value`: field names (Strings or Symbols) to values;
         #   Hashes become messages, Arrays repeated fields, Hashes map fields
-        # @raise [ArgumentError] for a name that is not a field
+        #
+        # Raises ArgumentError for a name that is not a field.
+        #: (?Hash[untyped, untyped]? initial_value) -> void
         def initialize(initial_value = NOTHING)
           super()
           return if NOTHING.equal?(initial_value)
@@ -217,16 +219,16 @@ module Google
           end
         end
 
-        # @param name [String]
-        # @return [Object, nil] the field's value; nil when there is no such field
+        # Returns the field's value; nil when there is no such field.
+        #: (String name) -> untyped
         def [](name)
           raise ::TypeError, "wrong argument type #{name.class} (expected String)" unless name.is_a?(String)
           fd = self.class.__gnames[name]
           fd && __gget(fd)
         end
 
-        # @param name [String]
-        # @raise [ArgumentError] when there is no such field
+        # Raises ArgumentError when there is no such field.
+        #: (String name, untyped value) -> untyped
         def []=(name, value)
           raise ::TypeError, "wrong argument type #{name.class} (expected String)" unless name.is_a?(String)
           fd = self.class.__gnames[name]
@@ -234,8 +236,9 @@ module Google
           __gset(fd, value)
         end
 
-        # @return [Hash] Symbol keys; fields with presence when set, others
-        #   when not at their default; nested messages as Hashes
+        # Returns Symbol keys; fields with presence when set, others
+        # when not at their default; nested messages as Hashes.
+        #: () -> Hash[untyped, untyped]
         def to_h
           __to_h
         end
@@ -299,37 +302,34 @@ module Google
         end
 
         # Freezes the message and everything in it
-        # @return [self]
+        #: () -> self
         def freeze
           @__gwrappers ||= {} unless frozen?
           super
         end
 
-        # @api private
-        def __gcopy_from(source)
+        def __gcopy_from(source) # :nodoc:
           @values = source.__values.dup
           @unknown = source.unknown_fields.empty? ? nil : source.unknown_fields.dup.freeze
           @__gwrappers = nil
         end
 
-        # @api private
-        # @return [Message] a copy with every nested message copied too
-        def __gdeep_copy
+        # Returns a copy with every nested message copied too.
+        #: () -> Protostar::Message
+        def __gdeep_copy # :nodoc:
           copy = self.class.allocate
           copy.__gdeep_from(self)
           copy
         end
 
-        # @api private
-        def __gdeep_from(source)
+        def __gdeep_from(source) # :nodoc:
           @values = source.__values.map { |v| Internal.deep_copy_value(v) }
           @unknown = source.unknown_fields.empty? ? nil : source.unknown_fields.dup.freeze
           @__gwrappers = nil
         end
 
-        # @api private
-        # @param fd [FieldDescriptor]
-        def __gget(fd)
+        #: (FieldDescriptor fd) -> untyped
+        def __gget(fd) # :nodoc:
           return __gext_get(fd) if fd.__extension?
           info = fd.__info
           if info.map
@@ -342,14 +342,12 @@ module Google
           end
         end
 
-        # @api private
-        def __ghas?(fd)
+        def __ghas?(fd) # :nodoc:
           return __gext_has?(fd) if fd.__extension?
           !@values[fd.__info.index].nil?
         end
 
-        # @api private
-        def __gset(fd, value)
+        def __gset(fd, value) # :nodoc:
           __check_gfrozen
           return __gext_set(fd, value) if fd.__extension?
           info = fd.__info
@@ -374,8 +372,7 @@ module Google
           value
         end
 
-        # @api private
-        def __gclear(fd)
+        def __gclear(fd) # :nodoc:
           __check_gfrozen
           return __gext_clear(fd) if fd.__extension?
           info = fd.__info
@@ -383,15 +380,15 @@ module Google
           nil
         end
 
-        # @api private
-        # @return [RepeatedField] the field's, the same object while the field holds the same Array
-        def __grepeated(fd)
+        # Returns the field's, the same object while the field holds the same Array.
+        #: (untyped fd) -> RepeatedField
+        def __grepeated(fd) # :nodoc:
           __gcontainer(fd, RepeatedField, [])
         end
 
-        # @api private
-        # @return [Map] the field's, the same object while the field holds the same Hash
-        def __gmap(fd)
+        # Returns the field's, the same object while the field holds the same Hash.
+        #: (untyped fd) -> Map
+        def __gmap(fd) # :nodoc:
           __gcontainer(fd, Map, {})
         end
 
@@ -418,9 +415,9 @@ module Google
           wrapper
         end
 
-        # @api private
-        # @return [Integer] how deeply messages nest under this one, counting it; stops at `limit`
-        def __gdepth(limit)
+        # Returns how deeply messages nest under this one, counting it; stops at `limit`.
+        #: (untyped limit) -> Integer
+        def __gdepth(limit) # :nodoc:
           nested = self.class.__gnested
           return 1 if nested.empty?
           return limit if limit <= 1
@@ -443,9 +440,9 @@ module Google
           deepest + 1
         end
 
-        # @api private
-        # @return [Array<UnknownField>] the unknown fields holding extensions, for comparison
-        def __gextensions
+        # Returns the unknown fields holding extensions, for comparison.
+        #: () -> Array[Protostar::UnknownField]
+        def __gextensions # :nodoc:
           descriptor = self.class.descriptor.__schema
           return Protostar::Message::EMPTY_ARRAY if descriptor.extension_ranges.empty?
           unknown_fields.sort_by(&:number).map(&:to_wire)
@@ -528,8 +525,7 @@ module Google
         end
       end
 
-      # @api private
-      def self.deep_copy_value(v)
+      def self.deep_copy_value(v) # :nodoc:
         case v
         when Protostar::Message then v.__gdeep_copy
         when Array then v.map { |e| e.is_a?(Protostar::Message) ? e.__gdeep_copy : e }

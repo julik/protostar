@@ -8,8 +8,7 @@ module Google
       # messages, into what protostar stores: Integers, Floats (single
       # precision for float), true/false, frozen Strings, enum Symbols (or
       # Integers for numbers without a name) and message instances.
-      # @api private
-      module Convert
+      module Convert # :nodoc: all
         INTEGER_TYPES = {
           int32: [32, false], sint32: [32, false], sfixed32: [32, false],
           int64: [64, false], sint64: [64, false], sfixed64: [64, false],
@@ -27,11 +26,12 @@ module Google
 
         module_function
 
-        # @param value [Object]
-        # @param type [Symbol] the field type as FieldDescriptor#type gives it
-        # @param sub [Descriptor, EnumDescriptor, nil] for message and enum types
-        # @param name [String] the field name, for error messages
-        # @return [Object] what protostar stores
+        # - `type`: the field type as FieldDescriptor#type gives it
+        # - `sub`: for message and enum types
+        # - `name`: the field name, for error messages
+        #
+        # Returns what protostar stores.
+        #: (untyped value, Symbol, (Descriptor | EnumDescriptor)? sub, String name) -> untyped
         def to_store(value, type, sub, name)
           case type
           when :double
@@ -152,7 +152,9 @@ module Google
         end
 
         # A field's value from a Hash given to `new`: Hashes become messages, here and nested
-        # @return [Object] what protostar stores
+        #
+        # Returns what protostar stores.
+        #: (untyped value, untyped, untyped sub, untyped name) -> untyped
         def initial(value, type, sub, name)
           if (type == :message || type == :group) && value.is_a?(Hash)
             sub.msgclass.new(value)

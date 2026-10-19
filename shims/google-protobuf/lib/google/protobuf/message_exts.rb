@@ -3,7 +3,7 @@
 module Google
   module Protobuf
     # Included into every message class. Libraries extend it (and
-    # {ClassMethods}) to give all messages more methods, as with the gem.
+    # ClassMethods) to give all messages more methods, as with the gem.
     module MessageExts
       def self.included(klass)
         klass.extend(ClassMethods)
@@ -13,14 +13,16 @@ module Google
       module ClassMethods
       end
 
-      # @param options [Hash] see the class's encode_json
-      # @return [String]
+      # - `options`: see the class's encode_json
+      #: (?Hash[untyped, untyped] options) -> String
       def to_json(options = {})
         self.class.encode_json(self, options)
       end
 
-      # @param options [Hash] see the class's encode
-      # @return [String] binary
+      # - `options`: see the class's encode
+      #
+      # Returns binary.
+      #: (?Hash[untyped, untyped] options) -> String
       def to_proto(options = {})
         self.class.encode(self, options)
       end

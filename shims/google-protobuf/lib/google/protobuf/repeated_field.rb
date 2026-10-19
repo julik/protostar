@@ -8,13 +8,16 @@ module Google
     # message's repeated field reads as a RepeatedField over the message's
     # own storage, so writes to it are writes to the message.
     class RepeatedField
-      include Enumerable
+      include Enumerable #[untyped]
       extend Forwardable
 
-      # @overload new(type, initial_values = [])
-      # @overload new(type, type_class, initial_values = [])
-      #   @param type_class [Class, Module] a message class or enum module, for :message and :enum
-      # @param type [Symbol] :int32, :string, :message, :enum and so on
+      # `new(type, initial_values = [])`, or `new(type, type_class, initial_values = [])`
+      # for :message and :enum
+      #
+      # - `type`: :int32, :string, :message, :enum and so on
+      # - `type_class`: a message class or enum module
+      #: (Symbol type, ?Array[untyped] initial_values) -> RepeatedField
+      #: (Symbol type, Class | Module type_class, ?Array[untyped] initial_values) -> RepeatedField
       def self.new(*args)
         raise ArgumentError, "Expected at least 1 argument." if args.empty?
         type, *rest = args
@@ -26,40 +29,34 @@ module Google
         instance
       end
 
-      # @api private
-      def self.__for_field(fd, array)
+      def self.__for_field(fd, array) # :nodoc:
         instance = allocate
         instance.__setup(fd.type, fd.subtype, array, "")
         instance
       end
 
-      # @api private
-      def __setup(type, sub, array, name)
+      def __setup(type, sub, array, name) # :nodoc:
         @type = type
         @sub = sub
         @array = array
         @name = name
       end
 
-      # @api private
-      def __array
+      def __array # :nodoc:
         @array
       end
       alias_method :__storage, :__array
 
-      # @api private
-      def __type
+      def __type # :nodoc:
         @type
       end
 
-      # @api private
-      def __sub
+      def __sub # :nodoc:
         @sub
       end
 
-      # @api private
-      # @raise [TypeError] unless this list can be the field's value
-      def __check_field(fd)
+      # Raises TypeError unless this list can be the field's value.
+      def __check_field(fd) # :nodoc:
         unless FieldDescriptor::CTYPES.fetch(@type) == fd.__ctype
           raise TypeError, "Repeated field array has wrong element type"
         end
@@ -72,9 +69,9 @@ module Google
         self
       end
 
-      # @overload [](index)
-      # @overload [](start, length)
-      # @overload [](range)
+      #: (Integer index) -> untyped
+      #: (Integer start, Integer length) -> Array[untyped]?
+      #: (Range[Integer?] range) -> Array[untyped]?
       def [](*args)
         if args.size == 1 && args[0].is_a?(Integer)
           @array[args[0]]
@@ -100,7 +97,7 @@ module Google
         nil
       end
 
-      # @return [self]
+      #: (*untyped values) -> self
       def push(*values)
         check_frozen
         converted = values.map { |v| convert(v) }
@@ -108,16 +105,15 @@ module Google
         self
       end
 
-      # @return [self]
+      #: (untyped value) -> self
       def <<(value)
         check_frozen
         @array << convert(value)
         self
       end
 
-      # @return [self]
-      # @param list [Array]
-      # @return [Array] the list given
+      # Returns the list given.
+      #: (Array[untyped] list) -> (self | Array[untyped])
       def replace(list)
         check_frozen
         raise ::TypeError, "wrong argument type #{list.class} (expected Array)" unless list.is_a?(Array)
@@ -126,7 +122,7 @@ module Google
         list
       end
 
-      # @return [self]
+      #: () -> self
       def clear
         check_frozen
         @array.clear
@@ -164,7 +160,8 @@ module Google
         end
       end
 
-      # @return [Array] a copy of the elements
+      # Returns a copy of the elements.
+      #: () -> Array[untyped]
       def to_ary
         @array.dup
       end
@@ -186,7 +183,8 @@ module Google
         @array.hash
       end
 
-      # @return [RepeatedField] a new list of the same elements; messages are shared
+      # Returns a new list of the same elements; messages are shared.
+      #: () -> RepeatedField
       def dup
         copy = self.class.allocate
         copy.__setup(@type, @sub, @array.dup, @name)
@@ -194,14 +192,14 @@ module Google
       end
       alias_method :clone, :dup
 
-      # @api private
-      def __deep_copy
+      def __deep_copy # :nodoc:
         copy = self.class.allocate
         copy.__setup(@type, @sub, @array.map { |v| Internal.deep_copy_value(v) }, @name)
         copy
       end
 
-      # @return [RepeatedField] a new list of this one's elements followed by the other's
+      # Returns a new list of this one's elements followed by the other's.
+      #: (untyped other) -> RepeatedField
       def +(other)
         case other
         when RepeatedField
@@ -219,7 +217,7 @@ module Google
       end
 
       # Appends every element of the Array
-      # @return [self]
+      #: (untyped other) -> self
       def concat(other)
         raise ::TypeError, "wrong argument type #{other.class} (expected Array)" unless other.is_a?(Array)
         push(*other)
@@ -295,8 +293,7 @@ module Google
       alias_method :reject!, :delete_if
 
       # Writes changes made through an Enumerator from #sort! and the like back to the list
-      # @api private
-      class ProxyingEnumerator
+      class ProxyingEnumerator # :nodoc: all
         def initialize(repeated_field, external_enumerator)
           @repeated_field = repeated_field
           @external_enumerator = external_enumerator
@@ -341,10 +338,10 @@ module Google
       # The element type of a RepeatedField or the value type of a Map from
       # the arguments after the type: the class or module for :message and
       # :enum, then the initial values
-      # @api private
-      # @return [Array(Descriptor, EnumDescriptor, nil), Object]
-      # @param before [Integer] how many arguments came before the type
-      def self.type_class(type, rest, before)
+      #
+      # - `before`: how many arguments came before the type
+      #: (untyped, untyped rest, Integer before) -> untyped
+      def self.type_class(type, rest, before) # :nodoc:
         raise ArgumentError, "Expected symbol for field type." unless type.is_a?(Symbol)
         raise ArgumentError, "Unknown field type." unless CONTAINER_TYPES.key?(type)
         typed = type == :message || type == :enum

@@ -6,15 +6,15 @@ module Google
       # Extension values live in a message's unknown fields, as protostar
       # keeps them; these read them out and write them back by the
       # extension's FieldDescriptor.
-      # @api private
-      module Extensions
+      module Extensions # :nodoc: all
         ITEM = 1 # MessageSet item group
         TYPE_ID = 2
         MESSAGE = 3
 
         module_function
 
-        # @return [Array] the extension's values on the message, as stored
+        # Returns the extension's values on the message, as stored.
+        #: (untyped msg, untyped fd) -> Array[untyped]
         def read(msg, fd)
           info = info(fd)
           if message_set?(msg)
@@ -58,7 +58,8 @@ module Google
           fd.descriptor_pool.__extension_codec
         end
 
-        # @return [Array<Array(Integer, String)>] each MessageSet item's type id and message bytes
+        # Returns each MessageSet item's type id and message bytes.
+        #: (untyped msg) -> Array[[Integer, String]]
         def items(msg)
           msg.unknown_fields.filter_map do |u|
             next unless u.number == ITEM && u.wire_type == Protostar::Wire::START_GROUP
@@ -102,8 +103,7 @@ module Google
       end
 
       module MessageMethods
-        # @api private
-        def __greplace_unknown(fields)
+        def __greplace_unknown(fields) # :nodoc:
           @unknown = fields.empty? ? nil : fields.freeze
         end
 
@@ -145,8 +145,7 @@ module Google
     end
 
     class DescriptorPool
-      # @api private
-      def __extension_codec
+      def __extension_codec # :nodoc:
         @extension_codec ||= Protostar::Text::Extensions.new(@registry, @schema_pool)
       end
     end

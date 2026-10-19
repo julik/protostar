@@ -7,12 +7,13 @@ module Google
     # A set of files and the message classes and enum modules made from them.
     # Generated `_pb.rb` files add their file to {generated_pool}.
     #
-    # Each pool has its own protostar {Protostar::Schema::Pool} and
-    # {Protostar::Types::Registry}, separate from `Protostar.generated_pool`
+    # Each pool has its own protostar Protostar::Schema::Pool and
+    # Protostar::Types::Registry, separate from `Protostar.generated_pool`
     # and the global registry: classes made here carry the google-protobuf
     # API, classes made by `Protostar::DSL` carry protostar's.
     class DescriptorPool
-      # @return [DescriptorPool] the pool generated code adds its files to
+      # Returns the pool generated code adds its files to.
+      #: () -> DescriptorPool
       def self.generated_pool
         @generated_pool
       end
@@ -28,10 +29,12 @@ module Google
       # Builds a serialized FileDescriptorProto and defines its message
       # classes. Its dependencies must have been added first; a file of the
       # same name must not have been.
-      # @param serialized [String] a serialized google.protobuf.FileDescriptorProto
-      # @return [FileDescriptor]
-      # @raise [ArgumentError] when the bytes do not parse
-      # @raise [TypeError] when the file does not build
+      #
+      # - `serialized`: a serialized google.protobuf.FileDescriptorProto
+      #
+      # Raises ArgumentError when the bytes do not parse.
+      # Raises TypeError when the file does not build.
+      #: (String serialized) -> FileDescriptor
       def add_serialized_file(serialized)
         raise ::TypeError, "wrong argument type #{serialized.class} (expected String)" unless serialized.is_a?(String)
         @monitor.synchronize do
@@ -50,9 +53,9 @@ module Google
         end
       end
 
-      # @param name [String] the full name of a message, enum, extension or
+      # - `name`: the full name of a message, enum, extension or
       #   service, or a file name
-      # @return [Descriptor, EnumDescriptor, FieldDescriptor, ServiceDescriptor, FileDescriptor, nil]
+      #: (String name) -> (Descriptor | EnumDescriptor | FieldDescriptor | ServiceDescriptor | FileDescriptor)?
       def lookup(name)
         found = @schema_pool.find_symbol(name)
         case found
@@ -68,7 +71,8 @@ module Google
 
       # `_pb.rb` files from protoc before 3.21 called this with a block of
       # message definitions; that DSL is not supported
-      # @raise [NotImplementedError]
+      #
+      # Raises NotImplementedError.
       def build(*)
         raise NotImplementedError, "DescriptorPool#build (the DSL in _pb.rb files from protoc before 3.21) is not " \
           "supported; regenerate the file with a newer protoc or with `protostar compile --google_out`"
@@ -78,29 +82,25 @@ module Google
         "#<#{self.class.name} #{@schema_pool.files.size} files>"
       end
 
-      # @api private
-      # @return [Protostar::Schema::Pool]
-      def __schema_pool
+      #: () -> Protostar::Schema::Pool
+      def __schema_pool # :nodoc:
         @schema_pool
       end
 
-      # @api private
-      # @return [Protostar::Types::Registry]
-      def __registry
+      #: () -> Protostar::Types::Registry
+      def __registry # :nodoc:
         @registry
       end
 
       # The wrapper of a schema descriptor, one per descriptor
-      # @api private
-      def __wrap(schema)
+      def __wrap(schema) # :nodoc:
         @monitor.synchronize do
           @wrappers[schema] ||= wrapper_class(schema).__wrap(schema, self)
         end
       end
 
-      # @api private
-      # @return [Class, nil]
-      def __msgclass(schema)
+      #: (untyped schema) -> Class?
+      def __msgclass(schema) # :nodoc:
         @classes[schema] || (schema.map_entry? ? entry_class(schema) : nil)
       end
 
