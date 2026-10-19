@@ -1,6 +1,6 @@
 # WS15: codec slots, one-pass encode, monomorphic decode
 
-Branch `ws15-codec-slots`, from `4c613c3`. Ruby 3.4.11, M1 Pro, 2026-10-19. The machine
+Branch `ws15-codec-slots`, from `4c613c3`, rebased onto `8dd99ae` (inline RBS and RDoc). Ruby 3.4.11, M1 Pro, 2026-10-19. The machine
 was shared with other test runs for most of the day (load average 7 to 60), so every
 comparison below is either before and after measured back to back or the best of several
 interleaved runs; absolute numbers move by 10 to 20% between runs.
@@ -121,16 +121,17 @@ are in the todo.
 ## Behaviour changes
 
 - Message internals: fields are `@_<n>` ivars; `__values` is replaced by `__slot`,
-  `__set_slot`, `__slots`, `__load_slots` (all `@api private`). `instance_variables` lists
+  `__set_slot`, `__slots`, `__load_slots` (all `:nodoc:`). `instance_variables` lists
   `@unknown` and the slots.
 - Each class defines `freeze` (ending in `super`, so the shim's runs) and `self.__empty`;
-  `Message#freeze` is documented with `@!method`. A test listing a class's own methods
-  (protostar RBS) now ignores names Message already answers.
+  `Message#freeze` is documented with RDoc's `:method:` directive, and its signature
+  moved to `sig/protostar_manual.rbs`. The tests listing a class's own methods
+  (protostar RBS and RBI) now ignore names Message already answers.
 - Each class includes an anonymous module holding its decoder; it shows in `ancestors`.
-- `__decode_fields` has a new signature (`@api private`; `View#to_message` updated).
+- `__decode_fields` has a new signature (`:nodoc:`; `View#to_message` updated).
 - Encoding an invalid repeated element raises the same `EncodeError` as before, now while
   writing rather than from a sizing pass; `encode` returns nothing either way.
-- New: `Wire.append_varint(buf, value)` (public, YARD), `Wire::Reader#__seek` (private).
+- New: `Wire.append_varint(buf, value)` (public), `Wire::Reader#__seek` (private).
 - Defining classes costs more: the 160 classes of unittest.proto took about 200 ms against
   176 in the previous table, from the extra generated methods (`__slot`/`__set_slot`
   cases, `__reset`, `__encode`, `freeze`, the decoder module).
