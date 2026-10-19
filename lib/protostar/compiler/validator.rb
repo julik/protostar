@@ -5,11 +5,9 @@ module Protostar
     # The checks protoc runs once a file's options are interpreted:
     # DescriptorBuilder's ValidateOptions phase, map entry conflict hints,
     # unused imports, naming style, proto limits and symbol visibility, and
-    # feature lifetimes, in that order. Checks read the built {Schema::File}
+    # feature lifetimes, in that order. Checks read the built Schema::File
     # and report against the AST's recorded positions.
-    #
-    # @api private
-    class Validator
+    class Validator # :nodoc: all
       INT32_MAX = 2**31 - 1
       MAX_FIELD_NUMBER = 536_870_911
       OPTIONS_EXTENDEES = %w[FileOptions MessageOptions FieldOptions EnumOptions EnumValueOptions ServiceOptions
@@ -53,8 +51,7 @@ module Protostar
 
       # The command-line interface's checks over the files it was asked to
       # compile, once all of them are built
-      # @param linkers [Array<Linker>]
-      # @param run [Run]
+      #: (Array[Linker] linkers, Run run) -> untyped
       def self.cli_checks(linkers, run)
         linkers.each do |linker|
           file = linker.file

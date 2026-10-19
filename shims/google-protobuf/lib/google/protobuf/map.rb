@@ -6,17 +6,17 @@ module Google
     # write. A message's map field reads as a Map over the message's own
     # storage, so writes to it are writes to the message.
     class Map
-      include Enumerable
+      include Enumerable #[untyped]
 
       KEY_TYPES = %i[int32 int64 uint32 uint64 sint32 sint64 fixed32 fixed64 sfixed32 sfixed64 bool string bytes]
         .to_h { |t| [t, true] }.freeze
       private_constant :KEY_TYPES
 
-      # @overload new(key_type, value_type, init_hashmap = {})
-      # @overload new(key_type, value_type, value_typeclass, init_hashmap = {})
-      #   @param value_typeclass [Class, Module] for :message and :enum values
-      # @param key_type [Symbol]
-      # @param value_type [Symbol]
+      # `new(key_type, value_type, init_hashmap = {})`, or with a
+      # `value_typeclass` (a message class or enum module) before the Hash for
+      # :message and :enum values
+      #: (Symbol key_type, Symbol value_type, ?Hash[untyped, untyped] init_hashmap) -> Map
+      #: (Symbol key_type, Symbol value_type, Class | Module value_typeclass, ?Hash[untyped, untyped] init_hashmap) -> Map
       def self.new(*args)
         raise ArgumentError, "Map constructor expects 2, 3 or 4 arguments." if args.size < 2 || args.size > 4
         key_type, value_type, *rest = args
@@ -30,8 +30,7 @@ module Google
         instance
       end
 
-      # @api private
-      def self.__for_field(fd, hash)
+      def self.__for_field(fd, hash) # :nodoc:
         entry = fd.subtype
         key = entry.lookup("key")
         value = entry.lookup("value")
@@ -40,8 +39,7 @@ module Google
         instance
       end
 
-      # @api private
-      def __setup(key_type, value_type, sub, hash, name)
+      def __setup(key_type, value_type, sub, hash, name) # :nodoc:
         @key_type = key_type
         @value_type = value_type
         @sub = sub
@@ -49,20 +47,17 @@ module Google
         @name = name
       end
 
-      # @api private
-      def __hash
+      def __hash # :nodoc:
         @hash
       end
       alias_method :__storage, :__hash
 
-      # @api private
-      def __types
+      def __types # :nodoc:
         [FieldDescriptor::CTYPES.fetch(@key_type), FieldDescriptor::CTYPES.fetch(@value_type), @sub]
       end
 
-      # @api private
-      # @raise [TypeError] unless this map can be the field's value
-      def __check_field(fd)
+      # Raises TypeError unless this map can be the field's value.
+      def __check_field(fd) # :nodoc:
         entry = fd.subtype
         key = entry.lookup("key")
         value = entry.lookup("value")
@@ -71,12 +66,14 @@ module Google
         raise TypeError, "Map value type has wrong message/enum class" unless @sub.equal?(value.subtype)
       end
 
-      # @return [Object, nil] the value, nil when the key is not there
+      # Returns the value, nil when the key is not there.
+      #: (untyped key) -> untyped
       def [](key)
         @hash[convert_key(key)]
       end
 
-      # @return [Object] the value given
+      # Returns the value given.
+      #: (untyped key, untyped value) -> untyped
       def []=(key, value)
         check_frozen
         k = convert_key(key)
@@ -87,13 +84,14 @@ module Google
         @hash.key?(convert_key(key))
       end
 
-      # @return [Object, nil] the value removed
+      # Returns the value removed.
+      #: (untyped key) -> untyped
       def delete(key)
         check_frozen
         @hash.delete(convert_key(key))
       end
 
-      # @return [nil]
+      #: () -> nil
       def clear
         check_frozen
         @hash.clear
@@ -114,14 +112,15 @@ module Google
       end
 
       # Yields each key and value
-      # @return [nil]
+      #: () ?{ (?) -> untyped } -> nil
       def each(&block)
         return enum_for(:each) { size } unless block
         @hash.each(&block)
         nil
       end
 
-      # @return [Hash] with message values as Hashes
+      # Returns with message values as Hashes.
+      #: () -> Hash[untyped, untyped]
       def to_h
         return @hash.dup unless @value_type == :message || @value_type == :group
         @hash.transform_values(&:to_h)
@@ -149,7 +148,8 @@ module Google
         @hash.to_a.sort_by(&:hash).hash
       end
 
-      # @return [Map] a copy; message values are shared
+      # Returns a copy; message values are shared.
+      #: () -> Map
       def dup
         copy = Map.allocate
         copy.__setup(@key_type, @value_type, @sub, @hash.dup, @name)
@@ -157,21 +157,19 @@ module Google
       end
       alias_method :clone, :dup
 
-      # @api private
-      def __deep_copy
+      def __deep_copy # :nodoc:
         copy = Map.allocate
         copy.__setup(@key_type, @value_type, @sub, @hash.transform_values { |v| Internal.deep_copy_value(v) }, @name)
         copy
       end
 
-      # @param other [Map, Hash]
-      # @return [Map] a copy of this map with the other's entries written over it
+      # Returns a copy of this map with the other's entries written over it.
+      #: ((Map | Hash[untyped, untyped]) other) -> Map
       def merge(other)
         dup.__merge_into_self(other)
       end
 
-      # @api private
-      def __merge_into_self(other)
+      def __merge_into_self(other) # :nodoc:
         case other
         when Hash
           other.each { |k, v| @hash[convert_key(k)] = convert_value(v) }

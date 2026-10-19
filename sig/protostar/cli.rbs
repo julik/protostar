@@ -1,0 +1,90 @@
+# Generated from lib/protostar/cli.rb by script/types.rb. Do not edit.
+
+module Protostar
+  # `protostar compile`, with protoc's flag names and protoc's messages
+  #
+  # ```sh
+  # protostar compile -I proto --ruby_out=lib --grpc_out=lib acme/service.proto
+  # ```
+  #
+  # `compile` is the default command. Without `-I` every input's own directory
+  # is an include path, and one input with no `--*_out` prints its native Ruby:
+  #
+  # ```sh
+  # protostar proto/acme/person.proto > person_pb.rb
+  # ```
+  class CLI
+    USAGE: ::String
+
+    DEFAULTS: ::String
+
+    NO_STDIN: ::String
+
+    Emitters: untyped
+
+    RBS_EDITIONS: ::String
+
+    NO_MAPPING: ::String
+
+    # Raised to stop with a message on stderr and exit status 1
+    class Failure < Protostar::Error
+    end
+
+    # Returns the exit status.
+    def self.run: (Array[String] argv, ?out: IO, ?err: IO) -> Integer
+
+    # Whether to colour what goes to `io`: a terminal, and NO_COLOR unset
+    def self.color?: (untyped io) -> untyped
+
+    def initialize: (untyped out, untyped err) -> untyped
+
+    def run: (untyped argv) -> Integer
+
+    private
+
+    # A bare word that is not a file is a mistyped command, not a missing input
+    def command?: (untyped arg) -> untyped
+
+    def parser: (untyped opts) -> untyped
+
+    def compile: (untyped argv) -> untyped
+
+    # Next to --ruby_out, protostar's own signatures go beside the Ruby unless
+    # declined or sent elsewhere. --google_out writes only what protoc writes.
+    def sidecars: (untyped opts) -> untyped
+
+    # protoc's one line, or with --error_format=rich, rustc's several
+    def show: (untyped diagnostic, untyped compiler) -> untyped
+
+    def print_ruby: (untyped file) -> untyped
+
+    # The directories of the inputs on disk, in the order given. Each input is
+    # named by its basename then, so two inputs of one name cannot both be
+    def default_include: (untyped files) -> untyped
+
+    def default_name: (untyped arg, untyped include, untyped compiler) -> untyped
+
+    # An import not found, but one directory above an input's, was most
+    # likely meant relative to that parent
+    def import_hints: (untyped diagnostics, untyped include) -> untyped
+
+    def shorten: (untyped dir) -> untyped
+
+    # Every output, generated before anything is written, as protoc does
+    def generate: (untyped opts, untyped named, untyped compiled, untyped compiler) -> untyped
+
+    def emitter: (untyped kind, untyped compiler, untyped opts) -> untyped
+
+    # --rbs_out and --rbi_out describe protostar's classes next to --ruby_out,
+    # and google-protobuf's otherwise
+    def native_rbs?: (untyped opts) -> untyped
+
+    def check_dir: (untyped dir) -> untyped
+
+    # protoc's MakeInputsBeProtoPathRelative: a file argument is a path on
+    # disk under an include path, or else a name relative to one
+    def virtual_name: (untyped arg, untyped include, untyped compiler) -> untyped
+
+    def disk_to_virtual: (untyped arg, untyped include) -> untyped
+  end
+end

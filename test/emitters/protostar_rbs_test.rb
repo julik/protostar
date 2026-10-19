@@ -181,21 +181,10 @@ class ProtostarRbsTest < Minitest::Test
   # declaring the same names go into separate runs.
   def test_rbs_accepts_the_signatures
     rbs = rbs_executable or skip "the rbs gem is not installed"
-    files = {}
-    CodecFixtures.goldens.each do |rel|
-      SchemaFixtures.cached(rel)[0].files.each do |f|
-        files[f.name] ||= f unless Emitters::BOOTSTRAP.include?(f.name)
-      end
-    end
     emitter = Emitters::ProtostarRbs.new
-    batches(files).each do |batch|
+    SignatureBatches.batches(SignatureBatches.corpus_files).each do |batch|
       tmpdir do |dir|
-        batch.each_value do |f|
-          emitter.emit([f]).each do |path, content|
-            FileUtils.mkdir_p(File.dirname(File.join(dir, path)))
-            File.write(File.join(dir, path), content)
-          end
-        end
+        SignatureBatches.write(dir, batch, emitter)
         out, err, status = Open3.capture3(RbConfig.ruby, rbs, "-I", SIG, "-I", dir, "validate")
         errors = (out + err).lines.grep(/ERROR|Error/)
         assert status.success? && errors.empty?, "#{batch.keys.first(3).join(", ")}...:\n#{(out + err)[0, 3000]}"
@@ -209,33 +198,5 @@ class ProtostarRbsTest < Minitest::Test
     Gem.bin_path("rbs", "rbs")
   rescue Gem::Exception
     nil
-  end
-
-  # Groups of files, each with its imports, in which no two files declare the same name
-  def batches(files)
-    closure = lambda do |f, acc = {}|
-      next acc if acc[f.name] || !files.key?(f.name)
-      acc[f.name] = f
-      f.dependencies.each { |d| closure.call(files[d], acc) if files[d] }
-      acc
-    end
-    declared = lambda do |f|
-      prefix = Emitters::Naming.module_path(f).join("::")
-      (f.all_messages + f.all_enums).map { |d| "#{prefix}::#{Emitters::Naming.relative_constant(d)}" }
-    end
-    batches = []
-    files.each_value do |f|
-      group = closure.call(f)
-      batch = batches.find do |b|
-        group.all? { |name, g| b[:files][name] || declared.call(g).none? { |n| b[:names][n] } }
-      end
-      batch ||= (batches << {files: {}, names: {}}).last
-      group.each do |name, g|
-        next if batch[:files][name]
-        batch[:files][name] = g
-        declared.call(g).each { |n| batch[:names][n] = true }
-      end
-    end
-    batches.map { |b| b[:files] }
   end
 end

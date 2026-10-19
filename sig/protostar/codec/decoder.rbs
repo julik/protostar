@@ -1,0 +1,60 @@
+# Generated from lib/protostar/codec/decoder.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Codec
+    # Decodes the binary wire format into message objects, eagerly.
+    module Decoder
+      # :nodoc: all
+      RECURSION_LIMIT: ::Integer
+
+      F: untyped
+
+      UTF_8: untyped
+
+      BINARY: untyped
+
+      # unpack directive of a packed run of fixed-width values
+      PACKED: untyped
+
+      def self?.decode: (untyped klass, untyped bytes, ?recursion_limit: untyped, ?frozen: untyped) -> Message
+
+      def self?.decode_delimited: (untyped klass, untyped source, **untyped options) -> Message?
+
+      # A varint from an IO, byte by byte; nil at a clean end of input
+      def self?.read_io_varint: (untyped io) -> untyped
+
+      # Decodes one field whose tag was just read from offset `at`. The
+      # decoders generated for each class (DecodeGenerator) handle a class's
+      # own fields inline and come here for everything else.
+      #
+      # Returns true when the tag ends the group being read.
+      def self?.field: (untyped msg, untyped r, untyped tag, untyped at, untyped depth, untyped end_group, untyped frozen) -> bool
+
+      # Checks the end of a message's fields: a group must have seen its end tag
+      def self?.finish: (untyped msg, untyped r, untyped end_group) -> untyped
+
+      def self?.repeated_message: (untyped values, untyped info, untyped r, untyped depth, untyped frozen, untyped at) -> untyped
+
+      def self?.singular_message: (untyped values, untyped info, untyped r, untyped depth, untyped frozen, untyped at) -> untyped
+
+      # Reads a message or group value into `sub`
+      def self?.nested: (untyped sub, untyped info, untyped r, untyped depth, untyped frozen, untyped at) -> untyped
+
+      def self?.unknown: (untyped msg, untyped r, untyped number, untyped wt, untyped depth) -> untyped
+
+      def self?.enum: (untyped msg, untyped values, untyped info, untyped r) -> untyped
+
+      # One value of a scalar field other than an enum
+      def self?.scalar: (untyped r, untyped info) -> untyped
+
+      def self?.string: (untyped r, untyped info) -> untyped
+
+      # Keeps a closed enum's number that has no name as an unknown varint field
+      def self?.closed_enum_value: (untyped msg, untyped number, untyped buf, untyped start, untyped pos) -> untyped
+
+      def self?.packed: (untyped msg, untyped values, untyped info, untyped r) -> untyped
+
+      def self?.map_entry: (untyped msg, untyped values, untyped info, untyped r, untyped depth, untyped frozen) -> untyped
+    end
+  end
+end

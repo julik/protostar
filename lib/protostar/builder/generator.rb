@@ -8,12 +8,13 @@ module Protostar
     # dispatches on the index of the message being written (`@k`) with a
     # literal `case`, the way the codec's generated methods do, and is
     # compiled from source so that it runs in any Ractor.
-    # @api private
-    module Generator
+    module Generator # :nodoc: all
       module_function
 
-      # @param root [Class] a message class
-      # @return [Class] a frozen subclass of {Builder}
+      # - `root`: a message class
+      #
+      # Returns a frozen subclass of Builder.
+      #: (singleton(Message) root) -> singleton(Builder)
       def generate(root)
         classes = reachable(root)
         index = classes.each_with_index.to_h.compare_by_identity
@@ -22,7 +23,7 @@ module Protostar
           klass.__fields.each { |f| by_name[f.name] << [i, f] }
         end
 
-        builder = Class.new(Builder)
+        builder = Class.new(Builder) #: singleton(Builder)
         builder.const_set(:CLASSES, Ractor.make_shareable(classes))
         builder.const_set(:INDEX, Ractor.make_shareable(index))
         builder.const_set(:BY_NAME, Ractor.make_shareable(classes.map(&:__by_name)))

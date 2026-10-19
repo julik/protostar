@@ -3,28 +3,29 @@
 module Protostar
   class View
     # Makes the view class of a message class: Ruby source for its index
-    # builder and its readers, `class_eval`ed into a subclass of {View}, the
-    # way {Codec::DecodeGenerator} makes decoders.
+    # builder and its readers, `class_eval`ed into a subclass of View, the
+    # way Codec::DecodeGenerator makes decoders.
     #
     # A view of a class with `n` fields keeps one Array, the index:
     #
-    #   [0, n)    per field: an inline varint value, an offset, a flat Array
-    #             of offsets and lengths (merged messages), or the entries of
-    #             a repeated or map field; nil when the field is not set
-    #   [n, 2n)   the length belonging to an offset in the first part
-    #   [2n, 3n)  decoded values, kept after the first read
-    #   3n        unknown fields as number, wire type, start, end
-    #   3n + 1    the UnknownField list, once asked for
-    # @api private
-    module Generator
+    # ```ruby
+    # [0, n)    per field: an inline varint value, an offset, a flat Array
+    #           of offsets and lengths (merged messages), or the entries of
+    #           a repeated or map field; nil when the field is not set
+    # [n, 2n)   the length belonging to an offset in the first part
+    # [2n, 3n)  decoded values, kept after the first read
+    # 3n        unknown fields as number, wire type, start, end
+    # 3n + 1    the UnknownField list, once asked for
+    # ```
+    module Generator # :nodoc: all
       F = Message::FieldInfo
 
       module_function
 
-      # @param klass [Class] a message class
-      # @param fields [Array<Message::FieldInfo>]
-      # @param oneofs [Array<Array(Symbol, Array<Integer>)>]
-      # @return [Class] the view class
+      # - `klass`: a message class
+      #
+      # Returns the view class.
+      #: (Class klass, Array[Message::FieldInfo] fields, Array[[Symbol, Array[Integer]]] oneofs) -> Class
       def install(klass, fields, oneofs)
         view = Class.new(View)
         view.__define(klass, fields)

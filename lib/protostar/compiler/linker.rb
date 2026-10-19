@@ -3,29 +3,26 @@
 module Protostar
   class Compiler
     # Links one parsed file against the pool, the way protoc's
-    # DescriptorBuilder does: drafts a {Schema::File} as it registers the
+    # DescriptorBuilder does: drafts a Schema::File as it registers the
     # file's symbols, resolves every name onto the draft, interprets options
     # into it, and freezes it. It reports protoc's errors in protoc's order,
     # each against the AST node and location kind protoc reports it at;
-    # {Validator} adds the checks protoc runs once the file is built.
-    #
-    # @api private
-    class Linker
+    # Validator adds the checks protoc runs once the file is built.
+    class Linker # :nodoc: all
       # One error or warning
       class Problem
-        # @return [Symbol] :error or :warning
-        attr_reader :severity
-        # @return [AST::Node, nil] whose recorded position protoc reports, nil for none
-        attr_reader :node
-        # @return [Symbol, nil] the kind of position (:name, :number, ...), or :import
-        attr_reader :location
-        # @return [String]
-        attr_reader :message
-        # @return [String, nil] for an :import problem, the imported file name
-        attr_reader :import
-        # @return [Array<Array(AST::Node, Symbol, String)>] other places the problem
-        #   involves, as node, position kind and label, for the rich renderer
-        attr_reader :related
+        # :error or :warning.
+        attr_reader :severity #: Symbol
+        # Whose recorded position protoc reports, nil for none.
+        attr_reader :node #: AST::Node?
+        # The kind of position (:name, :number, ...), or :import.
+        attr_reader :location #: Symbol?
+        attr_reader :message #: String
+        # For an :import problem, the imported file name.
+        attr_reader :import #: String?
+        # Other places the problem
+        # involves, as node, position kind and label, for the rich renderer.
+        attr_reader :related #: Array[[AST::Node, Symbol, String]]
 
         def initialize(severity:, message:, node: nil, location: nil, import: nil, related: [])
           @severity = severity
@@ -58,14 +55,13 @@ module Protostar
 
       # The options of one element awaiting interpretation
       class Pending
-        # @return [AST::Node]
-        attr_reader :node
-        # @return [Symbol] which options message applies: a key of {OPTIONS_TYPES}
-        attr_reader :kind
-        # @return [String] the scope custom option names are looked up from
-        attr_reader :name_scope
-        # @return [Array<Integer>] source path of the element's `options` field
-        attr_reader :path
+        attr_reader :node #: AST::Node
+        # Which options message applies: a key of OPTIONS_TYPES.
+        attr_reader :kind #: Symbol
+        # The scope custom option names are looked up from.
+        attr_reader :name_scope #: String
+        # Source path of the element's `options` field.
+        attr_reader :path #: Array[Integer]
 
         def initialize(node:, kind:, name_scope:, path:)
           @node = node
@@ -75,38 +71,35 @@ module Protostar
           freeze
         end
 
-        # @return [AST::Options] the uninterpreted options
+        # Returns the uninterpreted options.
+        #: () -> AST::Options
         def options
           @node.options
         end
       end
 
-      # @return [Array<Problem>]
-      attr_reader :problems
-      # @return [AST::File]
-      attr_reader :ast
-      # @return [SymbolTable]
-      attr_reader :table
-      # @return [Schema::Pool]
-      attr_reader :pool
-      # @return [Symbol] the file's edition (EDITION_PROTO2 or EDITION_PROTO3 for legacy syntax)
-      attr_reader :edition
-      # @return [Schema::File, nil] the built file, when linking succeeded
-      attr_reader :file
-      # @return [Array<SourceInfo::Location>] locations after option paths were rewritten
-      attr_reader :locations
+      attr_reader :problems #: Array[Problem]
+      attr_reader :ast #: AST::File
+      attr_reader :table #: SymbolTable
+      attr_reader :pool #: Schema::Pool
+      # The file's edition (EDITION_PROTO2 or EDITION_PROTO3 for legacy syntax).
+      attr_reader :edition #: Symbol
+      # The built file, when linking succeeded.
+      attr_reader :file #: Schema::File?
+      # Locations after option paths were rewritten.
+      attr_reader :locations #: Array[SourceInfo::Location]
 
-      # @param ast [AST::File]
-      # @param pool [Schema::Pool] holds every import that could be compiled
-      # @param missing [Array<String>] imports that could not be found or compiled
-      # @param direct [Boolean] whether the file was named on the command line
+      # - `pool`: holds every import that could be compiled
+      # - `missing`: imports that could not be found or compiled
+      # - `direct`: whether the file was named on the command line
       #   (unused imports are only reported for those)
-      # @param options_fallback [#call] returns the bundled descriptor.proto's
+      # - `options_fallback`: returns the bundled descriptor.proto's
       #   options message for a name, when the pool has no descriptor.proto
-      # @param protoc_cli [Boolean] apply what protoc's command line enables on
+      # - `protoc_cli`: apply what protoc's command line enables on
       #   top of a plain DescriptorPool: imports loaded from disk, unused import
       #   warnings, naming style, proto limits, symbol visibility and
       #   feature support checks
+      #: (AST::File ast, pool: Schema::Pool, ?missing: Array[String], ?direct: bool, ?options_fallback: untyped, ?source_info: untyped, ?protoc_cli: bool) -> void
       def initialize(ast, pool:, missing: [], direct: true, options_fallback: nil, source_info: false,
         protoc_cli: true)
         @ast = ast
@@ -123,28 +116,30 @@ module Protostar
         @descriptors = {}.compare_by_identity
       end
 
-      # @return [OptionInterpreter, nil] set once options have been interpreted
-      attr_reader :interpreter
+      # Set once options have been interpreted.
+      attr_reader :interpreter #: OptionInterpreter?
 
       def protoc_cli?
         @protoc_cli
       end
 
-      # @return [Boolean] whether the file was named on the command line
+      # Returns whether the file was named on the command line.
+      #: () -> bool
       def direct?
         @direct
       end
 
-      # @return [Array<Schema::File, nil>] the direct imports, nil where missing
-      attr_reader :dependency_files
+      # The direct imports, nil where missing.
+      attr_reader :dependency_files #: Array[Schema::File?]
 
-      # @return [Boolean] whether any error was reported
+      # Returns whether any error was reported.
+      #: () -> bool
       def errors?
         @problems.any?(&:error?)
       end
 
-      # Runs every phase up to building the {Schema::File}
-      # @return [Schema::File, nil]
+      # Runs every phase up to building the Schema::File
+      #: () -> Schema::File?
       def link
         setup_edition
         setup_symbols
@@ -158,12 +153,12 @@ module Protostar
         @file
       end
 
-      # @return [Schema::Draft::File] the file as drafted so far
-      attr_reader :draft
+      # The file as drafted so far.
+      attr_reader :draft #: Schema::Draft::File
 
       # The descriptor drafted for an AST node: the file, a message, field,
       # oneof, extension range, enum, enum value, service or method
-      # @return [Schema::Descriptor, nil]
+      #: (untyped node) -> Schema::Descriptor?
       def descriptor_of(node)
         node.is_a?(AST::File) ? @draft.descriptor : @descriptors[node]
       end
@@ -199,7 +194,7 @@ module Protostar
         @problems << Problem.new(severity: :warning, location: :import, message: message, import: name)
       end
 
-      # @return [Integer]
+      #: () -> Integer
       def edition_number
         Schema::Features::EDITIONS.fetch(@edition)
       end
@@ -220,6 +215,7 @@ module Protostar
         message.extension_range.each { |r| yield r, :extension_range }
       end
 
+      #: (untyped enum) { (untyped, Symbol) -> void } -> void
       def visit_enum(enum)
         yield enum, :enum
         enum.value.each { |v| yield v, :enum_value }
@@ -833,7 +829,9 @@ module Protostar
 
       # ResolveFeaturesImpl's checks, in VisitDescriptors order, once the
       # non-extension options (`features` among them) are known
-      # @param features [Hash{AST::Node => Schema::MessageValue}] the `features` each element sets
+      #
+      # - `features`: the `features` each element sets
+      #: (Hash[AST::Node, Schema::MessageValue] features) -> untyped
       def check_features(features)
         each_element do |node, kind|
           raw = features[node]

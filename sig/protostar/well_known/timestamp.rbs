@@ -1,0 +1,35 @@
+# Generated from lib/protostar/well_known/timestamp.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module WellKnown
+    # Mixed into google.protobuf.Timestamp
+    module Timestamp
+      def self.included: (untyped base) -> untyped
+
+      # Returns seconds and nanos of a Time, a
+      # DateTime or a Date; nil for anything else.
+      def self.parts: (untyped value) -> [ Integer, Integer ]?
+
+      module ClassMethods
+        # Returns a new Timestamp at the same instant, to the nanosecond.
+        def from_time: (Time time) -> Google::Protobuf::Timestamp
+
+        # What a Timestamp field makes of a value that is neither a Timestamp
+        # nor a Hash: a Time, a DateTime or a Date becomes a Timestamp
+        def __coerce: (untyped value) -> Message?
+      end
+
+      def from_time: (Time time) -> self
+
+      # Returns a Time in the local zone, as `Time.at` gives it.
+      def to_time: () -> Time
+
+      # Returns seconds since the epoch.
+      def to_i: () -> Integer
+
+      # Returns seconds since the epoch, exact; google-protobuf
+      # returns a Rational here too.
+      def to_f: () -> Rational
+    end
+  end
+end

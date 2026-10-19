@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/field_number_reuse_risk.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # FIELD_NUMBER_REUSE_RISK: A message with gaps in its field numbers that are not reserved
+      class FieldNumberReuseRisk < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

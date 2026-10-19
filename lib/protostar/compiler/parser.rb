@@ -2,13 +2,11 @@
 
 module Protostar
   class Compiler
-    # protoc's `.proto` parser (`compiler/parser.cc`). Produces an {AST::File}
+    # protoc's `.proto` parser (`compiler/parser.cc`). Produces an AST::File
     # shaped like the parser's FileDescriptorProto, the source locations protoc
     # records, and protoc's parse errors with its recovery (skip to the end of
     # the statement or block and carry on).
-    #
-    # @api private
-    class Parser
+    class Parser # :nodoc: all
       TYPES = {
         "double" => :TYPE_DOUBLE, "float" => :TYPE_FLOAT, "uint64" => :TYPE_UINT64, "fixed64" => :TYPE_FIXED64,
         "fixed32" => :TYPE_FIXED32, "bool" => :TYPE_BOOL, "string" => :TYPE_STRING, "group" => :TYPE_GROUP,
@@ -103,15 +101,14 @@ module Protostar
       OPTION_AGGREGATE_VALUE = 8
       NAME_PART = 1
 
-      # @return [Array<Array(Integer, Integer, String)>] 0-based errors, lexer's included
-      attr_reader :errors
-      # @return [Array<Array(Integer, Integer, String)>]
-      attr_reader :warnings
-      # @return [String] "proto2", "proto3" or "editions" once parsed
-      attr_reader :syntax_identifier
+      # 0-based errors, lexer's included.
+      attr_reader :errors #: Array[[Integer, Integer, String]]
+      attr_reader :warnings #: Array[[Integer, Integer, String]]
+      # "proto2", "proto3" or "editions" once parsed.
+      attr_reader :syntax_identifier #: String
 
-      # @param source [String]
-      # @param require_syntax [Boolean] reject files without `syntax` or `edition`
+      # - `require_syntax`: reject files without `syntax` or `edition`
+      #: (String source, ?require_syntax: bool) -> void
       def initialize(source, require_syntax: false)
         @errors = []
         @warnings = []
@@ -124,8 +121,10 @@ module Protostar
         @recursion_depth = MAX_NESTING
       end
 
-      # @param name [String, nil] the file name to record
-      # @return [AST::File] the tree, complete as far as parsing got
+      # - `name`: the file name to record
+      #
+      # Returns the tree, complete as far as parsing got.
+      #: (?String? name) -> AST::File
       def parse(name = nil)
         file = AST::File.new
         file.name = name
@@ -160,12 +159,14 @@ module Protostar
         file
       end
 
-      # @return [Boolean] whether parsing went without errors
+      # Returns whether parsing went without errors.
+      #: () -> bool
       def success?
         @errors.empty?
       end
 
-      # @return [Lexer::Token] the token parsing stopped at
+      # Returns the token parsing stopped at.
+      #: () -> Lexer::Token
       def current_token
         @lexer.current
       end
@@ -196,7 +197,7 @@ module Protostar
         false
       end
 
-      # @return [String, nil]
+      #: (untyped error) -> String?
       def consume_identifier(error)
         if looking_at_type?(:identifier)
           text = @lexer.current.text.dup.force_encoding(Encoding::UTF_8)
@@ -208,7 +209,7 @@ module Protostar
       end
 
       # Parser::ConsumeInteger: an unsigned int32
-      # @return [Integer, nil]
+      #: (untyped error) -> Integer?
       def consume_integer(error)
         if looking_at_type?(:integer)
           value = Lexer.parse_integer(@lexer.current.text, INT32_MAX)
@@ -223,7 +224,8 @@ module Protostar
         nil
       end
 
-      # @return [Integer, nil] an int32, sign included
+      # Returns an int32, sign included.
+      #: (untyped error) -> Integer?
       def consume_signed_integer(error)
         negative = false
         max = INT32_MAX
@@ -258,7 +260,7 @@ module Protostar
         value
       end
 
-      # @return [Float, nil]
+      #: (untyped error) -> Float?
       def consume_number(error)
         token = @lexer.current
         if token.type == :float
@@ -292,7 +294,8 @@ module Protostar
         end
       end
 
-      # @return [String, nil] binary, adjacent literals concatenated
+      # Returns a binary String, adjacent literals concatenated.
+      #: (untyped error) -> String?
       def consume_string(error)
         unless looking_at_type?(:string)
           record_error(error)
@@ -345,6 +348,7 @@ module Protostar
       end
 
       # Runs the block with a location that is finished however the block exits
+      #: [T] (untyped recorder) { (untyped) -> T } -> T
       def scoped(recorder)
         yield recorder
       ensure
@@ -775,6 +779,7 @@ module Protostar
         end
       end
 
+      #: (String name, Integer number, [Symbol?, String?]) -> untyped
       def map_entry_field(name, number, (type, type_name))
         f = AST::Field.new
         f.name = name
@@ -966,8 +971,9 @@ module Protostar
         end
       end
 
-      # @param holder [AST::Node] the element whose options this sets
-      # @param style [Symbol] :statement (`option x = y;`) or :assignment (`[x = y]`)
+      # - `holder`: the element whose options this sets
+      # - `style`: :statement (`option x = y;`) or :assignment (`[x = y]`)
+      #: (AST::Node holder, untyped options_location, Symbol style) -> untyped
       def parse_option(holder, options_location, style)
         options = (holder.options ||= AST::Options.new)
         scoped(options_location.child(UNINTERPRETED_OPTION, options.uninterpreted.size)) do |location|
@@ -1542,7 +1548,7 @@ module Protostar
         true
       end
 
-      # @return [Symbol, nil]
+      #: (untyped field_location) -> Symbol?
       def parse_label(field_location)
         return nil unless looking_at?("optional") || looking_at?("repeated") || looking_at?("required")
         if looking_at?("optional") && @syntax_identifier == "editions"
@@ -1568,7 +1574,8 @@ module Protostar
         @syntax_identifier == "editions" && @edition == :EDITION_UNSTABLE
       end
 
-      # @return [Array(Symbol, String), nil] the type, or "" and a type name
+      # Returns the type, or "" and a type name.
+      #: () -> [Symbol, String]?
       def parse_type
         table = fixed_wire_for_int_types? ? UNSTABLE_TYPES : TYPES
         text = @lexer.current.text
@@ -1589,7 +1596,7 @@ module Protostar
         end
       end
 
-      # @return [String, nil]
+      #: () -> String?
       def parse_user_defined_type
         if TYPES.key?(@lexer.current.text)
           record_error("Expected message type.")
@@ -1677,7 +1684,8 @@ module Protostar
         end
       end
 
-      # @return [Array(Boolean, Symbol)] success and the visibility, if any
+      # Returns success and the visibility, if any.
+      #: (untyped file) -> [bool, Symbol?]
       def parse_visibility(file)
         return [true, nil] if Schema::Features::EDITIONS.fetch(file.edition, 0) <= 1000
         visibility = if try_consume("export")

@@ -2,17 +2,19 @@
 
 module Protostar
   module Diagnostics
-    # Prints a {Compiler::Diagnostic} the way rustc prints its own:
+    # Prints a Compiler::Diagnostic the way rustc prints its own:
     #
-    #   error[L0301]: field number 1 is already used in `p.A`
-    #    --> link.proto:5:15
-    #     |
-    #   4 |   Missing m = 1;
-    #     |               - first used by `m`
-    #   5 |   int32 dup = 1;
-    #     |               ^ reused here
-    #     |
-    #     = help: the next available field number is 2
+    # ```ruby
+    # error[L0301]: field number 1 is already used in `p.A`
+    #  --> link.proto:5:15
+    #   |
+    # 4 |   Missing m = 1;
+    #   |               - first used by `m`
+    # 5 |   int32 dup = 1;
+    #   |               ^ reused here
+    #   |
+    #   = help: the next available field number is 2
+    # ```
     #
     # The primary span gets carets, related spans dashes, each with its label;
     # a span over several lines is drawn down the left margin. Without the
@@ -25,16 +27,17 @@ module Protostar
       # Lines of a multi-line span shown between its first and last before `...`
       INNER_LINES = 3
 
-      # @param color [Boolean] ANSI colours, for a terminal
-      # @param source [#call, nil] given the diagnostic, returns its file's text (or nil)
+      # - `color`: ANSI colours, for a terminal
+      # - `source`: given the diagnostic, returns its file's text (or nil)
+      #: (?color: bool, ?source: (^(Compiler::Diagnostic) -> String?)?) -> void
       def initialize(color: false, source: nil)
         @color = color
         @source = source
         @texts = {}
       end
 
-      # @param diagnostic [Compiler::Diagnostic]
-      # @return [String] the rendered diagnostic, ending in a newline
+      # Returns the rendered diagnostic, ending in a newline.
+      #: (Compiler::Diagnostic diagnostic) -> String
       def render(diagnostic)
         d = diagnostic.annotated
         out = +""
@@ -65,8 +68,7 @@ module Protostar
         out
       end
 
-      # @param diagnostic [Compiler::Diagnostic]
-      # @return [Source, nil]
+      #: (Compiler::Diagnostic diagnostic) -> Source?
       def source_for(diagnostic)
         return nil unless @source && diagnostic.file
         key = diagnostic.path || diagnostic.file

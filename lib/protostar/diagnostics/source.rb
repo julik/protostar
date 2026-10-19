@@ -5,16 +5,17 @@ module Protostar
     # The text of one `.proto` file, read the way protoc counts positions:
     # 1-based lines, columns in bytes with a tab advancing to the next
     # multiple of 8. Maps those columns to what a terminal shows, finds the
-    # token at a position, and applies {Edit}s.
+    # token at a position, and applies Edits.
     class Source
       TAB_WIDTH = 8
       TOKEN = /\A(?:[A-Za-z_][A-Za-z0-9_]*|0[xX][0-9A-Fa-f]+|[0-9]+(?:\.[0-9]*)?(?:[eE][+-]?[0-9]+)?[A-Za-z]?|
         \.[0-9]+(?:[eE][+-]?[0-9]+)?|"(?:[^"\\]|\\.)*"?|'(?:[^'\\]|\\.)*'?)/x
 
-      # @return [Array<String>] the lines, without their line ends, as UTF-8
-      attr_reader :lines
+      # The lines, without their line ends, as UTF-8.
+      attr_reader :lines #: Array[String]
 
-      # @param text [String] the file's bytes
+      # - `text`: the file's bytes
+      #: (String text) -> void
       def initialize(text)
         utf8 = text.dup.force_encoding(Encoding::UTF_8)
         utf8 = utf8.scrub("?") unless utf8.valid_encoding?
@@ -22,28 +23,32 @@ module Protostar
         @lines.pop if @lines.size > 1 && @lines.last.empty?
       end
 
-      # @param number [Integer] 1-based; past the end is an empty line, where
+      # - `number`: 1-based; past the end is an empty line, where
       #   protoc reports errors at the end of input
-      # @return [String]
+      #: (Integer number) -> String
       def line(number)
         @lines.fetch(number - 1, "")
       end
 
-      # @return [Integer] the number of lines
+      # Returns the number of lines.
+      #: () -> Integer
       def size
         @lines.size
       end
 
-      # @return [String] the line as shown: tabs expanded to the columns protoc counts
+      # Returns the line as shown: tabs expanded to the columns protoc counts.
+      #: (Integer number) -> String
       def display(number)
         out = +""
         each_char(number) { |char, _, width, _| out << ((char == "\t") ? " " * width : char) }
         out
       end
 
-      # @param number [Integer] 1-based line
-      # @param column [Integer] 1-based protoc column
-      # @return [Integer] the 1-based column a terminal shows it at
+      # - `number`: 1-based line
+      # - `column`: 1-based protoc column
+      #
+      # Returns the 1-based column a terminal shows it at.
+      #: (Integer number, Integer column) -> Integer
       def display_column(number, column)
         target = column - 1
         last_protoc = 0
@@ -58,8 +63,9 @@ module Protostar
         last_display + (target - last_protoc) + 1
       end
 
-      # @return [Integer] the 1-based protoc column just past the token starting at
-      #   the position (one character when no token starts there)
+      # Returns the 1-based protoc column just past the token starting at
+      # the position (one character when no token starts there).
+      #: (Integer number, Integer column) -> Integer
       def token_end(number, column)
         text = line(number)
         index = char_index(number, column)
@@ -69,29 +75,34 @@ module Protostar
         column + token.bytesize
       end
 
-      # @return [Integer, nil] the 1-based column of the first character that is not
-      #   whitespace, nil on a blank line
+      # Returns the 1-based column of the first character that is not
+      # whitespace, nil on a blank line.
+      #: (Integer number) -> Integer?
       def first_column(number)
         each_char(number) { |char, protoc, _, _| return protoc + 1 unless char.match?(/\s/) }
         nil
       end
 
-      # @return [Integer] the 1-based column just past the last character
+      # Returns the 1-based column just past the last character.
+      #: (Integer number) -> Integer
       def end_column(number)
         protoc = 0
         each_char(number) { |char, at, width, _| protoc = at + ((char == "\t") ? width : char.bytesize) }
         protoc + 1
       end
 
-      # @return [Span] with its end filled in: the token at its start when unknown
+      # Returns the span with its end filled in: the token at its start when unknown.
+      #: (Span span) -> Span
       def resolve(span)
         return span if span.end_line
         Span.new(span.line, span.column, span.line, token_end(span.line, span.column), label: span.label,
           primary: span.primary?)
       end
 
-      # @param edits [Array<Edit>] on this text, not overlapping
-      # @return [String] the text with the edits made, line ends as they were
+      # - `edits`: on this text, not overlapping
+      #
+      # Returns the text with the edits made, line ends as they were.
+      #: (String text, Array[Edit] edits) -> String
       def apply(text, edits)
         out = text.dup.force_encoding(Encoding::UTF_8)
         starts = line_starts(out)
@@ -105,6 +116,7 @@ module Protostar
 
       private
 
+      #: (Integer number) { (String, Integer, Integer, Integer) -> void } -> void
       def each_char(number)
         protoc = 0
         display = 0

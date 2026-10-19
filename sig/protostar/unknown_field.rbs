@@ -1,0 +1,36 @@
+# Generated from lib/protostar/unknown_field.rb by script/types.rb. Do not edit.
+
+module Protostar
+  # A field the decoder did not recognise, kept so that it is re-emitted on
+  # encode. #bytes are the raw bytes that followed the tag on the wire,
+  # verbatim: a varint as it was encoded, 4 or 8 fixed bytes, a length prefix
+  # and its payload, or a group's contents through its end tag.
+  class UnknownField
+    attr_reader number: Integer
+
+    # One of the Wire wire type constants.
+    attr_reader wire_type: Integer
+
+    # Frozen, binary.
+    attr_reader bytes: String
+
+    # - `bytes`: the bytes after the tag; copied unless frozen and binary
+    def initialize: (Integer number, Integer wire_type, String bytes) -> void
+
+    # Returns the decoded value: an Integer for varint and
+    # fixed wire types, the payload without its length prefix for
+    # length-delimited, the contents without the end tag for a group.
+    def value: () -> (Integer | String)
+
+    # Returns the field as it goes on the wire, tag included.
+    def to_wire: () -> String
+
+    def ==: (untyped other) -> untyped
+
+    def hash: () -> untyped
+
+    def inspect: () -> untyped
+
+    alias eql? ==
+  end
+end

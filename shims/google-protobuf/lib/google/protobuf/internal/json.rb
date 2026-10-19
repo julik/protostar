@@ -8,8 +8,7 @@ module Google
       # JSON through protostar's encoder and parser, with the gem's options,
       # errors, and extensions of the top-level message written as
       # `"[full.name]": value`.
-      # @api private
-      module Json
+      module Json # :nodoc: all
         INT64 = %i[int64 sint64 sfixed64 uint64 fixed64].to_h { |t| [t, true] }.freeze
 
         module_function

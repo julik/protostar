@@ -1,0 +1,124 @@
+# Generated from lib/protostar/wire/reader.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Wire
+    # Reads wire-format values from a String without copying it or allocating
+    # per byte. The String is never mutated, and its encoding does not matter:
+    # every read works on bytes. An IO::Buffer is read in place through an
+    # IOSource, and so is any source answering `getbyte`, `byteslice`,
+    # `unpack1(format, offset:)` and `bytesize` the way String does.
+    #
+    # A reader has a position and a limit. Reads never go past the limit, so a
+    # nested message is read by narrowing the limit to its end and restoring it
+    # afterwards (#push_limit, #pop_limit).
+    #
+    # ```ruby
+    # r = Protostar::Wire::Reader.new(bytes)
+    # until r.eof?
+    #   number, wire_type = r.read_tag
+    #   ...
+    # end
+    # ```
+    class Reader
+      # What a source other than a String must answer
+      SOURCE_METHODS: untyped
+
+      # The underlying bytes.
+      attr_reader buffer: untyped
+
+      # The current byte offset.
+      attr_accessor pos: Integer
+
+      # The offset reads must not pass.
+      attr_reader limit: Integer
+
+      # - `buffer`: an IO::Buffer is wrapped in an IOSource, not copied
+      # - `pos`: where to start
+      # - `limit`: where to stop, the end of the buffer by default
+      def initialize: (untyped buffer, ?Integer pos, ?Integer? limit) -> void
+
+      # Returns whether the position has reached the limit.
+      def eof?: () -> bool
+
+      # Narrows the limit to `length` bytes from the current position
+      #
+      # Returns the previous limit, to hand to #pop_limit.
+      # Raises DecodeError when that runs past the current limit.
+      def push_limit: (untyped length) -> Integer
+
+      # Restores a limit returned by #push_limit
+      def pop_limit: (untyped old_limit) -> untyped
+
+      # Returns an unsigned varint of up to 64 bits. Longer encodings
+      # are truncated to 64 bits, as protoc does.
+      # Raises DecodeError when truncated or longer than ten bytes.
+      def read_varint: () -> Integer
+
+      # Returns a tag's varint, unchecked.
+      # Raises DecodeError when truncated or longer than five bytes, which
+      # protoc refuses even when the value would fit.
+      def read_tag_varint: () -> Integer
+
+      # Returns field number and wire type.
+      # Raises DecodeError for field number 0, an out of range tag or an invalid wire type.
+      def read_tag: () -> [ Integer, Integer ]
+
+      # Returns a signed 32-bit integer from a varint (int32 and enum).
+      def read_int32: () -> Integer
+
+      # Returns a signed 64-bit integer from a varint.
+      def read_int64: () -> Integer
+
+      # Returns an unsigned 32-bit integer from a varint.
+      def read_uint32: () -> Integer
+
+      # Returns a zigzag-decoded signed 32-bit integer (sint32).
+      def read_sint32: () -> Integer
+
+      # Returns a zigzag-decoded signed 64-bit integer (sint64).
+      def read_sint64: () -> Integer
+
+      # Returns an unsigned 32-bit little-endian integer.
+      def read_fixed32: () -> Integer
+
+      # Returns an unsigned 64-bit little-endian integer.
+      def read_fixed64: () -> Integer
+
+      def read_sfixed32: () -> Integer
+
+      def read_sfixed64: () -> Integer
+
+      def read_float: () -> Float
+
+      def read_double: () -> Float
+
+      # Reads a varint length and that many bytes
+      #
+      # Returns a new binary String.
+      def read_bytes: () -> String
+
+      # Returns the next `length` bytes as a new binary String.
+      def read_raw: (untyped length) -> String
+
+      # Skips the value of a field whose tag was just read
+      #
+      # - `number`: the field number, needed to match the end of a group
+      # - `depth`: groups left before DecodeError for nesting too deep
+      def skip_field: (Integer number, Integer wire_type, ?Integer depth) -> untyped
+
+      # Raises DecodeError unless `length` bytes remain before the limit.
+      def skip: (untyped length) -> untyped
+
+      # Skips the contents of a group up to and including its end tag
+      def skip_group: (untyped number, ?untyped depth) -> untyped
+
+      def self.check_tag: (untyped tag, untyped at) -> untyped
+
+      private
+
+      def read_fixed: (untyped size, untyped format) -> untyped
+
+      def read_varint_slow: (untyped start) -> untyped
+    end
+  end
+end

@@ -1,0 +1,117 @@
+# Generated from lib/protostar/json/parser.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module JSON
+    # Reads proto3 JSON into a message, accepting what google-protobuf's Ruby
+    # gem accepts. The stdlib parser builds the raw tree; this walks it
+    # against the message's fields.
+    class Parser
+      # :nodoc: all
+      F: untyped
+
+      SPECIAL: untyped
+
+      # Marks an enum name that is not known, dropped with ignore_unknown_fields
+      SKIP: untyped
+
+      RANGES: untyped
+
+      INT64_LIMIT: untyped
+
+      UINT64_LIMIT: untyped
+
+      QUOTED_INTEGER: ::Regexp
+
+      # Integers in decimal or exponent form, read through a double as protoc does ("1e5")
+      QUOTED_INTEGRAL: ::Regexp
+
+      QUOTED_FLOAT: ::Regexp
+
+      NONFINITE: untyped
+
+      BASE64: ::Regexp
+
+      TIMESTAMP: ::Regexp
+
+      DURATION: ::Regexp
+
+      # A string literal, or -0 standing alone as a number
+      NEGATIVE_ZERO: ::Regexp
+
+      VALUE: ::String
+
+      NULL_VALUE: untyped
+
+      # - `ignore_unknown_fields`: skip unknown field names and enum names
+      # - `registry`: where the types inside Any are looked up
+      def initialize: (?ignore_unknown_fields: bool, ?registry: Types::Registry) -> void
+
+      # - `klass`: a message class
+      # - `string`: JSON
+      #
+      # Raises ParseError.
+      def decode: (Class klass, String string) -> Message
+
+      private
+
+      def fail!: (untyped message) -> untyped
+
+      def describe: (untyped node) -> untyped
+
+      def message: (untyped klass, untyped node) -> untyped
+
+      def fields: (untyped msg, untyped node) -> untyped
+
+      # An extension given as "[full.name]": its values are collected, then
+      # kept where the binary codec keeps them, in the unknown fields
+      def extension: (untyped msg, untyped name, untyped value, untyped collected) -> untyped
+
+      def add_extensions: (untyped msg, untyped collected) -> untyped
+
+      # null is the null of Value and NullValue fields, and absence everywhere else
+      def null_is_value?: (untyped info) -> untyped
+
+      def field_value: (untyped info, untyped value) -> untyped
+
+      # An element of a repeated field or a map value, where null is not absence
+      def element: (untyped info, untyped value) -> untyped
+
+      def map_key: (untyped info, untyped key) -> untyped
+
+      def single: (untyped info, untyped value) -> untyped
+
+      def integer: (untyped info, untyped value) -> untyped
+
+      def float: (untyped info, untyped value) -> untyped
+
+      # Standard or URL-safe base64, padded or not
+      def bytes: (untyped value) -> untyped
+
+      def enum: (untyped info, untyped value) -> untyped
+
+      def wrapper: (untyped klass, untyped node) -> untyped
+
+      def timestamp: (untyped klass, untyped node) -> untyped
+
+      # Days since 1970-01-01 of a proleptic Gregorian date; like upb, it
+      # does not check that the day exists in the month
+      def days_from_civil: (untyped y, untyped m, untyped d) -> untyped
+
+      def nanos: (untyped digits) -> untyped
+
+      def duration: (untyped klass, untyped node) -> untyped
+
+      def field_mask: (untyped klass, untyped node) -> untyped
+
+      def struct: (untyped klass, untyped node) -> untyped
+
+      def list_value: (untyped klass, untyped node) -> untyped
+
+      def value: (untyped klass, untyped node) -> untyped
+
+      def any: (untyped klass, untyped node) -> untyped
+
+      def element_message: (untyped klass, untyped node) -> untyped
+    end
+  end
+end

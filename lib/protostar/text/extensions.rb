@@ -5,12 +5,10 @@ module Protostar
     # Extensions seen through the unknown fields that hold them: finding the
     # extensions of a message, reading their values out of unknown fields
     # and writing values back into unknown fields.
-    # @api private
-    class Extensions
+    class Extensions # :nodoc: all
       F = Message::FieldInfo
 
-      # @param registry [Types::Registry]
-      # @param pool [Schema::Pool, nil]
+      #: (Types::Registry registry, Schema::Pool? pool) -> void
       def initialize(registry, pool)
         @registry = registry
         @pool = pool
@@ -18,8 +16,8 @@ module Protostar
         @infos = {}
       end
 
-      # @param descriptor [Schema::Message]
-      # @return [Hash{Integer => Schema::Field}] extensions of the message by number
+      # Returns extensions of the message by number.
+      #: (Schema::Message descriptor) -> Hash[Integer, Schema::Field]
       def of(descriptor)
         @by_extendee[descriptor] ||= begin
           fields = if @pool
@@ -31,15 +29,16 @@ module Protostar
         end
       end
 
-      # @param descriptor [Schema::Message]
-      # @param name [String] the extension's full name
-      # @return [Schema::Field, nil]
+      # - `name`: the extension's full name
+      #: (Schema::Message descriptor, String name) -> Schema::Field?
       def named(descriptor, name)
         of(descriptor).each_value.find { |f| f.full_name == name }
       end
 
-      # @param field [Schema::Field] an extension
-      # @return [Message::FieldInfo, nil] nil when its message or enum type has no class
+      # - `field`: an extension
+      #
+      # Returns nil when its message or enum type has no class.
+      #: (Schema::Field field) -> Message::FieldInfo?
       def info(field)
         return @infos[field] if @infos.key?(field)
         @infos[field] = begin
@@ -50,10 +49,12 @@ module Protostar
       end
 
       # The values an extension holds in a message's unknown fields
-      # @param info [Message::FieldInfo]
-      # @param unknown [Array<UnknownField>] those with the extension's number
-      # @return [Array] values as the field's reader would give them, or nil
-      #   when the bytes do not read as the extension's type
+      #
+      # - `unknown`: those with the extension's number
+      #
+      # Returns the values as the field's reader would give them, or nil
+      # when the bytes do not read as the extension's type.
+      #: (Message::FieldInfo info, Array[UnknownField] unknown) -> Array[untyped]?
       def read(info, unknown)
         values = []
         unknown.each do |u|
@@ -73,9 +74,8 @@ module Protostar
         nil
       end
 
-      # @param info [Message::FieldInfo]
-      # @param values [Array]
-      # @return [Array<UnknownField>] the fields the binary codec would have kept
+      # Returns the fields the binary codec would have kept.
+      #: (Message::FieldInfo info, Array[untyped] values) -> Array[UnknownField]
       def write(info, values)
         if info.packed && !values.empty?
           w = Wire::Writer.new

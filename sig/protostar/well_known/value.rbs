@@ -1,0 +1,30 @@
+# Generated from lib/protostar/well_known/value.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module WellKnown
+    # Mixed into google.protobuf.Value
+    module Value
+      def self.included: (untyped base) -> untyped
+
+      module ClassMethods
+        # - `value`: nil, Numeric, String, true, false, Hash,
+        #   Array, a Struct or a ListValue
+        #
+        # Returns a new Value.
+        # Raises UnexpectedStructType.
+        def from_ruby: (untyped value) -> Google::Protobuf::Value
+      end
+
+      # - `recursive`: whether to convert a Struct or ListValue to
+      #   a Hash or Array as well
+      #
+      # Raises UnexpectedStructType when no kind is set.
+      def to_ruby: (?bool recursive) -> untyped
+
+      # Sets the kind matching a Ruby value
+      #
+      # Raises UnexpectedStructType.
+      def from_ruby: (untyped value) -> self
+    end
+  end
+end

@@ -3,14 +3,15 @@
 module Protostar
   class Compiler
     module Emitters
-      # Writes `_pb.rbs` signatures for the classes {Ruby} generates:
+      # Writes `_pb.rbs` signatures for the classes Ruby generates:
       # subclasses of `Protostar::Message`, repeated fields as Arrays, maps as
-      # Hashes, writers typed as {Message::Coercion} accepts. Signatures for
+      # Hashes, writers typed as Message::Coercion accepts. Signatures for
       # `Protostar::Message` itself are in the gem's `sig/protostar.rbs`.
-      # {Rbs} writes protoc's signatures for google-protobuf's classes instead.
+      # Rbs writes protoc's signatures for google-protobuf's classes instead.
       class ProtostarRbs
-        INTEGERS = %i[fixed32 fixed64 int32 int64 sfixed32 sfixed64 sint32 sint64 uint32 uint64].freeze
-        # The mixins {WellKnown::MIXINS} includes, by full name, as RBS names
+        include NativeNames
+
+        # The mixins WellKnown::MIXINS includes, by full name, as RBS names
         MIXINS = {
           "google.protobuf.Any" => "::Protostar::WellKnown::Any",
           "google.protobuf.Timestamp" => "::Protostar::WellKnown::Timestamp",
@@ -19,26 +20,22 @@ module Protostar
           "google.protobuf.Value" => "::Protostar::WellKnown::Value",
           "google.protobuf.ListValue" => "::Protostar::WellKnown::ListValue"
         }.freeze
-        # Ruby values {Message::Coercion} turns into these messages
-        COERCED = {
-          "google.protobuf.Timestamp" => "::Time",
-          "google.protobuf.Duration" => "::Numeric"
-        }.freeze
 
-        # @param namespaces [Hash{String => String}] Ruby module paths by file name, as {Ruby} takes them
+        # - `namespaces`: Ruby module paths by file name, as Ruby takes them
+        #: (?namespaces: Hash[String, String]) -> void
         def initialize(namespaces: {})
           @namespaces = namespaces
           @reserved = Message::Accessors.reserved
+          @types = FieldTypes.new(FieldTypes::RBS) { |d| constant(d) }
         end
 
-        # @param files [Array<Schema::File>]
-        # @return [Hash{String => String}] output path to signatures
+        # Returns a Hash of output path to signatures.
+        #: (Array[Schema::File] files) -> Hash[String, String]
         def emit(files)
           files.to_h { |f| [Naming.require_name(f.name) + ".rbs", file(f)] }
         end
 
-        # @param file [Schema::File]
-        # @return [String]
+        #: (Schema::File file) -> String
         def file(file)
           Naming.check_ruby_package(file)
           @source = file.source_info
@@ -65,84 +62,6 @@ module Protostar
         end
 
         private
-
-        def module_path(file)
-          namespace = @namespaces[file.name]
-          namespace ||= "Protostar::#{Naming.module_path(file).join("::")}" if BOOTSTRAP.include?(file.name)
-          Naming.module_path(file, namespace)
-        end
-
-        def constant(descriptor)
-          prefix = module_path(descriptor.file).map { |m| "::#{m}" }.join
-          "#{prefix}::#{Naming.relative_constant(descriptor)}"
-        end
-
-        def blank(p, first)
-          if first[0]
-            first[0] = false
-          else
-            p.print("\n")
-          end
-        end
-
-        def comment(p, path)
-          text = @source&.location(path)&.leading_comments
-          return if text.nil? || text.empty?
-          text.split("\n").reject(&:empty?).each { |line| p.print("##{line}\n") }
-        end
-
-        def message?(field)
-          field.type == :message || field.type == :group
-        end
-
-        # What the reader returns for one value
-        def read_one(field)
-          case field.type
-          when :double, :float then "::Float"
-          when *INTEGERS then "::Integer"
-          when :bool then "bool"
-          when :string, :bytes then "::String"
-          when :enum then "#{constant(field.enum_type)}::names | ::Integer"
-          else constant(field.message_type)
-          end
-        end
-
-        # What the writer takes for one value
-        def write_one(field)
-          case field.type
-          when :double, :float then "::Float | ::Integer"
-          when *INTEGERS then "::Integer"
-          when :bool then "bool"
-          when :string, :bytes then "::String"
-          when :enum then "#{constant(field.enum_type)}::names | ::Integer"
-          else
-            name = constant(field.message_type)
-            [name, "#{name}::init_map", COERCED[field.message_type.full_name]].compact.join(" | ")
-          end
-        end
-
-        def read_type(field)
-          if field.map?
-            "::Hash[#{read_one(field.map_key)}, #{read_one(field.map_value)}]"
-          elsif field.repeated?
-            "::Array[#{read_one(field)}]"
-          elsif message?(field)
-            "#{constant(field.message_type)}?"
-          else
-            read_one(field)
-          end
-        end
-
-        def write_type(field)
-          inner = if field.map?
-            "::Hash[#{write_one(field.map_key)}, #{write_one(field.map_value)}]"
-          elsif field.repeated?
-            "::Array[#{write_one(field)}]"
-          else
-            write_one(field)
-          end
-          inner.include?("|") ? "(#{inner})?" : "#{inner}?"
-        end
 
         def enum(p, enum, path, first)
           blank(p, first)
@@ -206,7 +125,7 @@ module Protostar
           p.indent
           message.fields.each_with_index do |f, i|
             comma = (i == message.fields.size - 1) ? "" : ","
-            p.print("?#{f.name}: #{write_type(f)}#{comma}\n")
+            p.print("?#{f.name}: #{@types.write_type(f)}#{comma}\n")
           end
           p.outdent
           p.print("}\n")
@@ -221,15 +140,15 @@ module Protostar
           p.print("def initialize: (\n")
           p.indent
           p.print("?init_map? fields")
-          message.fields.each { |f| p.print(",\n?#{f.name}: #{write_type(f)}") }
+          message.fields.each { |f| p.print(",\n?#{f.name}: #{@types.write_type(f)}") }
           p.outdent
           p.print("\n) -> void\n")
         end
 
         def accessors(p, field, path, taken)
           name = field.name
-          read = read_type(field)
-          write = write_type(field)
+          read = @types.read_type(field)
+          write = @types.write_type(field)
           reader = !taken[name.to_sym]
           writer = !taken[:"#{name}="]
           taken[name.to_sym] = taken[:"#{name}="] = true

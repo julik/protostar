@@ -1,0 +1,77 @@
+# Generated from lib/protostar/diagnostics/renderer.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Diagnostics
+    # Prints a Compiler::Diagnostic the way rustc prints its own:
+    #
+    # ```ruby
+    # error[L0301]: field number 1 is already used in `p.A`
+    #  --> link.proto:5:15
+    #   |
+    # 4 |   Missing m = 1;
+    #   |               - first used by `m`
+    # 5 |   int32 dup = 1;
+    #   |               ^ reused here
+    #   |
+    #   = help: the next available field number is 2
+    # ```
+    #
+    # The primary span gets carets, related spans dashes, each with its label;
+    # a span over several lines is drawn down the left margin. Without the
+    # source, only the header, location and the `help:` and `note:` lines print.
+    class Renderer
+      COLORS: untyped
+
+      # Lines of a multi-line span shown between its first and last before `...`
+      INNER_LINES: ::Integer
+
+      # - `color`: ANSI colours, for a terminal
+      # - `source`: given the diagnostic, returns its file's text (or nil)
+      def initialize: (?color: bool, ?source: (^(Compiler::Diagnostic) -> String?)?) -> void
+
+      # Returns the rendered diagnostic, ending in a newline.
+      def render: (Compiler::Diagnostic diagnostic) -> String
+
+      def source_for: (Compiler::Diagnostic diagnostic) -> Source?
+
+      private
+
+      def header: (untyped d) -> untyped
+
+      def paint: (untyped text, untyped kind) -> untyped
+
+      def spans_of: (untyped d, untyped source) -> untyped
+
+      # One underline on one line, in display columns
+      class Mark
+        attr_reader start: untyped
+
+        attr_reader finish: untyped
+
+        attr_reader primary: untyped
+
+        attr_reader label: untyped
+
+        def initialize: (untyped start, untyped finish, untyped primary, untyped label) -> untyped
+      end
+
+      def snippet: (untyped out, untyped source, untyped spans, untyped severity, untyped width) -> untyped
+
+      def slash_start?: (untyped multi, untyped source) -> untyped
+
+      def inside?: (untyped multi, untyped line) -> untyped
+
+      def gutter_margin: (untyped multi, untyped line, untyped source, untyped severity) -> untyped
+
+      def marker: (untyped span) -> untyped
+
+      def source_line: (untyped out, untyped source, untyped line, untyped width, untyped margin_text, untyped margin) -> untyped
+
+      # The underline row, and below it the labels that do not fit at its end,
+      # each hanging from its span by a `|`
+      def annotate: (untyped out, untyped marks, untyped width, untyped margin_kind, untyped severity, untyped margin) -> untyped
+
+      def paint_cells: (untyped cells, untyped kinds) -> untyped
+    end
+  end
+end

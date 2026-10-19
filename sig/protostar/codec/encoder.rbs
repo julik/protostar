@@ -1,0 +1,38 @@
+# Generated from lib/protostar/codec/encoder.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Codec
+    # The second encoding pass writes fields in ascending number order, then
+    # unknown fields verbatim, using the sizes the first pass recorded. The
+    # per-class `__write` methods (EncodeGenerator) do the work; this
+    # module has the entry points and the parts they share.
+    module Encoder
+      # :nodoc: all
+      F: untyped
+
+      BINARY: untyped
+
+      # Returns a binary String.
+      def self?.encode: (untyped msg) -> String
+
+      def self?.encode_to: (untyped msg, untyped io) -> untyped
+
+      def self?.encode_delimited: (untyped msg, untyped io) -> (String | IO)
+
+      # Returns the number of an enum value as stored (Symbol or Integer).
+      # Raises EncodeError for a name the enum does not have or an Integer out of int32 range.
+      def self?.enum_number: (untyped info, untyped v) -> Integer
+
+      # One value, without its tag; a group's end tag is written here
+      def self?.value: (untyped info, untyped v, untyped w, untyped sizes) -> untyped
+
+      # The payload of a packed run; tag and length are already written
+      def self?.packed: (untyped info, untyped list, untyped w) -> untyped
+
+      # Every entry of a map field, in insertion order, key then value
+      def self?.map: (untyped info, untyped hash, untyped w, untyped sizes) -> untyped
+
+      def self?.unknown: (untyped w, Array[UnknownField] list) -> untyped
+    end
+  end
+end

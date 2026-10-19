@@ -108,11 +108,28 @@ namespace :test do
   end
 end
 
+namespace :types do
+  desc "Write sig/ and rbi/protostar.rbi from the inline RBS in lib/ and sig/protostar_manual.rbs"
+  task :generate do
+    ruby "script/types.rb", "generate"
+  end
+
+  desc "Fail when sig/ or rbi/protostar.rbi differ from what lib/ generates"
+  task :check do
+    ruby "script/types.rb", "check"
+  end
+end
+
 namespace :rbs do
-  desc "Check sig/ (the public API and the well-known types) with rbs validate"
+  desc "Check sig/ (generated from lib/, and the well-known types) with rbs validate"
   task :validate do
     sh "rbs", "-I", "sig", "validate"
   end
+end
+
+desc "Typecheck lib/ against the signatures in sig/ with Steep (Steepfile; Ruby 3.3 and later)"
+task :steep do
+  sh "steep", "check"
 end
 
 namespace :shim do
@@ -139,9 +156,16 @@ namespace :builder do
   end
 end
 
-desc "Build the API documentation into doc/ (options in .yardopts), failing on any YARD warning"
-task :yard do
-  sh "yard", "doc", "--fail-on-warning"
+desc "Build the API documentation into doc/ with RDoc (options in .rdoc_options), failing on any warning"
+task :rdoc do
+  require "open3"
+  files = ["README.md", "CHANGELOG.md", *Dir["docs/*.md"].sort, "lib"]
+  out, status = Open3.capture2e("rdoc", "--op", "doc", "--force-output", *files)
+  # RDoc has no flag that makes warnings fail the run; anything but its progress and totals is one
+  progress = /\A\s*(\z|\d+% \[|Parsing |Generating |(Files|Classes|Modules|Constants|Attributes|Methods|Total): |[\d.]+% documented|Elapsed: |You can visit)/
+  problems = out.split(/[\r\n]+/).reject { |line| line.match?(progress) }
+  abort "rdoc reported:\n#{problems.join("\n")}" unless status.success? && problems.empty?
+  puts out.split(/[\r\n]+/).grep(/% documented|You can visit/)
 end
 
 desc "Run every benchmark in bench/ and print one table (WRITE=1 also puts it into docs/benchmarks.md)"

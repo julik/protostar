@@ -1,0 +1,37 @@
+# Generated from lib/protostar/well_known/list_value.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module WellKnown
+    # Mixed into google.protobuf.ListValue: an Array of plain Ruby values
+    module ListValue
+      include Enumerable[untyped]
+
+      def self.included: (untyped base) -> untyped
+
+      module ClassMethods
+        # Returns a new ListValue.
+        # Raises UnexpectedStructType.
+        def from_a: (Array[untyped] array) -> Google::Protobuf::ListValue
+
+        def __value_class: () -> untyped
+      end
+
+      def length: () -> Integer
+
+      # Returns the element as Ruby, Structs and ListValues left as they are.
+      def []: (Integer index) -> untyped
+
+      def []=: (Integer index, untyped value) -> untyped
+
+      # Appends a Ruby value
+      def <<: (untyped value) -> self
+
+      # Yields each element as Ruby, Structs and ListValues left as they are
+      def each: () { (untyped) -> void } -> self
+              | () -> Enumerator[untyped, self]
+
+      # Returns an Array with nested Structs and ListValues converted too.
+      def to_a: () -> Array[untyped]
+    end
+  end
+end

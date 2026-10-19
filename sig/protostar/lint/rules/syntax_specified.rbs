@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/syntax_specified.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # SYNTAX_SPECIFIED: A file without a `syntax` or `edition` line
+      class SyntaxSpecified < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

@@ -1,0 +1,35 @@
+# Generated from lib/protostar/enum.rb by script/types.rb. Do not edit.
+
+module Protostar
+  # Extended by every enum Module that Types.define makes. Such a Module has
+  # one constant per value (aliases included) holding its number, and is frozen.
+  #
+  # ```ruby
+  # Color::RED          # => 1
+  # Color.lookup(1)     # => :RED
+  # Color.resolve(:RED) # => 1
+  # ```
+  module Enum
+    attr_reader descriptor: Schema::Enum
+
+    # Returns the first name declared for the number.
+    def lookup: (Integer number) -> Symbol?
+
+    def resolve: (Symbol | String name) -> Integer?
+
+    def __names: () -> untyped
+
+    def __numbers: () -> untyped
+
+    def inspect: () -> untyped
+
+    # Builds the enum Module for a descriptor
+    #
+    # Returns a frozen value.
+    def self.build: (Schema::Enum descriptor) -> Module
+
+    # Returns the value name as a Ruby constant name: first
+    # letter upper-cased, nil when that is still not a constant name.
+    def self.constant_name: (untyped name) -> String?
+  end
+end

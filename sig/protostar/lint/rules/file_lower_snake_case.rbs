@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/file_lower_snake_case.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # FILE_LOWER_SNAKE_CASE: A file name that is not lower_snake_case
+      class FileLowerSnakeCase < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

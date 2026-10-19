@@ -1,0 +1,220 @@
+# Generated from lib/protostar/compiler/linker.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    # Links one parsed file against the pool, the way protoc's
+    # DescriptorBuilder does: drafts a Schema::File as it registers the
+    # file's symbols, resolves every name onto the draft, interprets options
+    # into it, and freezes it. It reports protoc's errors in protoc's order,
+    # each against the AST node and location kind protoc reports it at;
+    # Validator adds the checks protoc runs once the file is built.
+    class Linker
+      # One error or warning
+      class Problem
+        # :error or :warning.
+        attr_reader severity: Symbol
+
+        # Whose recorded position protoc reports, nil for none.
+        attr_reader node: AST::Node?
+
+        # The kind of position (:name, :number, ...), or :import.
+        attr_reader location: Symbol?
+
+        attr_reader message: String
+
+        # For an :import problem, the imported file name.
+        attr_reader import: String?
+
+        # Other places the problem
+        # involves, as node, position kind and label, for the rich renderer.
+        attr_reader related: Array[[ AST::Node, Symbol, String ]]
+
+        def initialize: (severity: untyped, message: untyped, ?node: untyped, ?location: untyped, ?import: untyped, ?related: untyped) -> untyped
+
+        def error?: () -> untyped
+      end
+
+      MAX_FIELD_NUMBER: ::Integer
+
+      INT32_MAX: untyped
+
+      LEGACY_EDITIONS: untyped
+
+      MINIMUM_EDITION: ::Symbol
+
+      MAXIMUM_EDITION: ::Symbol
+
+      OPTIONS_TYPES: untyped
+
+      # The options of one element awaiting interpretation
+      class Pending
+        attr_reader node: AST::Node
+
+        # Which options message applies: a key of OPTIONS_TYPES.
+        attr_reader kind: Symbol
+
+        # The scope custom option names are looked up from.
+        attr_reader name_scope: String
+
+        # Source path of the element's `options` field.
+        attr_reader path: Array[Integer]
+
+        def initialize: (node: untyped, kind: untyped, name_scope: untyped, path: untyped) -> untyped
+
+        # Returns the uninterpreted options.
+        def options: () -> AST::Options
+      end
+
+      attr_reader problems: Array[Problem]
+
+      attr_reader ast: AST::File
+
+      attr_reader table: SymbolTable
+
+      attr_reader pool: Schema::Pool
+
+      # The file's edition (EDITION_PROTO2 or EDITION_PROTO3 for legacy syntax).
+      attr_reader edition: Symbol
+
+      # The built file, when linking succeeded.
+      attr_reader file: Schema::File?
+
+      # Locations after option paths were rewritten.
+      attr_reader locations: Array[SourceInfo::Location]
+
+      # - `pool`: holds every import that could be compiled
+      # - `missing`: imports that could not be found or compiled
+      # - `direct`: whether the file was named on the command line
+      #   (unused imports are only reported for those)
+      # - `options_fallback`: returns the bundled descriptor.proto's
+      #   options message for a name, when the pool has no descriptor.proto
+      # - `protoc_cli`: apply what protoc's command line enables on
+      #   top of a plain DescriptorPool: imports loaded from disk, unused import
+      #   warnings, naming style, proto limits, symbol visibility and
+      #   feature support checks
+      def initialize: (AST::File ast, pool: Schema::Pool, ?missing: Array[String], ?direct: bool, ?options_fallback: untyped, ?source_info: untyped, ?protoc_cli: bool) -> void
+
+      # Set once options have been interpreted.
+      attr_reader interpreter: OptionInterpreter?
+
+      def protoc_cli?: () -> untyped
+
+      # Returns whether the file was named on the command line.
+      def direct?: () -> bool
+
+      # The direct imports, nil where missing.
+      attr_reader dependency_files: Array[Schema::File?]
+
+      # Returns whether any error was reported.
+      def errors?: () -> bool
+
+      # Runs every phase up to building the Schema::File
+      def link: () -> Schema::File?
+
+      # The file as drafted so far.
+      attr_reader draft: Schema::Draft::File
+
+      # The descriptor drafted for an AST node: the file, a message, field,
+      # oneof, extension range, enum, enum value, service or method
+      def descriptor_of: (untyped node) -> Schema::Descriptor?
+
+      # Every element in protoc's VisitDescriptors order, as [node, kind]
+      def each_element: () ?{ (?) -> untyped } -> untyped
+
+      # Records an error against a node's recorded position
+      def error: (untyped node, untyped location, untyped message, ?related: untyped) -> untyped
+
+      def warning: (untyped node, untyped location, untyped message, ?related: untyped) -> untyped
+
+      def import_error: (untyped name, untyped message) -> untyped
+
+      def import_warning: (untyped name, untyped message) -> untyped
+
+      def edition_number: () -> Integer
+
+      def legacy?: () -> untyped
+
+      private
+
+      def visit_message: (untyped message) ?{ (?) -> untyped } -> untyped
+
+      def visit_enum: (untyped enum) { (untyped, Symbol) -> void } -> void
+
+      def setup_edition: () -> untyped
+
+      # How absl prints an Edition: the enum name without its prefix
+      def edition_label: (untyped edition) -> untyped
+
+      # AddImportError: protoc's command line loads imports on demand, a bare pool does not
+      def missing_import_message: (untyped name) -> untyped
+
+      def setup_symbols: () -> untyped
+
+      def build_file: () -> untyped
+
+      # protoc's CopyTo writes no `syntax` for proto2
+      def draft_syntax: () -> untyped
+
+      def scope_of: (untyped parent) -> untyped
+
+      def qualify: (untyped scope, untyped name) -> untyped
+
+      def pend: (untyped node, untyped kind, untyped name_scope, untyped path) -> untyped
+
+      def add_symbol: (untyped kind, untyped node, untyped full_name) -> untyped
+
+      def hint: (untyped message, untyped reason, untyped location, ?untyped from, ?untyped to) -> untyped
+
+      def build_message: (untyped message, untyped parent, untyped index, untyped path, untyped scope) -> untyped
+
+      def build_field: (untyped field, untyped parent, untyped index, untyped path, untyped scope, extension: untyped, ?oneofs: untyped) -> untyped
+
+      def build_enum: (untyped enum, untyped parent, untyped index, untyped path, untyped scope_draft) -> untyped
+
+      def build_service: (untyped service, untyped index) -> untyped
+
+      def cross_link: () -> untyped
+
+      def cross_link_message: (untyped message) -> untyped
+
+      def not_defined: (untyped node, untyped location, untyped name) -> untyped
+
+      def cross_link_field: (untyped field) -> untyped
+
+      def holder_key: (untyped holder) -> untyped
+
+      def next_available_number: (untyped message) -> untyped
+
+      def extension_number?: (untyped symbol, untyped number) -> untyped
+
+      def enum_value_names: (untyped symbol) -> untyped
+
+      # Symbol::IsVisibleFrom: edition 2024 `local` types are invisible outside their file
+      def visible?: (untyped symbol, untyped node, untyped location, ?untyped usage) -> untyped
+
+      def cross_link_method: (untyped method) -> untyped
+
+      def suggest_field_numbers: () -> untyped
+
+      def interpret_options: () -> untyped
+
+      FEATURE_UNKNOWNS: untyped
+
+      # ResolveFeaturesImpl's checks, in VisitDescriptors order, once the
+      # non-extension options (`features` among them) are known
+      #
+      # - `features`: the `features` each element sets
+      def check_features: (Hash[AST::Node, Schema::MessageValue] features) -> untyped
+
+      def build_schema: () -> untyped
+
+      # FieldDescriptor::DefaultValueAsString over the parsed default
+      def default_text: (untyped field) -> untyped
+
+      def parse_float_default: (untyped text) -> untyped
+
+      # absl::CUnescape, as far as validity goes
+      def c_unescape: (untyped text) -> untyped
+    end
+  end
+end

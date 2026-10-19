@@ -97,8 +97,12 @@ jobs:
           ruby-version: "3.4"
           bundler-cache: true
       - run: bundle exec rake standard
-      - name: API docs build with no YARD warnings
-        run: bundle exec rake yard
+      - name: sig/ and rbi/protostar.rbi are what lib/ generates
+        run: bundle exec rake types:check
+      - name: lib/ typechecks with Steep
+        run: bundle exec rake steep
+      - name: API docs build with no RDoc warnings
+        run: bundle exec rake rdoc
   conformance:
     name: protobuf conformance suite (binary, JSON, text format)
     runs-on: ubuntu-latest

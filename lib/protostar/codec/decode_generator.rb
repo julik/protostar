@@ -7,18 +7,16 @@ module Protostar
     # tag with one `case` (field number and wire type at once), reads varints
     # of one byte and fixed-width values inline, and keeps the read position
     # in a local. Anything it has no branch for (unknown fields, wire type
-    # mismatches, end-group tags, malformed tags) goes to {Decoder.field}.
+    # mismatches, end-group tags, malformed tags) goes to Decoder.field.
     #
     # A generic loop over field descriptors spent most of its time in method
     # calls on the field table; this does the same work with a fraction of them.
-    # @api private
-    module DecodeGenerator
+    module DecodeGenerator # :nodoc: all
       F = Message::FieldInfo
 
       module_function
 
-      # @param klass [Class]
-      # @param fields [Array<Message::FieldInfo>]
+      #: (Class klass, Array[Message::FieldInfo] fields) -> untyped
       def install(klass, fields)
         klass.class_eval(source(fields), "(protostar decoder #{klass.descriptor.full_name})", 1)
       end

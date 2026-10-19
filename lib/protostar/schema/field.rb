@@ -16,10 +16,8 @@ module Protostar
       # FieldDescriptorProto.Label names to the short label symbols
       LABELS = {LABEL_OPTIONAL: :optional, LABEL_REQUIRED: :required, LABEL_REPEATED: :repeated}.freeze
 
-      # @api private
-      PROTO_TYPES = TYPES.invert.freeze
-      # @api private
-      PROTO_LABELS = LABELS.invert.freeze
+      PROTO_TYPES = TYPES.invert.freeze # :nodoc:
+      PROTO_LABELS = LABELS.invert.freeze # :nodoc:
 
       # Wire type of a single, unpacked value of each type
       WIRE_TYPES = {
@@ -37,41 +35,35 @@ module Protostar
 
       UNPACKABLE = %i[string bytes message group].freeze
 
-      # @return [Integer]
-      attr_reader :number
-      # @return [Symbol] :optional, :required or :repeated, with editions
-      #   `LEGACY_REQUIRED` presence reported as :required
-      attr_reader :label
-      # @return [Symbol] :int32, :string, :message, ... with editions
-      #   `DELIMITED` message fields reported as :group, as protoc does
-      attr_reader :type
-      # @return [String, nil] full name of the message or enum type, no leading dot
-      attr_reader :type_name
-      # @return [Message, nil]
-      attr_reader :message_type
-      # @return [Enum, nil]
-      attr_reader :enum_type
-      # @return [Object, nil] the declared default parsed to a Ruby value
-      #   (Integer, Float, true/false, String, binary String, or Symbol for enums)
-      attr_reader :default_value
-      # @return [Object, nil] {#default_value}, or the type's implicit default:
-      #   zero, false, an empty String, the first value's name for an enum, nil for messages.
-      #   For repeated fields this is the default of a single element.
-      attr_reader :default
-      # @return [String]
-      attr_reader :json_name
-      # @return [Oneof, nil] the containing oneof, synthetic ones included
-      attr_reader :oneof
-      # @return [Message, nil] for an extension, the extended message
-      attr_reader :extendee
-      # @return [Message, nil] the message holding the field; for an extension the
-      #   message it was declared in, or nil when declared at file level
-      attr_reader :containing_message
-      # @return [File]
-      attr_reader :file
+      attr_reader :number #: Integer
+      # :optional, :required or :repeated, with editions
+      # `LEGACY_REQUIRED` presence reported as :required.
+      attr_reader :label #: Symbol
+      # :int32, :string, :message, ... with editions
+      # `DELIMITED` message fields reported as :group, as protoc does.
+      attr_reader :type #: Symbol
+      # Full name of the message or enum type, no leading dot.
+      attr_reader :type_name #: String?
+      attr_reader :message_type #: Message?
+      attr_reader :enum_type #: Enum?
+      # The declared default parsed to a Ruby value
+      # (Integer, Float, true/false, String, binary String, or Symbol for enums).
+      attr_reader :default_value #: untyped
+      # #default_value, or the type's implicit default:
+      # zero, false, an empty String, the first value's name for an enum, nil for messages.
+      # For repeated fields this is the default of a single element.
+      attr_reader :default #: untyped
+      attr_reader :json_name #: String
+      # The containing oneof, synthetic ones included.
+      attr_reader :oneof #: Oneof?
+      # For an extension, the extended message.
+      attr_reader :extendee #: Message?
+      # The message holding the field; for an extension the
+      # message it was declared in, or nil when declared at file level.
+      attr_reader :containing_message #: Message?
+      attr_reader :file #: File
 
-      # @api private
-      def initialize(name:, full_name:, number:, label:, type:, type_name:, extendee_name:, raw_default:, json_name:,
+      def initialize(name:, full_name:, number:, label:, type:, type_name:, extendee_name:, raw_default:, json_name:, # :nodoc:
         proto3_optional:, extension:, containing_message:, file:, index:)
         @name = name
         @full_name = full_name
@@ -91,108 +83,117 @@ module Protostar
         @index = index
       end
 
-      # @api private
-      # @return [String, nil] the default as protoc stores it in `default_value`
-      attr_reader :raw_default
-      # @api private
-      # @return [String, nil] the extendee as written, until it is resolved
-      attr_reader :extendee_name
-      # @api private
-      # @return [Symbol, nil] the label as declared: :repeated, :optional or :required,
-      #   before editions features turn `LEGACY_REQUIRED` into :required
-      attr_reader :declared_label
-      # @api private
-      # @return [Symbol, nil] the type as declared, before editions features turn
-      #   `DELIMITED` message fields into :group; nil while a type name is unresolved
-      attr_reader :declared_type
+      # :stopdoc:
+      # The default as protoc stores it in `default_value`.
+      attr_reader :raw_default #: String?
+      # The extendee as written, until it is resolved.
+      attr_reader :extendee_name #: String?
+      # The label as declared: :repeated, :optional or :required,
+      # before editions features turn `LEGACY_REQUIRED` into :required.
+      attr_reader :declared_label #: Symbol?
+      # The type as declared, before editions features turn
+      # `DELIMITED` message fields into :group; nil while a type name is unresolved.
+      attr_reader :declared_type #: Symbol?
+      # :startdoc:
 
-      # @return [Boolean]
+      #: () -> bool
       def proto3_optional?
         @proto3_optional
       end
 
-      # @return [Boolean]
+      #: () -> bool
       def extension?
         @extension
       end
 
-      # @return [Oneof, nil] the containing oneof unless it is synthetic
+      # Returns the containing oneof unless it is synthetic.
+      #: () -> Oneof?
       def real_oneof
         @oneof unless @oneof.nil? || @oneof.synthetic?
       end
 
-      # @return [Boolean]
+      #: () -> bool
       def repeated?
         @label == :repeated
       end
 
-      # @return [Boolean]
+      #: () -> bool
       def required?
         @label == :required
       end
 
-      # @return [Boolean]
+      #: () -> bool
       def optional?
         @label == :optional
       end
 
-      # @return [Boolean] a `map<K, V>` field: repeated, of a map entry message type
+      # Returns a `map<K, V>` field: repeated, of a map entry message type.
+      #: () -> bool
       def map?
         @label == :repeated && !@message_type.nil? && @message_type.map_entry?
       end
 
-      # @return [Field, nil] the key field of a map field's entry
+      # Returns the key field of a map field's entry.
+      #: () -> Field?
       def map_key
         @message_type.fields_by_number[1] if map?
       end
 
-      # @return [Field, nil] the value field of a map field's entry
+      # Returns the value field of a map field's entry.
+      #: () -> Field?
       def map_value
         @message_type.fields_by_number[2] if map?
       end
 
-      # @return [Boolean] not a message or group; enums count as scalars
+      # Returns not a message or group; enums count as scalars.
+      #: () -> bool
       def scalar?
         @type != :message && @type != :group
       end
 
-      # @return [Boolean] repeated and of a type that can be packed
+      # Returns repeated and of a type that can be packed.
+      #: () -> bool
       def packable?
         @label == :repeated && !UNPACKABLE.include?(@type)
       end
 
-      # @return [Boolean] whether repeated values are written packed. Resolved
-      #   through features: proto2 defaults to expanded, proto3 to packed, editions
-      #   follow `repeated_field_encoding`, and a legacy `packed` option wins.
+      # Returns whether repeated values are written packed. Resolved
+      # through features: proto2 defaults to expanded, proto3 to packed, editions
+      # follow `repeated_field_encoding`, and a legacy `packed` option wins.
+      #: () -> bool
       def packed?
         packable? && @features.repeated_field_encoding == :PACKED
       end
 
-      # @return [Boolean] explicit presence (has-bits): singular fields that are
-      #   messages, extensions, oneof members, or not `IMPLICIT` by features
+      # Returns explicit presence (has-bits): singular fields that are
+      # messages, extensions, oneof members, or not `IMPLICIT` by features.
+      #: () -> bool
       def presence?
         return false if @label == :repeated
         @type == :message || @type == :group || @extension || !@oneof.nil? ||
           @features.field_presence != :IMPLICIT
       end
 
-      # @return [Boolean] group, or editions `message_encoding = DELIMITED`
+      # Returns group, or editions `message_encoding = DELIMITED`.
+      #: () -> bool
       def delimited?
         @type == :group
       end
 
-      # @return [Integer] the wire type of one unpacked value
+      # Returns the wire type of one unpacked value.
+      #: () -> Integer
       def wire_type
         WIRE_TYPES.fetch(@type)
       end
 
-      # @return [Boolean] whether string values must be valid UTF-8 when parsed
+      # Returns whether string values must be valid UTF-8 when parsed.
+      #: () -> bool
       def utf8_validation?
         @type == :string && @features.utf8_validation == :VERIFY
       end
 
-      # @param default_json_names [Boolean] see {File#to_proto}
-      # @return [Protostar::Google::Protobuf::FieldDescriptorProto]
+      # - `default_json_names`: see File#to_proto
+      #: (?default_json_names: bool) -> Protostar::Google::Protobuf::FieldDescriptorProto
       def to_proto(default_json_names: true)
         Proto::Writer.field(self, default_json_names)
       end

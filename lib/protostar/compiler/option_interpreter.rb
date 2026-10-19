@@ -7,27 +7,24 @@ module Protostar
     # fields), accumulated per element the way protoc accumulates unknown
     # fields, so "already set" checks and the merging of `(a).b = 1` with
     # `(a).c = 2` behave as in protoc. The entries are then folded into a
-    # {Schema::MessageValue}: options message fields by name, extensions by
-    # their {Schema::Field}.
+    # Schema::MessageValue: options message fields by name, extensions by
+    # their Schema::Field.
     #
     # Option types are read from descriptors: those in the pool, and for the
     # file being linked its draft, linked but not yet given options, so
     # options declared and used in the same file (descriptor.proto's own
     # included) resolve the same way.
-    #
-    # @api private
-    class OptionInterpreter
+    class OptionInterpreter # :nodoc: all
       INT32_RANGE = (-2**31..2**31 - 1)
       INT64_RANGE = (-2**63..2**63 - 1)
       UINT32_MAX = 2**32 - 1
       UINT64_MAX = 2**64 - 1
 
-      # @return [Hash{Array<Integer> => Array<Integer>}] uninterpreted_option paths to option paths
-      attr_reader :interpreted_paths
+      # Uninterpreted_option paths to option paths.
+      attr_reader :interpreted_paths #: Hash[Array[Integer], Array[Integer]]
 
-      # @param linker [Linker]
-      # @param pool [Schema::Pool]
-      # @param fallback [#call, nil] the bundled descriptor.proto's message for a name
+      # - `fallback`: the bundled descriptor.proto's message for a name
+      #: (Linker linker, Schema::Pool pool, untyped fallback) -> void
       def initialize(linker, pool, fallback)
         @linker = linker
         @table = linker.table
@@ -37,8 +34,8 @@ module Protostar
         @repeated_counts = Hash.new(0)
       end
 
-      # @param pending [Array<Linker::Pending>]
-      # @return [Hash{AST::Node => Schema::MessageValue}] the options of every element that declared options
+      # Returns the options of every element that declared options.
+      #: (Array[Linker::Pending] pending) ?{ (?) -> untyped } -> Hash[AST::Node, Schema::MessageValue]
       def run(pending)
         @local = @linker.draft.descriptor
         state = pending.map { |p| [p, [], []] }
@@ -332,8 +329,9 @@ module Protostar
       # Folds entries into a value the way parsing their serialized form
       # would: repeated fields append, message fields merge, scalars take the
       # last value
-      # @param known [Hash{Symbol => Object}] fields set before any entry (the parser's `map_entry`)
-      # @return [Schema::MessageValue]
+      #
+      # - `known`: fields set before any entry (the parser's `map_entry`)
+      #: (untyped entries, ?Hash[Symbol, untyped] known) -> Schema::MessageValue
       def fold(entries, known = nil)
         merged = {}.compare_by_identity
         entries.each do |field, value|

@@ -4,23 +4,24 @@ module Google
   module Protobuf
     module Internal
       # The Ruby helpers of google.protobuf.Struct, Value and ListValue as
-      # the gem's well_known_types.rb defines them. {MessageClass.setup}
-      # includes them after {MessageMethods}, so their `[]`, `[]=` and `to_h`
+      # the gem's well_known_types.rb defines them. MessageClass.setup
+      # includes them after MessageMethods, so their `[]`, `[]=` and `to_h`
       # win over the message methods of the same names, whether or not
       # well_known_types is required.
-      # @api private
-      module WellKnown
+      module WellKnown # :nodoc: all
         module Value
           module ClassMethods
-            # @return [Value] a new Value holding the Ruby value
+            # Returns a new Value holding the Ruby value.
+            #: (untyped value) -> Value
             def from_ruby(value)
               new.from_ruby(value)
             end
           end
 
-          # @param recursive [Boolean] convert a Struct or ListValue to a Hash or Array as well
-          # @return [Object]
-          # @raise [UnexpectedStructType] when no kind is set
+          # - `recursive`: convert a Struct or ListValue to a Hash or Array as well
+          #
+          # Raises UnexpectedStructType when no kind is set.
+          #: (?bool recursive) -> untyped
           def to_ruby(recursive = false)
             case kind
             when :struct_value then recursive ? struct_value.to_h : struct_value
@@ -34,8 +35,9 @@ module Google
           end
 
           # Sets the kind matching a Ruby value
-          # @return [self]
-          # @raise [UnexpectedStructType]
+          #
+          # Raises UnexpectedStructType.
+          #: (untyped value) -> self
           def from_ruby(value)
             by_name = self.class.__by_name
             struct = by_name.fetch("struct_value").message_class
@@ -58,7 +60,7 @@ module Google
 
         module Struct
           module ClassMethods
-            # @return [Struct]
+            #: (untyped hash) -> untyped
             def from_hash(hash)
               struct = new
               hash.each { |key, value| struct[key] = value }
@@ -66,21 +68,23 @@ module Google
             end
           end
 
-          # @return [Object, nil] the value as Ruby; nil for a missing key
+          # Returns the value as Ruby; nil for a missing key.
+          #: (untyped key) -> untyped
           def [](key)
             fields[key].to_ruby
           rescue NoMethodError
             nil
           end
 
-          # @raise [UnexpectedStructType] for a key that is not a String or a value Struct cannot hold
+          # Raises UnexpectedStructType for a key that is not a String or a value Struct cannot hold.
           def []=(key, value)
             raise UnexpectedStructType, "Struct keys must be strings." unless key.is_a?(String)
             fields[key] ||= self.class.__by_name.fetch("fields").value.message_class.new
             fields[key].from_ruby(value)
           end
 
-          # @return [Hash] with nested Structs and ListValues converted too
+          # Returns with nested Structs and ListValues converted too.
+          #: () -> Hash[untyped, untyped]
           def to_h
             fields.each_with_object({}) { |(key, value), h| h[key] = value.to_ruby(true) }
           end
@@ -91,10 +95,10 @@ module Google
         end
 
         module ListValue
-          include Enumerable
+          include Enumerable #[untyped]
 
           module ClassMethods
-            # @return [ListValue]
+            #: (untyped array) -> ListValue
             def from_a(array)
               list = new
               array.each { |v| list << v }
@@ -122,13 +126,14 @@ module Google
             values.each { |v| yield v.to_ruby }
           end
 
-          # @return [Array] with nested Structs and ListValues converted too
+          # Returns with nested Structs and ListValues converted too.
+          #: () -> Array[untyped]
           def to_a
             values.map { |v| v.to_ruby(true) }
           end
         end
 
-        # Full name to the module {MessageClass.setup} mixes in
+        # Full name to the module MessageClass.setup mixes in
         MIXINS = {
           "google.protobuf.Struct" => Struct,
           "google.protobuf.Value" => Value,

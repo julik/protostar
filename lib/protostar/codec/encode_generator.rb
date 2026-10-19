@@ -9,12 +9,11 @@ module Protostar
     # buffer. Fields come in ascending number order, tags are literal bytes,
     # one-byte varints are appended inline, and enum names map to numbers
     # through a literal `case`. Maps, packed runs and unknown fields go to
-    # {Sizer} and {Encoder}.
+    # Sizer and Encoder.
     #
     # The generic loop over field descriptors this replaces spent most of
     # its time on method calls into the field table.
-    # @api private
-    module EncodeGenerator
+    module EncodeGenerator # :nodoc: all
       F = Message::FieldInfo
 
       INT_BOUNDS = {
@@ -30,8 +29,7 @@ module Protostar
 
       module_function
 
-      # @param klass [Class]
-      # @param fields [Array<Message::FieldInfo>]
+      #: (Class klass, Array[Message::FieldInfo] fields) -> untyped
       def install(klass, fields)
         ordered = fields.sort_by(&:number)
         klass.class_eval(source(ordered), "(protostar encoder #{klass.descriptor.full_name})", 1)
@@ -107,7 +105,7 @@ module Protostar
       end
 
       # Statements leaving the payload size of packed run `v` in `run`,
-      # checking each element as {Sizer.packed} does, without a call per element
+      # checking each element as Sizer.packed does, without a call per element
       def packed_size(f)
         check = (f.kind == F::ENUM) ? "" : "Protostar::Codec::Sizer.invalid(#{info(f)}, e) unless #{valid(f, "e")}\n"
         case f.kind

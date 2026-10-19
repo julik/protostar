@@ -4,13 +4,11 @@ module Protostar
   module Schema
     # A oneof, real or synthesized for a proto3 `optional` field
     class Oneof < Descriptor
-      # @return [Message]
-      attr_reader :containing_message
-      # @return [Array<Field>] members in declaration order
-      attr_reader :fields
+      attr_reader :containing_message #: Message
+      # Members in declaration order.
+      attr_reader :fields #: Array[Field]
 
-      # @api private
-      def initialize(name:, full_name:, containing_message:, index:)
+      def initialize(name:, full_name:, containing_message:, index:) # :nodoc:
         @name = name
         @full_name = full_name
         @containing_message = containing_message
@@ -19,17 +17,18 @@ module Protostar
         @synthetic = false
       end
 
-      # @return [File]
+      #: () -> File
       def file
         @containing_message.file
       end
 
-      # @return [Boolean] whether protoc synthesized it for a proto3 `optional` field
+      # Returns whether protoc synthesized it for a proto3 `optional` field.
+      #: () -> bool
       def synthetic?
         @synthetic
       end
 
-      # @return [Protostar::Google::Protobuf::OneofDescriptorProto]
+      #: () -> Protostar::Google::Protobuf::OneofDescriptorProto
       def to_proto
         Proto::Writer.oneof(self)
       end

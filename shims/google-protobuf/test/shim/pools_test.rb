@@ -55,6 +55,23 @@ class PoolsTest < Test::Unit::TestCase
     refute_equal a.new(a: 1), b.new(a: 1)
   end
 
+  # As tapioca's protobuf compiler gathers them: subclasses of the private
+  # AbstractMessage, found through its singleton class
+  def test_google_message_classes_descend_from_abstract_message_and_native_ones_do_not
+    abstract = Google::Protobuf.const_get(:AbstractMessage)
+    assert Google::Protobuf.const_defined?(:AbstractMessage)
+    assert_raises(NameError) { Google::Protobuf::AbstractMessage }
+    entry = BasicTest::MapMessage.descriptor.lookup("map_string_int32").subtype.msgclass
+    descendants = ObjectSpace.each_object(abstract.singleton_class).reject { |k| k.singleton_class? || k == abstract }
+    [BasicTest::TestMessage, BasicTest::TestMessage2, Google::Protobuf::Timestamp, entry].each do |klass|
+      assert_include descendants, klass
+      assert_same abstract, klass.superclass
+      assert_kind_of Protostar::Message, klass.new
+    end
+    [Protostar::Google::Protobuf::Timestamp, Protostar::Message].each { |klass| assert_not_include descendants, klass }
+    assert_same Protostar::Message, Protostar::Google::Protobuf::Timestamp.superclass
+  end
+
   def test_add_serialized_file_errors
     pool = Pool.new
     assert_raises(::TypeError) { pool.add_serialized_file(5) }

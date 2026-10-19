@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/comment_enum_value.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # COMMENT_ENUM_VALUE: A enum value without a comment
+      class CommentEnumValue < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

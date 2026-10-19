@@ -9,19 +9,22 @@ module Protostar
       end
 
       module ClassMethods
-        # @param value [Object] nil, Numeric, String, true, false, Hash,
+        # - `value`: nil, Numeric, String, true, false, Hash,
         #   Array, a Struct or a ListValue
-        # @return [Message] a new Value
-        # @raise [UnexpectedStructType]
+        #
+        # Returns a new Value.
+        # Raises UnexpectedStructType.
+        #: (untyped value) -> Google::Protobuf::Value
         def from_ruby(value)
           new.from_ruby(value)
         end
       end
 
-      # @param recursive [Boolean] whether to convert a Struct or ListValue to
+      # - `recursive`: whether to convert a Struct or ListValue to
       #   a Hash or Array as well
-      # @return [Object]
-      # @raise [UnexpectedStructType] when no kind is set
+      #
+      # Raises UnexpectedStructType when no kind is set.
+      #: (?bool recursive) -> untyped
       def to_ruby(recursive = false)
         case which_kind
         when :struct_value then recursive ? struct_value.to_h : struct_value
@@ -35,8 +38,9 @@ module Protostar
       end
 
       # Sets the kind matching a Ruby value
-      # @return [self]
-      # @raise [UnexpectedStructType]
+      #
+      # Raises UnexpectedStructType.
+      #: (untyped value) -> self
       def from_ruby(value)
         fields = self.class.__by_name
         struct_class = fields.fetch("struct_value").message_class

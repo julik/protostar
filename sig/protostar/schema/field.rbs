@@ -1,0 +1,131 @@
+# Generated from lib/protostar/schema/field.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    # A field of a message, or an extension
+    class Field < Descriptor
+      # FieldDescriptorProto.Type names to the short type symbols
+      TYPES: untyped
+
+      # FieldDescriptorProto.Label names to the short label symbols
+      LABELS: untyped
+
+      PROTO_TYPES: untyped
+
+      PROTO_LABELS: untyped
+
+      # Wire type of a single, unpacked value of each type
+      WIRE_TYPES: untyped
+
+      # The implicit default of each scalar type
+      ZERO: untyped
+
+      UNPACKABLE: untyped
+
+      attr_reader number: Integer
+
+      # :optional, :required or :repeated, with editions
+      # `LEGACY_REQUIRED` presence reported as :required.
+      attr_reader label: Symbol
+
+      # :int32, :string, :message, ... with editions
+      # `DELIMITED` message fields reported as :group, as protoc does.
+      attr_reader type: Symbol
+
+      # Full name of the message or enum type, no leading dot.
+      attr_reader type_name: String?
+
+      attr_reader message_type: Message?
+
+      attr_reader enum_type: Enum?
+
+      # The declared default parsed to a Ruby value
+      # (Integer, Float, true/false, String, binary String, or Symbol for enums).
+      attr_reader default_value: untyped
+
+      # #default_value, or the type's implicit default:
+      # zero, false, an empty String, the first value's name for an enum, nil for messages.
+      # For repeated fields this is the default of a single element.
+      attr_reader default: untyped
+
+      attr_reader json_name: String
+
+      # The containing oneof, synthetic ones included.
+      attr_reader oneof: Oneof?
+
+      # For an extension, the extended message.
+      attr_reader extendee: Message?
+
+      # The message holding the field; for an extension the
+      # message it was declared in, or nil when declared at file level.
+      attr_reader containing_message: Message?
+
+      attr_reader file: File
+
+      def initialize: (name: untyped, full_name: untyped, number: untyped, label: untyped, type: untyped, type_name: untyped, extendee_name: untyped, raw_default: untyped, json_name: untyped, proto3_optional: untyped, extension: untyped, containing_message: untyped, file: untyped, index: untyped) -> untyped
+
+      # The default as protoc stores it in `default_value`.
+      attr_reader raw_default: String?
+
+      # The extendee as written, until it is resolved.
+      attr_reader extendee_name: String?
+
+      # The label as declared: :repeated, :optional or :required,
+      # before editions features turn `LEGACY_REQUIRED` into :required.
+      attr_reader declared_label: Symbol?
+
+      # The type as declared, before editions features turn
+      # `DELIMITED` message fields into :group; nil while a type name is unresolved.
+      attr_reader declared_type: Symbol?
+
+      def proto3_optional?: () -> bool
+
+      def extension?: () -> bool
+
+      # Returns the containing oneof unless it is synthetic.
+      def real_oneof: () -> Oneof?
+
+      def repeated?: () -> bool
+
+      def required?: () -> bool
+
+      def optional?: () -> bool
+
+      # Returns a `map<K, V>` field: repeated, of a map entry message type.
+      def map?: () -> bool
+
+      # Returns the key field of a map field's entry.
+      def map_key: () -> Field?
+
+      # Returns the value field of a map field's entry.
+      def map_value: () -> Field?
+
+      # Returns not a message or group; enums count as scalars.
+      def scalar?: () -> bool
+
+      # Returns repeated and of a type that can be packed.
+      def packable?: () -> bool
+
+      # Returns whether repeated values are written packed. Resolved
+      # through features: proto2 defaults to expanded, proto3 to packed, editions
+      # follow `repeated_field_encoding`, and a legacy `packed` option wins.
+      def packed?: () -> bool
+
+      # Returns explicit presence (has-bits): singular fields that are
+      # messages, extensions, oneof members, or not `IMPLICIT` by features.
+      def presence?: () -> bool
+
+      # Returns group, or editions `message_encoding = DELIMITED`.
+      def delimited?: () -> bool
+
+      # Returns the wire type of one unpacked value.
+      def wire_type: () -> Integer
+
+      # Returns whether string values must be valid UTF-8 when parsed.
+      def utf8_validation?: () -> bool
+
+      # - `default_json_names`: see File#to_proto
+      def to_proto: (?default_json_names: bool) -> Protostar::Google::Protobuf::FieldDescriptorProto
+    end
+  end
+end

@@ -14,6 +14,6 @@ gets picked up.
 - `thin-native-codec.md`: an optional, thin C gem for encode and decode only, same objects, same bytes
 - `fiber-local-arenas.md`: an experiment with per-Fiber object pools and scratch buffers for decode and build
 - `registries-not-global.md`: Protostar::Registry as an object you hold, Ractor-shareable when frozen, generated files that do not self-register
-- `rbs-by-default.md`: `--ruby_out` writes the `.rbs` next to the `.rb` unless `--no-rbs`
+- `rbs-by-default.md`: done in WS16 (`--ruby_out` writes the `.rbs` and the `.rbi` next to the `.rb`)
 - `generated-code-linter-guards.md`: rubocop and standard disable wrappers, frozen string literals stay on
 - `diagnostics-twice-as-good.md`: did-you-mean suggestions, teaching notes, cross-file spans and fixes, lint reports everything, lint per input

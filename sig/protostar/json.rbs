@@ -1,0 +1,44 @@
+# Generated from lib/protostar/json.rb by script/types.rb. Do not edit.
+
+module Protostar
+  # The proto3 JSON mapping, as google-protobuf's Ruby gem implements it.
+  #
+  # ```ruby
+  # json = Protostar::JSON.encode(person)                # also person.to_json
+  # Protostar::JSON.decode(Person, json) == person       # also Person.decode_json(json)
+  # ```
+  #
+  # Well-known types take their special forms. The type inside an Any is
+  # looked up by its full name with Types.find in the given registry.
+  module JSON
+    # - `preserve_proto_field_names:` field names as written in the
+    #   .proto rather than their lowerCamel json_name; `preserve_proto_fieldnames`,
+    #   google-protobuf's spelling, is accepted too
+    # - `emit_defaults:` also write fields without presence that
+    #   hold their default, and empty repeated fields and maps; unset message
+    #   fields and oneof members are still left out
+    # - `format_enums_as_integers:` enum numbers instead of names
+    # - `registry:` where the types inside Any are found
+    #
+    # Returns compact UTF-8 JSON.
+    # Raises EncodeError for contents with no JSON form, like a Timestamp out of range.
+    def self.encode: (Message message, ?preserve_proto_field_names: bool, ?preserve_proto_fieldnames: bool, ?emit_defaults: bool, ?format_enums_as_integers: bool, ?registry: Types::Registry?) -> String
+
+    # - `klass`: a message class
+    # - `ignore_unknown_fields:` skip names that are not fields
+    #   and enum names that are not values, instead of raising
+    # - `registry:` where the types inside Any are found
+    #
+    # Raises ParseError with the path of the offending field.
+    def self.decode: (singleton(Message) klass, String json, ?ignore_unknown_fields: bool, ?registry: Types::Registry?) -> Message
+
+    # Lays compact JSON out as the stdlib generator would with `state`
+    # (indent, space, newlines, current depth). Tokens are copied as they
+    # are, so numbers keep the spelling the encoder gave them.
+    #
+    # - `json`: compact JSON, as `encode` writes it
+    def self.layout: (String json, untyped state) -> String
+
+    LAYOUT_TOKENS: ::Regexp
+  end
+end

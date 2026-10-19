@@ -15,15 +15,15 @@ require "google/protobuf/timestamp_pb"
 module Google
   module Protobuf
     Any.class_eval do
-      # @return [Any] a new Any holding the message
+      # Returns a new Any holding the message.
       def self.pack(msg, type_url_prefix = "type.googleapis.com/")
         any = new
         any.pack(msg, type_url_prefix)
         any
       end
 
-      # Stores the message and a type URL of the prefix and its full name
-      # @return [String] the message's bytes
+      # Stores the message and a type URL of the prefix and its full name.
+      # Returns the message's bytes.
       def pack(msg, type_url_prefix = "type.googleapis.com/")
         self.type_url = if type_url_prefix.empty? || !type_url_prefix.end_with?("/")
           "#{type_url_prefix}/#{msg.class.descriptor.name}"

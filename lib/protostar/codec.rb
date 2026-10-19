@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Protostar
-  # Binary encoding and decoding of {Message} objects. Use the methods on
+  # Binary encoding and decoding of Message objects. Use the methods on
   # message classes and instances; these modules are their implementation.
   module Codec
     # Needed while a class is defined, never after

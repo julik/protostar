@@ -41,10 +41,28 @@ class PluginTest < Minitest::Test
     assert_equal expected, response.file.to_h { |f| [f.name, f.content] }
   end
 
-  def test_native_ruby_by_default
+  def test_native_ruby_with_its_signatures_by_default
     response = Response.decode(Protostar::Plugin.respond(request("").encode))
     directory = files.find { |f| f.name == "acme/directory.proto" }
-    assert_equal Emitters::Ruby.new.emit([directory]), response.file.to_h { |f| [f.name, f.content] }
+    expected = Emitters::Ruby.new.emit([directory]).merge(Emitters::ProtostarRbs.new.emit([directory]))
+      .merge(Emitters::ProtostarRbi.new.emit([directory]))
+    assert_equal expected, response.file.to_h { |f| [f.name, f.content] }
+  end
+
+  def test_no_rbs_and_no_rbi
+    {"no-rbs" => %w[directory_pb.rb directory_pb.rbi], "ruby,no-rbi" => %w[directory_pb.rb directory_pb.rbs],
+     "no-rbs,no-rbi" => %w[directory_pb.rb]}.each do |parameter, names|
+      response = Response.decode(Protostar::Plugin.respond(request(parameter).encode))
+      assert_equal "", response.error
+      assert_equal names.map { |n| "acme/#{n}" }, response.file.map(&:name).sort, parameter
+    end
+  end
+
+  def test_rbi_for_google_format
+    response = Response.decode(Protostar::Plugin.respond(request("google,rbi").encode))
+    directory = files.find { |f| f.name == "acme/directory.proto" }
+    expected = Emitters::GoogleRuby.new.emit([directory]).merge(Emitters::Rbi.new.emit([directory]))
+    assert_equal expected, response.file.to_h { |f| [f.name, f.content] }
   end
 
   def test_rbs_with_native_ruby_describes_protostar_classes
@@ -52,6 +70,7 @@ class PluginTest < Minitest::Test
     assert_equal "", response.error
     named = files.select { |f| %w[acme/directory.proto acme/editions.proto].include?(f.name) }
     expected = Emitters::Ruby.new.emit(named).merge(Emitters::ProtostarRbs.new.emit(named))
+      .merge(Emitters::ProtostarRbi.new.emit(named))
     assert_equal expected, response.file.to_h { |f| [f.name, f.content] }
   end
 
@@ -63,7 +82,8 @@ class PluginTest < Minitest::Test
 
   def test_errors_are_reported_in_the_response
     {
-      "fortran" => "unknown output \"fortran\"; use ruby, google, rbs, grpc",
+      "fortran" => "unknown output \"fortran\"; use ruby, google, rbs, rbi, grpc, no-rbs, no-rbi",
+      "ruby,rbs,no-rbs" => "rbs and no-rbs contradict each other",
       "ruby,google" => "ruby and google both write *_pb.rb; ask for one of them"
     }.each do |parameter, message|
       response = Response.decode(Protostar::Plugin.respond(request(parameter).encode))

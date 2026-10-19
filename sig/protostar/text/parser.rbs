@@ -1,0 +1,105 @@
+# Generated from lib/protostar/text/parser.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Text
+    # Reads protoc's text format into a message, with protoc's grammar and
+    # its checks: non-repeated fields and oneofs set at most once, enum
+    # names and numbers known to closed enums, integers in range.
+    class Parser
+      # :nodoc: all
+      F: untyped
+
+      RANGES: untyped
+
+      CLOSE: untyped
+
+      TRUE_WORDS: untyped
+
+      FALSE_WORDS: untyped
+
+      SIMPLE_ESCAPES: untyped
+
+      ESCAPE: ::Regexp
+
+      ANY: ::String
+
+      UNSIGNED: untyped
+
+      def initialize: (untyped text, ?allow_unknown_fields: untyped, ?allow_partial: untyped, ?registry: untyped, ?pool: untyped) -> untyped
+
+      def parse: (Class klass) -> Message
+
+      private
+
+      def fail!: (untyped message, ?untyped token) -> untyped
+
+      def accept: (untyped text) -> untyped
+
+      def expect: (untyped text) -> untyped
+
+      def shown: (untyped token) -> untyped
+
+      # Fields up to the closing delimiter, or the end of input when there is none
+      def message_body: (untyped msg, untyped close) -> untyped
+
+      # The text between `[` and `]` as protoc reads it: an extension's full
+      # name, or an Any's type URL whose prefix may hold any URL characters
+      def bracketed_name: () -> untyped
+
+      def field: (untyped msg, untyped seen) -> untyped
+
+      # A field by name; groups also by their type name, as protoc prints them
+      def lookup: (untyped klass, untyped name) -> untyped
+
+      # The value or values after a field name: `: scalar`, `: [list]`, `{ message }`
+      def field_values: (untyped info, untyped klass) -> untyped
+
+      def open?: () -> untyped
+
+      def list: () { () -> void } -> void
+
+      def assign: (untyped msg, untyped info, untyped values, untyped token) -> untyped
+
+      def store: (untyped msg, untyped info, untyped value, untyped token) -> untyped
+
+      def message_value: (untyped info) -> untyped
+
+      # A map entry as a message with `key` and `value`; either may be left out
+      def map_entry: (untyped info, untyped close) -> untyped
+
+      def scalar: (untyped info) -> untyped
+
+      def integer: (untyped info) -> untyped
+
+      def integer_value: (untyped t) -> untyped
+
+      def float: (untyped info) -> untyped
+
+      def bool: () -> untyped
+
+      # One or more adjacent string literals, concatenated
+      def string: (untyped info) -> untyped
+
+      def unescape: (untyped t) -> untyped
+
+      def codepoint: (untyped n, untyped t) -> untyped
+
+      def enum: (untyped info) -> untyped
+
+      def any_expansion: (untyped msg, untyped url, untyped token) -> untyped
+
+      def extension: (untyped msg, untyped name, untyped token, untyped collected) -> untyped
+
+      # Extensions go where the binary codec keeps them, in the unknown fields,
+      # in number order as protoc writes them
+      def add_extensions: (untyped msg, untyped collected) -> untyped
+
+      # Skips the value of a field nobody knows: a scalar, a list or a message
+      def skip_value: () -> untyped
+
+      def skip_single: () -> untyped
+
+      def skip_message: () -> untyped
+    end
+  end
+end

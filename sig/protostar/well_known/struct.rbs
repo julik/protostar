@@ -1,0 +1,32 @@
+# Generated from lib/protostar/well_known/struct.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module WellKnown
+    # Mixed into google.protobuf.Struct: a Hash of String keys to plain Ruby
+    # values (nil, Numeric, String, true, false, Hash, Array)
+    module Struct
+      def self.included: (untyped base) -> untyped
+
+      module ClassMethods
+        # Returns a new Struct.
+        # Raises UnexpectedStructType.
+        def from_hash: (Hash[String, untyped] hash) -> Google::Protobuf::Struct
+
+        def __value_class: () -> untyped
+      end
+
+      # Returns the value as Ruby, Structs and ListValues
+      # left as they are; nil for a missing key.
+      def []: (String key) -> untyped
+
+      # Raises UnexpectedStructType for a key that is not a String or a value Struct cannot hold.
+      def []=: (String key, untyped value) -> untyped
+
+      # Returns a Hash with nested Structs and ListValues
+      # converted too.
+      def to_h: () -> Hash[String, untyped]
+
+      def has_key?: (String key) -> bool
+    end
+  end
+end

@@ -50,7 +50,8 @@ project and its expectations are recorded as fixtures:
   committed generated file is stale; the matching `:regenerate` tasks fix that
 * `rake conformance:run` drives protobuf's official conformance runner (`rake conformance:build`
   once, it needs CMake and a C++ toolchain)
-* `rake rbs:validate` and `rake yard` keep the signatures and the API docs honest
+* `rake types:check`, `rake rbs:validate`, `rake steep` and `rake rdoc` keep the signatures
+  and the API docs honest (see below)
 
 protoc is never needed to run the tests. `test/corpus/` holds protoc's own test files and the
 descriptors protoc 36.2 produced for them; `rake corpus:goldens` regenerates those and is the
@@ -58,6 +59,36 @@ only task that needs protoc on the machine. Don't edit the corpus or the goldens
 
 Two rules the whole codebase follows: no runtime dependencies and no native code, ever; and
 everything reachable from a descriptor or a generated class is frozen and Ractor-shareable.
+
+## Types and docs
+
+A method's type is written once, as inline RBS right above its `def`, under the RDoc comment
+that documents it:
+
+```ruby
+# Reads a message from its wire bytes.
+#
+# - `frozen`: return a deep-frozen, Ractor-shareable message
+#
+# Raises DecodeError.
+#: (String | IO::Buffer bytes, ?frozen: bool) -> instance
+def self.decode(bytes, frozen: false)
+```
+
+An attribute takes its type at the end of the line (`attr_reader :name #: String`); an
+overload is one more `#:` line. Everything else is generated from these, so don't edit it by hand:
+
+* `rake types:generate` writes `sig/` (except `sig/protostar/google/`, which
+  `rake bootstrap:regenerate` writes) and `rbi/protostar.rbi`. `rake types:check`, and a
+  test, fail when they are stale. `sig/protostar_manual.rbs` holds the few things inline RBS
+  cannot say: class aliases, type aliases and interfaces.
+* `rake steep` typechecks `lib/` against those signatures (it needs Ruby 3.3).
+* `rake rdoc` builds the API docs into `doc/` and fails on any RDoc warning. The signature
+  becomes the method's call-seq, so describe parameters in prose, not in tags.
+
+Internal API gets `# :nodoc:` at the end of its `def`, `attr_*` or `class` line (`# :nodoc: all`
+for a whole internal class or module). On a line of its own, RDoc applies it to the rest of the
+enclosing class. A typed internal attribute goes between `# :stopdoc:` and `# :startdoc:` instead.
 
 ## Basic expectations
 

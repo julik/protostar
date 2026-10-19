@@ -6,10 +6,12 @@ module Protostar
   module Lint
     # `protostar lint`, the command line
     #
-    #   protostar lint proto/                        # every *.proto under proto/, recursively
-    #   protostar lint acme/person.proto --format json
-    #   protostar lint proto/ --rules default,documentation --except FIELD_NOT_REQUIRED
-    #   protostar lint --explain FIELD_NOT_REQUIRED
+    # ```sh
+    # protostar lint proto/                        # every *.proto under proto/, recursively
+    # protostar lint acme/person.proto --format json
+    # protostar lint proto/ --rules default,documentation --except FIELD_NOT_REQUIRED
+    # protostar lint --explain FIELD_NOT_REQUIRED
+    # ```
     #
     # Exits 0 when clean, 1 with warnings (0 with --warnings-ok), 2 with
     # errors, including mistakes on the command line.
@@ -18,13 +20,14 @@ module Protostar
       FORMATS = %w[text json github].freeze
       EXPLAIN_HINT = "For more about a code or rule, try `protostar lint --explain CODE`."
 
+      #: (untyped out, untyped err) -> void
       def initialize(out, err)
         @out = out
         @err = err
       end
 
-      # @param argv [Array<String>]
-      # @return [Integer] the exit status
+      # Returns the exit status.
+      #: (Array[String] argv) -> Integer
       def run(argv)
         opts = {}
         inputs = parser(opts).parse(argv)

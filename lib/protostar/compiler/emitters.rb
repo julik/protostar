@@ -2,7 +2,7 @@
 
 module Protostar
   class Compiler
-    # Code generators. Each takes built {Schema::File}s and returns a Hash of
+    # Code generators. Each takes built Schema::File objects and returns a Hash of
     # output path to contents.
     module Emitters
       # Raised when a file cannot be emitted, with protoc's generator message
@@ -27,6 +27,9 @@ module Protostar
       autoload :Rbs, ::File.expand_path("emitters/rbs", __dir__)
       autoload :ProtostarRbs, ::File.expand_path("emitters/protostar_rbs", __dir__)
       autoload :Grpc, ::File.expand_path("emitters/grpc", __dir__)
+      autoload :FieldTypes, ::File.expand_path("emitters/field_types", __dir__)
+      autoload :ProtostarRbi, ::File.expand_path("emitters/protostar_rbi", __dir__)
+      autoload :Rbi, ::File.expand_path("emitters/rbi", __dir__)
 
       # protoc's Ruby generator naming rules (ruby_generator.cc), which grpc
       # stubs and application code depend on
@@ -73,9 +76,9 @@ module Protostar
 
         # The modules a file's constants live in, outermost first: protoc's
         # GeneratePackageModules
-        # @param file [Schema::File]
-        # @param namespace [String, nil] overrides the package and `ruby_package`
-        # @return [Array<String>]
+        #
+        # - `namespace`: overrides the package and `ruby_package`
+        #: (Schema::File file, ?String? namespace) -> Array[String]
         def module_path(file, namespace = nil)
           return namespace.split("::") if namespace
           convert = true
@@ -100,7 +103,8 @@ module Protostar
         end
 
         # protoc's check on `ruby_package`
-        # @raise [Emitters::Error]
+        #
+        # Raises Emitters::Error.
         def check_ruby_package(file)
           file.options.ruby_package&.each_char do |c|
             next unless BANNED_RUBY_PACKAGE.include?(c)
@@ -110,7 +114,7 @@ module Protostar
         end
 
         # The constant path of a message or enum relative to its file's module
-        # @param descriptor [Schema::Message, Schema::Enum]
+        #: ((Schema::Message | Schema::Enum) descriptor) -> untyped
         def relative_constant(descriptor)
           names = []
           d = descriptor
@@ -123,6 +127,37 @@ module Protostar
 
         def upcase(c)
           c.between?("a", "z") ? c.upcase : c
+        end
+      end
+
+      # Constant paths and comments for the signature emitters of protostar's
+      # own classes, which put the bootstrap under `Protostar::`
+      module NativeNames # :nodoc: all
+        private
+
+        def module_path(file)
+          namespace = @namespaces[file.name]
+          namespace ||= "Protostar::#{Naming.module_path(file).join("::")}" if BOOTSTRAP.include?(file.name)
+          Naming.module_path(file, namespace)
+        end
+
+        def constant(descriptor)
+          prefix = module_path(descriptor.file).map { |m| "::#{m}" }.join
+          "#{prefix}::#{Naming.relative_constant(descriptor)}"
+        end
+
+        def blank(p, first)
+          if first[0]
+            first[0] = false
+          else
+            p.print("\n")
+          end
+        end
+
+        def comment(p, path)
+          text = @source&.location(path)&.leading_comments
+          return if text.nil? || text.empty?
+          text.split("\n").reject(&:empty?).each { |line| p.print("##{line}\n") }
         end
       end
 
@@ -170,10 +205,11 @@ module Protostar
 
         module_function
 
-        # @param value [Object]
-        # @param indent [Integer] the indentation of the line the literal is on
-        # @param start [Integer] the column the literal starts on
-        # @return [String] on one line when it fits, otherwise one element per line
+        # - `indent`: the indentation of the line the literal is on
+        # - `start`: the column the literal starts on
+        #
+        # Returns on one line when it fits, otherwise one element per line.
+        #: (untyped value, ?Integer indent, ?Integer start) -> String
         def call(value, indent = 0, start = indent)
           flat = flat(value)
           return flat if start + flat.size <= WIDTH || !(value.is_a?(Hash) || value.is_a?(Array)) || value.empty?

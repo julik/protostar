@@ -1,0 +1,91 @@
+# Generated from lib/protostar/message/reflection.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Message
+    # Reading and writing a message class's fields by descriptor, name or
+    # number rather than through the accessors, for code that walks messages
+    # it does not know in advance: serializers, builders, form mappers.
+    # Every message class has one, made when the class is defined, frozen and
+    # shareable:
+    #
+    # ```ruby
+    # r = Acme::Person.reflection
+    # r.fields.map(&:name)                 # => ["name", "id", "emails", "address"]
+    # r.get(person, :name)                 # => "Ada"
+    # r.set(person, "id", 7)
+    # r.set?(person, :address)             # => false
+    # r.message_class(:address)            # => Acme::Address
+    # r.each(person) { |field, value| ... } # fields that are set, in declaration order
+    # ```
+    #
+    # It lives on the class (`Klass.reflection`), where no field accessor can
+    # take its name. Values go through the same coercion and checks as the
+    # accessors: `set(m, f, v)` is `m.f = v`, `get(m, f)` is `m.f`.
+    class Reflection
+      # The message class it reflects.
+      attr_reader klass: untyped
+
+      attr_reader descriptor: Schema::Message
+
+      def initialize: (untyped klass, untyped descriptor) -> untyped
+
+      # Returns them in declaration order.
+      def fields: () -> Array[untyped]
+
+      # Returns real oneofs; a proto3 `optional` field's
+      # synthetic oneof is left out, as it is no choice.
+      def oneofs: () -> Array[untyped]
+
+      # - `key`: a field, its name or its number
+      def field: (field_key key) -> untyped
+
+      # - `message`: an instance of the class
+      #
+      # Returns what the field's reader returns.
+      # Raises ArgumentError when there is no such field.
+      def get: (Message message, field_key key) -> untyped
+
+      # - `value`: nil clears the field
+      #
+      # Raises ArgumentError when there is no such field.
+      # Raises Protostar::TypeError for a value the field cannot hold.
+      def set: (Message message, field_key key, untyped value) -> Message
+
+      # Returns set, for a field with presence; not empty, for a
+      # repeated or map field; not its zero value, for any other.
+      def set?: (Message message, field_key key) -> bool
+
+      def clear: (Message message, field_key key) -> Message
+
+      # Returns the member that is set.
+      def which: (Message message, untyped oneof) -> untyped
+
+      # - `key`: a message or group field,
+      #   or a map field whose values are messages
+      #
+      # Returns the class its values are instances of.
+      def message_class: (field_key key) -> untyped
+
+      # - `key`: an enum field, or a map field of enum values
+      #
+      # Returns the enum's module.
+      def enum_module: (field_key key) -> untyped
+
+      # Yields each field that is #set?, in declaration order
+      #
+      # - yields `value`: what the reader returns
+      #
+      # Returns an Enumerator without a block.
+      def each: (Message message) { (untyped field, untyped value) -> void } -> nil
+              | (Message message) -> Enumerator[[ untyped, untyped ], nil]
+
+      def inspect: () -> String
+
+      private
+
+      def info: (untyped key) -> untyped
+
+      def info!: (untyped key) -> untyped
+    end
+  end
+end

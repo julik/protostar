@@ -8,17 +8,18 @@ module Protostar
     # enums are decoded all together on first use. Every decoded element is
     # kept, so reading it again is free.
     #
-    #   view.friends.size
-    #   view.friends[2].name
-    #   view.lucky_numbers.to_a # => [7, 13]
+    # ```ruby
+    # view.friends.size
+    # view.friends[2].name
+    # view.lucky_numbers.to_a # => [7, 13]
+    # ```
     class Repeated
-      include Enumerable
+      include Enumerable #[untyped]
 
       FieldInfo = Message::FieldInfo
       private_constant :FieldInfo
 
-      # @api private
-      def initialize(buf, info, entries, depth)
+      def initialize(buf, info, entries, depth) # :nodoc:
         @buf = buf
         @info = info
         @entries = entries
@@ -32,7 +33,7 @@ module Protostar
         freeze
       end
 
-      # @return [Integer]
+      #: () -> Integer
       def size
         @lazy ? @memo.size : __values.size
       end
@@ -42,13 +43,11 @@ module Protostar
         size.zero?
       end
 
-      # @overload [](index)
-      #   @param index [Integer] negative counts from the end
-      #   @return [Object, nil] the element, nil when out of range
-      # @overload [](start, length)
-      #   @return [Array, nil]
-      # @overload [](range)
-      #   @return [Array, nil]
+      # The element at `index` (negative counts from the end), nil when out of
+      # range; with a length or a Range, an Array as Array#[] returns it.
+      #: (Integer index) -> untyped
+      #: (Integer start, Integer length) -> Array[untyped]?
+      #: (Range[Integer?] range) -> Array[untyped]?
       def [](index, length = nil)
         return to_a[index, length] if length
         return to_a[index] unless index.is_a?(Integer)
@@ -69,7 +68,8 @@ module Protostar
         self
       end
 
-      # @return [Array] the elements; frozen
+      # Returns the elements; frozen.
+      #: () -> Array[untyped]
       def to_a
         return __values unless @lazy
         Array.new(@memo.size) { |j| __element(j) }.freeze
@@ -98,7 +98,7 @@ module Protostar
 
       # Decodes every element and freezes what it keeps, after which the
       # container is Ractor-shareable when its buffer is
-      # @return [self]
+      #: () -> self
       def freeze_index
         return self if @memo.frozen?
         if @lazy
@@ -114,8 +114,7 @@ module Protostar
         self
       end
 
-      # @api private
-      def __values
+      def __values # :nodoc:
         @memo[0] ||= Scan.scalars(@buf, @info, @entries)
       end
 

@@ -1,0 +1,71 @@
+# Generated from lib/protostar/compiler/emitters/rbs.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    module Emitters
+      # Writes the `_pb.rbs` signatures protoc's rbs_generator.cc writes.
+      # Leading comments come from source info, so compile with it.
+      class Rbs
+        WRAPPERS: untyped
+
+        HEADER: ::String
+
+        # Returns a Hash of output path to signatures.
+        def emit: (Array[Schema::File] files) -> Hash[String, String]
+
+        def file: (Schema::File file) -> String
+
+        private
+
+        def mid_line: (untyped initial, untyped p) -> untyped
+
+        def separator: (untyped initial) -> untyped
+
+        def wrap_union: (untyped type) -> untyped
+
+        def optional: (untyped type) -> untyped
+
+        def comment: (untyped p, untyped path) -> untyped
+
+        def deprecation: (untyped p, untyped descriptor) -> untyped
+
+        # rbs_generator.cc's ModulePath: the package's modules as "::A::B"
+        def module_path: (untyped file) -> untyped
+
+        def message_name: (untyped message) -> untyped
+
+        def enum_name: (untyped enum) -> untyped
+
+        def types: () -> untyped
+
+        def scalar_read: (untyped field) -> untyped
+
+        def scalar_write: (untyped field) -> untyped
+
+        def message?: (untyped field) -> untyped
+
+        def read_type: (untyped field) -> untyped
+
+        def write_type: (untyped field) -> untyped
+
+        def init_type: (untyped field) -> untyped
+
+        def enum_value: (untyped p, untyped value, untyped path) -> untyped
+
+        def enum: (untyped p, untyped enum, untyped path) -> untyped
+
+        def field: (untyped p, untyped field, untyped path) -> untyped
+
+        def oneof: (untyped p, untyped oneof, untyped path) -> untyped
+
+        def message: (untyped p, untyped message, untyped path) -> untyped
+
+        def message_lookup: (untyped p, untyped message, untyped overload) -> untyped
+
+        def enum_lookup: (untyped p, untyped enum, untyped overload) -> untyped
+
+        def lookup_override: (untyped p, untyped file) -> untyped
+      end
+    end
+  end
+end

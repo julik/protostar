@@ -1,0 +1,114 @@
+# Generated from lib/protostar/compiler/emitters.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    # Code generators. Each takes built Schema::File objects and returns a Hash of
+    # output path to contents.
+    module Emitters
+      # Raised when a file cannot be emitted, with protoc's generator message
+      class Error < Protostar::Error
+      end
+
+      # The files whose generated Ruby ships with protostar under
+      # `protostar/google/protobuf/`, with constants under
+      # `Protostar::Google::Protobuf`
+      BOOTSTRAP: untyped
+
+      # The Ruby module the bootstrap's `google.protobuf` package lives in
+      BOOTSTRAP_NAMESPACE: ::String
+
+      # protoc's Ruby generator naming rules (ruby_generator.cc), which grpc
+      # stubs and application code depend on
+      module Naming
+        # Characters protoc refuses in `ruby_package`
+        BANNED_RUBY_PACKAGE: ::String
+
+        # "foo/bar.proto" to "foo/bar_pb"
+        def self?.require_name: (untyped proto_file) -> untyped
+
+        # snake_case package part to a module name: "foo_bar" to "FooBar"
+        def self?.package_to_module: (untyped name) -> untyped
+
+        # A message or enum name as a Ruby constant: first letter
+        # capitalised, "PB_" prefixed when it does not start with a letter
+        def self?.rubify_constant: (untyped name) -> untyped
+
+        # The modules a file's constants live in, outermost first: protoc's
+        # GeneratePackageModules
+        #
+        # - `namespace`: overrides the package and `ruby_package`
+        def self?.module_path: (Schema::File file, ?String? namespace) -> Array[String]
+
+        # protoc's check on `ruby_package`
+        #
+        # Raises Emitters::Error.
+        def self?.check_ruby_package: (untyped file) -> untyped
+
+        # The constant path of a message or enum relative to its file's module
+        def self?.relative_constant: (Schema::Message | Schema::Enum descriptor) -> untyped
+
+        def self?.upcase: (untyped c) -> untyped
+      end
+
+      # Constant paths and comments for the signature emitters of protostar's
+      # own classes, which put the bootstrap under `Protostar::`
+      module NativeNames
+        private
+
+        def module_path: (untyped file) -> untyped
+
+        def constant: (untyped descriptor) -> untyped
+
+        def blank: (untyped p, untyped first) -> untyped
+
+        def comment: (untyped p, untyped path) -> untyped
+      end
+
+      # protoc's io::Printer: text is indented at the start of every line
+      # that is not empty
+      class Printer
+        def initialize: () -> untyped
+
+        def print: (untyped text) -> untyped
+
+        def indent: () -> untyped
+
+        def outdent: () -> untyped
+
+        def to_s: () -> untyped
+      end
+
+      # Ruby source for literal values: Strings as UTF-8 text or binary with
+      # `.b`, floats exactly, Hashes and Arrays broken over lines when long
+      module Literal
+        WIDTH: ::Integer
+
+        ESCAPES: untyped
+
+        # - `indent`: the indentation of the line the literal is on
+        # - `start`: the column the literal starts on
+        #
+        # Returns on one line when it fits, otherwise one element per line.
+        def self?.call: (untyped value, ?Integer indent, ?Integer start) -> String
+
+        def self?.flat: (untyped value) -> untyped
+
+        def self?.key: (untyped k) -> untyped
+
+        def self?.float: (untyped value) -> untyped
+
+        # A double-quoted literal; binary Strings, and Strings that are not
+        # valid UTF-8, are escaped byte by byte and marked `.b`
+        def self?.string: (untyped value) -> untyped
+
+        def self?.byte: (untyped b) -> untyped
+
+        def self?.char: (untyped c) -> untyped
+
+        # Formatting and line-breaking code points are escaped so that a
+        # generated line never breaks or reorders visually
+        def self?.printable?: (untyped c) -> untyped
+      end
+    end
+  end
+end

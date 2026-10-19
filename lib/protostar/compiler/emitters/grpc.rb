@@ -7,8 +7,8 @@ module Protostar
       # (grpc's src/compiler/ruby_generator.cc). Comments come from source
       # info, so compile with it.
       class Grpc
-        # @param files [Array<Schema::File>]
-        # @return [Hash{String => String}] output path to source, for files with services only
+        # Returns a Hash of output path to source, for files with services only.
+        #: (Array[Schema::File] files) -> Hash[String, String]
         def emit(files)
           files.each_with_object({}) do |f, out|
             source = file(f)
@@ -16,9 +16,11 @@ module Protostar
           end
         end
 
-        # @param name [String] "foo/bar.proto"
-        # @return [String] "foo/bar_services_pb.rb"
-        # @raise [Emitters::Error] for a name protoc's plugin refuses
+        # - `name`: "foo/bar.proto"
+        #
+        # Returns "foo/bar_services_pb.rb".
+        # Raises Emitters::Error for a name protoc's plugin refuses.
+        #: (String name) -> String
         def self.output_name(name)
           unless name.size > 6 && ".proto".include?(name[-1])
             raise Error, "Invalid proto file name:  must end with .proto"
@@ -26,8 +28,8 @@ module Protostar
           name[0, name.size - 6] + "_services_pb.rb"
         end
 
-        # @param file [Schema::File]
-        # @return [String] empty when the file declares no services
+        # Returns empty when the file declares no services.
+        #: (Schema::File file) -> String
         def file(file)
           return "" if file.services.empty?
           @source = file.source_info

@@ -1,0 +1,176 @@
+# Generated from lib/protostar/compiler.rb by script/types.rb. Do not edit.
+
+module Protostar
+  # A pure-Ruby protoc front end: turns `.proto` source into
+  # Protostar::Schema::File objects whose `to_proto` is what protoc 36.2 puts in a
+  # `FileDescriptorProto`, and rejects what protoc rejects with protoc's
+  # `file:line:col: message` diagnostics.
+  #
+  # ```ruby
+  # compiler = Protostar::Compiler.new(include_paths: ["proto"])
+  # files = compiler.compile(["foo/bar.proto"], source_info: true)
+  # ```
+  class Compiler
+    # Where the bundled `google/protobuf/*.proto` imports live
+    INCLUDE_DIR: untyped
+
+    # One error or warning, with protoc's 1-based line and column (nil when
+    # protoc reports none). #to_s and #format print it as protoc does; the
+    # rest is for Diagnostics::Renderer, which prints it as rustc would.
+    class Diagnostic
+      # The file name as imported.
+      attr_reader file: String
+
+      attr_reader line: Integer?
+
+      attr_reader column: Integer?
+
+      attr_reader message: String
+
+      # :error or :warning.
+      attr_reader severity: :error | :warning
+
+      # The file on disk, spelled as protoc prints it: the include
+      # path as given (canonicalized) joined with #file; nil for in-memory and bundled files.
+      attr_reader path: String?
+
+      # The primary span first, then related ones; empty
+      # when the compiler knows only #line and #column, or nothing.
+      attr_reader spans: Array[Diagnostics::Span]
+
+      # `help:` lines, the concrete fix in words.
+      attr_reader help: Array[String]
+
+      # `note:` lines.
+      attr_reader notes: Array[String]
+
+      # A mechanical fix `protostar lint --fix` can apply.
+      attr_reader fix: Diagnostics::Fix?
+
+      # The lint rule that found it, e.g. "FIELD_NOT_REQUIRED".
+      attr_reader rule: String?
+
+      def initialize: (String file, Integer? line, Integer? column, String message, ?:error | :warning severity, ?path: String?, ?spans: Array[Diagnostics::Span], ?code: String?, ?title: String?, ?help: Array[String], ?notes: Array[String], ?fix: Diagnostics::Fix?, ?rule: String?) -> void
+
+      # Returns the stable code `protostar lint --explain` knows, e.g. "L0201";
+      # for the compiler's messages, looked up in Diagnostics::Codes.
+      def code: () -> String?
+
+      # Returns the headline the renderer prints: a short rewording where the
+      # catalogue has one, else #message.
+      def title: () -> String
+
+      # Returns a copy with what Diagnostics::Codes knows about the message
+      # filled in: code, title, span labels, help and notes.
+      def annotated: () -> Diagnostic
+
+      # Returns a copy with the given attributes replaced.
+      def with: (**untyped changes) -> Diagnostic
+
+      def error?: () -> bool
+
+      def warning?: () -> bool
+
+      # Returns the diagnostic as protoc prints it, with the virtual file name.
+      def to_s: () -> String
+
+      # - `error_format`: :gcc or :msvs, protoc's `--error_format`
+      #
+      # Returns the diagnostic as protoc's command line prints it: the path on disk when known.
+      def format: (?:gcc | :msvs error_format) -> String
+
+      def ==: (untyped other) -> untyped
+
+      def hash: () -> untyped
+
+      def inspect: () -> untyped
+
+      alias eql? ==
+    end
+
+    # Raised when compilation fails
+    class Error < Protostar::Error
+      # Every error found, in protoc's order.
+      attr_reader diagnostics: Array[Diagnostic]
+
+      def initialize: (untyped diagnostics) -> untyped
+    end
+
+    # Where compiled files go and imports are looked up.
+    attr_reader pool: Schema::Pool
+
+    # Directories searched for imports, in order, before the bundled includes.
+    attr_reader include_paths: Array[String]
+
+    # Warnings (and errors) of the last #compile.
+    attr_reader diagnostics: Array[Diagnostic]
+
+    # - `include_paths`: directories to resolve `.proto` names against, in order
+    # - `pool`: receives every compiled file; files already in it are reused
+    # - `bundled_includes`: search the bundled `google/protobuf/*.proto` after `include_paths`
+    def initialize: (?include_paths: Array[String], ?pool: Schema::Pool, ?bundled_includes: bool) -> void
+
+    # Compiles `.proto` files and everything they import.
+    #
+    # The pool keeps every option, as protoc's own pool does, so later files
+    # are validated against the full declarations. What is returned is what
+    # protoc writes with `--descriptor_set_out`: options declared
+    # `retention = RETENTION_SOURCE` removed (pass `retain_options: true`
+    # for the pool's files as they are).
+    #
+    # - `names`: file names relative to an include path, e.g. "foo/bar.proto"
+    # - `source_info`: keep `source_code_info` in the built files
+    # - `retain_options`: return the pool's files, source-retention options included
+    # - `sources`: file contents by name, consulted before the include paths
+    # - `protoc_cli`: @api private: false checks like a bare DescriptorPool rather than
+    #   protoc's command line (no imports loaded from disk, no unused import, naming style or other
+    #   command-line checks), as protoc's own parser tests do
+    #
+    # Returns the named files and their transitive imports, imports first.
+    # Raises Error with every diagnostic when a file cannot be compiled.
+    def compile: (Array[String] names, ?source_info: bool, ?retain_options: bool, ?sources: Hash[String, String], ?protoc_cli: bool) -> Array[Schema::File]
+
+    # **Deprecated:** Goes away in 0.2.0. Use #compile and read the Schema::File objects, or
+    # `compile(names).map { |f| f.to_proto.to_h }` for the same Hashes.
+    #
+    # Same as #compile, each file as `to_proto.to_h`, for reading
+    def compile_to_hashes: (untyped names, ?source_info: untyped, ?retain_options: untyped, ?sources: untyped) -> Array[Hash[untyped, untyped]]
+
+    # - `name`: a virtual file name
+    #
+    # Returns the path it resolves to on disk.
+    def resolve: (String name) -> String?
+
+    # - `name`: a virtual file name
+    #
+    # Returns where it is on disk, spelled from the include path as it
+    # was given, as protoc prints it in diagnostics; nil when not under one.
+    def disk_path: (String name) -> String?
+
+    # protoc's CanonicalizePath: "." components, empty components and a
+    # trailing slash dropped
+    def self.canonical_path: (untyped path) -> untyped
+
+    # The options message protoc compiles into itself, from the bundled
+    # descriptor.proto, for files that do not import descriptor.proto
+    def builtin_options_type: (untyped name) -> untyped
+
+    # The source-retention-stripped copy of a pool file, linked against the
+    # stripped copies of its imports
+    def output_file: (untyped file) -> untyped
+
+    # protoc's SimpleDtoa: the shortest of %.15g and %.17g that reads back exactly
+    def self.simple_dtoa: (untyped value) -> untyped
+
+    # protoc's SimpleFtoa over the float nearest to `value`
+    def self.simple_ftoa: (untyped value) -> untyped
+
+    # strtof reports ERANGE for values that overflow or flush to zero
+    def self.strtof_in_range?: (untyped value) -> untyped
+
+    C_ESCAPES: untyped
+
+    # absl::CEscape: protoc's spelling of bytes defaults
+    def self.c_escape: (untyped bytes) -> untyped
+  end
+end

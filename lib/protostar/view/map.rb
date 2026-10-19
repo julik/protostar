@@ -7,21 +7,24 @@ module Protostar
     # positions until read, then become nested views. A key that occurs
     # twice keeps the last entry, as decoding does.
     #
-    #   view.attrs["colour"]
-    #   view.attrs.key?("size")
-    #   view.attrs.to_h
+    # ```ruby
+    # view.attrs["colour"]
+    # view.attrs.key?("size")
+    # view.attrs.to_h
+    # ```
     class Map
-      include Enumerable
+      include Enumerable #[[untyped, untyped]]
 
       F = Message::FieldInfo
       private_constant :F
 
       # Reads one map entry
-      # @return [Array(Object, Object, Boolean)] key, value and whether the
-      #   value is a closed enum's unknown number. A message value is the
-      #   flat Array of its segments' offsets and lengths.
-      # @api private
-      def self.entry(buf, offset, length, info, depth)
+      #
+      # Returns key, value and whether the
+      # value is a closed enum's unknown number. A message value is the
+      # flat Array of its segments' offsets and lengths.
+      #: (untyped buf, untyped offset, untyped length, untyped info, untyped depth) -> [untyped, untyped, bool]
+      def self.entry(buf, offset, length, info, depth) # :nodoc:
         c = Wire::Reader.new(buf, offset, offset + length)
         key_info = info.key
         value_info = info.value
@@ -67,8 +70,7 @@ module Protostar
         [key, value, unknown_enum]
       end
 
-      # @api private
-      def initialize(buf, info, entries, depth)
+      def initialize(buf, info, entries, depth) # :nodoc:
         @buf = buf
         @info = info
         @entries = entries
@@ -77,14 +79,15 @@ module Protostar
         freeze
       end
 
-      # @return [Object, nil] the value for `key`, nil when there is none
+      # Returns the value for `key`, nil when there is none.
+      #: (untyped key) -> untyped
       def [](key)
         h = __hash
         v = h[key]
         v.is_a?(Array) ? (h[key] = Scan.nested(@info.value, @buf, v, @depth)) : v
       end
 
-      # @raise [KeyError] when there is no such key
+      # Raises KeyError when there is no such key.
       def fetch(key, *default, &block)
         return self[key] if __hash.key?(key)
         __hash.fetch(key, *default, &block)
@@ -97,17 +100,17 @@ module Protostar
       alias_method :include?, :key?
       alias_method :member?, :key?
 
-      # @return [Array]
+      #: () -> Array[untyped]
       def keys
         __hash.keys
       end
 
-      # @return [Array]
+      #: () -> Array[untyped]
       def values
         to_h.values
       end
 
-      # @return [Integer]
+      #: () -> Integer
       def size
         __hash.size
       end
@@ -125,7 +128,8 @@ module Protostar
       end
       alias_method :each_pair, :each
 
-      # @return [Hash] every key and value, message values as nested views; frozen
+      # Returns every key and value, message values as nested views; frozen.
+      #: () -> Hash[untyped, untyped]
       def to_h
         h = __hash
         return h if h.frozen?
@@ -155,7 +159,7 @@ module Protostar
 
       # Decodes every entry and freezes what it keeps, after which the
       # container is Ractor-shareable when its buffer is
-      # @return [self]
+      #: () -> self
       def freeze_index
         return self if @memo.frozen?
         __resolve.each_value { |v| v.freeze_index if v.is_a?(View) }
@@ -165,8 +169,7 @@ module Protostar
         self
       end
 
-      # @api private
-      def __hash
+      def __hash # :nodoc:
         @memo[0] ||= begin
           h = {}
           entries = @entries

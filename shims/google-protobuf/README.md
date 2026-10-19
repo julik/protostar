@@ -199,9 +199,8 @@ probe for each. In short:
 - Descriptors inspect as the FFI implementation's do (`Google::Protobuf::FieldDescriptor: name`),
   not with an address; their names are frozen UTF-8 Strings.
 - Accessors are methods on the class, not `method_missing`, and protostar's own message
-  methods (`encode`, `to_text`, `merge!`, ...) are there too. Message classes subclass
-  `Protostar::Message`, not `Google::Protobuf::AbstractMessage` (they are
-  `MessageExts`, as in the gem).
+  methods (`encode`, `to_text`, `merge!`, ...) are there too: message classes subclass
+  `Google::Protobuf::AbstractMessage`, as in the gem, and it subclasses `Protostar::Message`.
 - Lookups take Strings and Symbols alike; `each` without a block returns an Enumerator.
 - Maps iterate and encode in insertion order (upb uses its hash order).
 - JSON: error messages are protostar's (the class is the gem's `ParseError`); extensions

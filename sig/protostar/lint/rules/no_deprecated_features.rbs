@@ -1,0 +1,24 @@
+# Generated from lib/protostar/lint/rules/no_deprecated_features.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # NO_DEPRECATED_FEATURES: A feature or option deprecated in the file's edition
+      class NoDeprecatedFeatures < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        CLAIMS: untyped
+
+        def check: () -> untyped
+
+        private
+
+        # protoc reports against the element; the option that sets the
+        # feature is the more useful place to point
+        def option_span: (untyped feature) -> untyped
+      end
+    end
+  end
+end

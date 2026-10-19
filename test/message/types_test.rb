@@ -133,6 +133,17 @@ class TypesTest < Minitest::Test
     assert_raises(NotImplementedError) { Protostar::Message.new }
   end
 
+  def test_registry_with_another_base_class
+    base = Class.new(Protostar::Message)
+    _, file = SchemaFixtures.load("google/protobuf/unittest_import_public.proto")
+    klass = Protostar::Types::Registry.new(base: base).define(file).fetch("proto2_unittest_import.PublicImportMessage")
+    assert_same base, klass.superclass
+    assert_equal 3, klass.decode(klass.new(e: 3).encode).e
+    assert Ractor.shareable?(klass.__fields)
+    assert_raises(ArgumentError) { Protostar::Types::Registry.new(base: Object) }
+    assert_raises(ArgumentError) { Protostar::Types::Registry.new(base: Protostar::Enum) }
+  end
+
   def test_refuses_names_that_are_not_identifiers
     file = SchemaFixtures.add(Protostar::Schema::Pool.new, "evil.proto", package: "evil") do |f|
       f.message("M") { |m| m.field "a; raise 'pwned'", 1, :int32 }

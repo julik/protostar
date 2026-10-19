@@ -1,0 +1,34 @@
+# Generated from lib/protostar/schema/descriptor.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    # What every descriptor has. Made by a Draft, frozen and shareable once it is finished.
+    class Descriptor
+      # The simple name.
+      attr_reader name: String
+
+      # The fully qualified name, without a leading dot.
+      attr_reader full_name: String
+
+      # Position among its siblings, in declaration order.
+      attr_reader index: Integer
+
+      # Resolved features.
+      attr_reader features: Features
+
+      # Returns declared options; once resolved, also the resolved Options#features.
+      def options: () -> untyped
+
+      # Sets attributes that only become known while linking. Drafts are the
+      # callers; everything is frozen once the draft is finished.
+      def __link: (**untyped attrs) -> untyped
+
+      def inspect: () -> untyped
+
+      # `to_proto` as a Hash, for reading; nothing builds from it
+      def to_h: () -> Hash[Symbol, untyped]
+
+      alias to_s inspect
+    end
+  end
+end

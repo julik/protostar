@@ -1,0 +1,64 @@
+# Generated from lib/protostar/view/repeated.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class View
+    # The value of a repeated field read through a view. Elements of string,
+    # bytes and message fields are decoded one at a time when first read
+    # (messages as nested views over the same buffer); numbers, booleans and
+    # enums are decoded all together on first use. Every decoded element is
+    # kept, so reading it again is free.
+    #
+    # ```ruby
+    # view.friends.size
+    # view.friends[2].name
+    # view.lucky_numbers.to_a # => [7, 13]
+    # ```
+    class Repeated
+      include Enumerable[untyped]
+
+      FieldInfo: untyped
+
+      def initialize: (untyped buf, untyped info, untyped entries, untyped depth) -> untyped
+
+      def size: () -> Integer
+
+      def empty?: () -> untyped
+
+      # The element at `index` (negative counts from the end), nil when out of
+      # range; with a length or a Range, an Array as Array#[] returns it.
+      def []: (Integer index) -> untyped
+            | (Integer start, Integer length) -> Array[untyped]?
+            | (Range[Integer?] range) -> Array[untyped]?
+
+      def each: () ?{ (?) -> untyped } -> untyped
+
+      # Returns the elements; frozen.
+      def to_a: () -> Array[untyped]
+
+      # Equal to another Repeated or an Array with equal elements
+      def ==: (untyped other) -> untyped
+
+      def hash: () -> untyped
+
+      def inspect: () -> untyped
+
+      def pretty_print: (untyped q) -> untyped
+
+      # Decodes every element and freezes what it keeps, after which the
+      # container is Ractor-shareable when its buffer is
+      def freeze_index: () -> self
+
+      def __values: () -> untyped
+
+      private
+
+      def __element: (untyped j) -> untyped
+
+      EMPTY: untyped
+
+      alias length size
+
+      alias to_ary to_a
+    end
+  end
+end

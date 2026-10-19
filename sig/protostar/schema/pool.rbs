@@ -1,0 +1,78 @@
+# Generated from lib/protostar/schema/pool.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    # A registry of built files, safe to use from several threads. The pool
+    # itself is mutable and not shareable between Ractors; the files it holds are.
+    class Pool
+      def initialize: () -> void
+
+      # Registers a built file and everything it defines.
+      #
+      # An extension whose extendee and number another file already uses is
+      # accepted with a warning, as protoc does; #find_extension keeps
+      # returning the first one.
+      #
+      # - `warn`: write that warning with `Kernel#warn`; the
+      #   compiler passes false and reports it as a diagnostic instead
+      #
+      # Raises Error when the file name is taken, a symbol or package it
+      # defines clashes with one already in the pool, or the file itself uses
+      # an extension number twice.
+      def add: (File file, ?warn: bool) -> File
+
+      def file: (String name) -> File?
+
+      # Returns whether a file of that name is registered.
+      def include?: (untyped file_name) -> bool
+
+      # Returns them in the order they were added.
+      def files: () -> Array[File]
+
+      # - `full_name`: without a leading dot
+      #
+      # Returns any symbol: message, field, oneof, enum, enum value, service or method.
+      def find_symbol: (String full_name) -> Descriptor?
+
+      def find_message: (String full_name) -> Message?
+
+      def find_enum: (String full_name) -> Enum?
+
+      def find_service: (untyped full_name) -> Service?
+
+      # - `extendee`: the extended message or its full name
+      def find_extension: (String | Message extendee, Integer number) -> Field?
+
+      # Returns every registered extension of the message, by number.
+      def extensions_of: (String | Message extendee) -> Array[Field]
+
+      def inspect: () -> untyped
+
+      # Builds and adds a serialized FileDescriptorProto, unless a file of that name is here
+      def add_serialized_file: (untyped bytes) -> File
+
+      # See Protostar.load_descriptor_set.
+      def load_descriptor_set: (untyped bytes) -> untyped
+
+      private
+
+      def check_clashes: (untyped file) -> untyped
+
+      def package_prefixes: (untyped package) -> untyped
+    end
+  end
+end
+
+module Protostar
+  # The process-wide pool generated `_pb.rb` files build into.
+  attr_reader self.generated_pool: Schema::Pool
+
+  # Builds every file of a serialized `FileDescriptorSet` into a pool, in
+  # order. Custom options are decoded against the extensions the pool (and
+  # the file itself) defines; files already in the pool are taken from it.
+  #
+  # - `bytes`: a serialized google.protobuf.FileDescriptorSet
+  def self.load_descriptor_set: (String bytes, pool: Schema::Pool) -> Array[Schema::File]
+
+  Pool: untyped
+end

@@ -6,22 +6,15 @@ module Protostar
     class SourceInfo
       # One `SourceCodeInfo.Location`
       class Location
-        # @return [Array<Integer>] the descriptor path, e.g. [4, 0, 2, 1] for message 0, field 1
-        attr_reader :path
-        # @return [Array<Integer>] [start_line, start_column, (end_line,) end_column], zero-based
-        attr_reader :span
-        # @return [String, nil]
-        attr_reader :leading_comments
-        # @return [String, nil]
-        attr_reader :trailing_comments
-        # @return [Array<String>]
-        attr_reader :leading_detached_comments
+        # The descriptor path, e.g. [4, 0, 2, 1] for message 0, field 1.
+        attr_reader :path #: Array[Integer]
+        # [start_line, start_column, (end_line,) end_column], zero-based.
+        attr_reader :span #: Array[Integer]
+        attr_reader :leading_comments #: String?
+        attr_reader :trailing_comments #: String?
+        attr_reader :leading_detached_comments #: Array[String]
 
-        # @param path [Array<Integer>]
-        # @param span [Array<Integer>]
-        # @param leading_comments [String, nil]
-        # @param trailing_comments [String, nil]
-        # @param leading_detached_comments [Array<String>]
+        #: (path: Array[Integer], span: Array[Integer], ?leading_comments: String?, ?trailing_comments: String?, ?leading_detached_comments: Array[String]) -> void
         def initialize(path:, span:, leading_comments: nil, trailing_comments: nil, leading_detached_comments: [])
           @path = Freezer.call(path)
           @span = Freezer.call(span)
@@ -32,10 +25,10 @@ module Protostar
         end
       end
 
-      # @return [Array<Location>]
-      attr_reader :locations
+      attr_reader :locations #: Array[Location]
 
-      # @param locations [Array<Location>] in protoc's order
+      # - `locations`: in protoc's order
+      #: (Array[Location] locations) -> void
       def initialize(locations)
         @locations = locations.dup.freeze
         @by_path = {}
@@ -43,8 +36,8 @@ module Protostar
         @by_path.freeze
       end
 
-      # @param path [Array<Integer>]
-      # @return [Location, nil] the first location recorded for the path
+      # Returns the first location recorded for the path.
+      #: (Array[Integer] path) -> Location?
       def location(path)
         @by_path[path]
       end

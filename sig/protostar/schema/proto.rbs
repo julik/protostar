@@ -1,0 +1,140 @@
+# Generated from lib/protostar/schema/proto.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    # The one place that knows protoc's shape. File#to_proto writes a
+    # file as the `FileDescriptorProto` message of the bootstrap classes
+    # (`Protostar::Google::Protobuf`), as protoc's `FileDescriptor::CopyTo`
+    # would; File.from_proto reads one back into a draft. Custom options
+    # exist as extension bytes inside options messages only here: written by
+    # MessageValue#encode, read by MessageValue.decode.
+    module Proto
+      # descriptor.proto's classes are autoloaded on first reference, which
+      # Ruby 3.2 and 3.3 can only do in the main Ractor
+      #
+      # Returns `Protostar::Google::Protobuf`, descriptor.proto's message classes.
+      def self.types: () -> Module
+
+      # - `name`: a descriptor.proto message, e.g. :FieldOptions
+      #
+      # Returns its descriptor, as the bootstrap defines it.
+      def self.schema: (Symbol | String name) -> Schema::Message
+
+      # - `bytes`: a serialized FileDescriptorSet
+      #
+      # Returns each serialized FileDescriptorProto.
+      def self.each_file: (String bytes) -> Array[String]
+
+      # Descriptors as descriptor.proto messages
+      module Writer
+        def self?.file: (untyped file, source_info: untyped, json_names: untyped) -> untyped
+
+        def self?.message: (untyped message, untyped json_names) -> untyped
+
+        def self?.field: (untyped field, untyped json_names) -> untyped
+
+        def self?.oneof: (untyped oneof) -> untyped
+
+        def self?.enum: (untyped enum) -> untyped
+
+        def self?.enum_value: (untyped value) -> untyped
+
+        def self?.service: (untyped service) -> untyped
+
+        def self?.rpc: (untyped rpc) -> untyped
+
+        def self?.source_code_info: (untyped info) -> untyped
+
+        def self?.options: (untyped attrs, untyped descriptor) -> untyped
+
+        FILE_SOURCE_CODE_INFO: ::Integer
+
+        # A serialized FileDescriptorProto with `source_code_info` put in its
+        # place among the fields, which are in number order. Thousands of
+        # locations are written straight to bytes rather than built as
+        # messages first: the same bytes, a quarter of the time.
+        def self?.with_source_code_info: (untyped bytes, untyped info) -> untyped
+
+        # SourceCodeInfo: location = 1; and in Location, path = 1 and span = 2
+        # (packed), leading_comments = 3, trailing_comments = 4,
+        # leading_detached_comments = 6
+        def self?.source_code_info_bytes: (untyped info) -> untyped
+
+        def self?.packed: (untyped w, untyped number, untyped values) -> untyped
+
+        def self?.string: (untyped w, untyped number, untyped text) -> untyped
+
+        def self?.list: (untyped attrs, untyped key, untyped items) ?{ (?) -> untyped } -> untyped
+      end
+
+      # A FileDescriptorProto message read into a draft
+      class Reader
+        # :nodoc: all
+        def initialize: (untyped proto, untyped pool) -> untyped
+
+        def call: () -> untyped
+
+        private
+
+        def record: (untyped descriptor, untyped proto) -> untyped
+
+        # Extensions from the pool, then those the file defines itself
+        def extension_lookup: (untyped file) -> untyped
+
+        def message: (untyped scope, untyped proto) -> untyped
+
+        def field: (untyped scope, untyped proto, untyped oneofs) -> untyped
+
+        def extension: (untyped scope, untyped proto) -> untyped
+
+        def field_attributes: (untyped proto) -> untyped
+
+        def enum: (untyped scope, untyped proto) -> untyped
+
+        def source_info: (untyped proto) -> untyped
+      end
+
+      # descriptor.proto's SymbolVisibility for Message#visibility and Enum#visibility
+      def visibility: (untyped symbol) -> untyped
+
+      def visibility_symbol: (untyped proto) -> untyped
+
+      # Message values to and from wire bytes, driven by Schema::Message descriptors:
+      # fields in number order with extensions among them, unknown fields
+      # last; packed repeated fields per features; MessageSet items for
+      # `message_set_wire_format` types; proto3 zero values left out.
+      module Codec
+        def self?.encode: (untyped type, untyped value) -> untyped
+
+        # A MessageSet item: group 1 holding type_id 2 and message 3
+        def self?.write_set_item: (untyped w, untyped field, untyped value) -> untyped
+
+        def self?.write_field: (untyped w, untyped field, untyped value) -> untyped
+
+        def self?.zero?: (untyped field, untyped value) -> untyped
+
+        def self?.write_one: (untyped w, untyped field, untyped value) -> untyped
+
+        def self?.write_value: (untyped w, untyped field, untyped v) -> untyped
+
+        def self?.decode: (untyped type, untyped bytes, untyped lookup) -> untyped
+
+        def self?.read: (untyped r, untyped type, untyped lookup) -> untyped
+
+        # One MessageSet item; kept whole as an unknown group when its
+        # extension is not known
+        def self?.read_set_item: (untyped r, untyped extensions, untyped type, untyped lookup, untyped unknown) -> untyped
+
+        def self?.compatible?: (untyped field, untyped wire_type) -> untyped
+
+        def self?.tag_bytes: (untyped number, untyped wire_type) -> untyped
+
+        def self?.raw: (untyped r, untyped start) -> untyped
+
+        def self?.group_body: (untyped r, untyped start, untyped number) -> untyped
+
+        def self?.read_value: (untyped r, untyped field) -> untyped
+      end
+    end
+  end
+end

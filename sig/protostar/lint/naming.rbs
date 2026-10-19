@@ -1,0 +1,29 @@
+# Generated from lib/protostar/lint/naming.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    # Case conversions as buf's naming rules apply them
+    module Naming
+      # Returns the words of a name in any case: "HTTPServer_v2" is HTTP, Server, v2.
+      def self?.words: (untyped name) -> Array[String]
+
+      # Returns "fooBar" as "foo_bar".
+      def self?.lower_snake: (untyped name) -> String
+
+      # Returns "fooBar" as "FOO_BAR".
+      def self?.upper_snake: (untyped name) -> String
+
+      # Returns "foo_bar" as "FooBar".
+      def self?.pascal: (untyped name) -> String
+
+      def self?.lower_snake?: (untyped name) -> untyped
+
+      def self?.upper_snake?: (untyped name) -> untyped
+
+      def self?.pascal?: (untyped name) -> untyped
+
+      # Words joined by underscores, a digit run kept on the word before it
+      def self?.joined: (untyped name) -> untyped
+    end
+  end
+end

@@ -2,13 +2,15 @@
 
 module Protostar
   # The base class of every message class. Subclasses are made by
-  # {Types.define} from a {Schema::Message}; they get one reader and writer
+  # Types.define from a Schema::Message; they get one reader and writer
   # per field, `has_` and `clear_` for fields with presence, and `which_` for
   # each oneof.
   #
-  #   person = Person.new(name: "Ada", ids: [1, 2])
-  #   bytes = person.encode
-  #   Person.decode(bytes) == person # => true
+  # ```ruby
+  # person = Person.new(name: "Ada", ids: [1, 2])
+  # bytes = person.encode
+  # Person.decode(bytes) == person # => true
+  # ```
   #
   # Values are kept in one Array per message, a slot per field. Singular
   # fields with presence hold nil when unset; fields without presence hold
@@ -23,35 +25,39 @@ module Protostar
     autoload :Reflection, ::File.expand_path("message/reflection", __dir__)
 
     class << self
-      # @return [Schema::Message]
-      attr_reader :descriptor
+      attr_reader :descriptor #: Schema::Message
 
-      # @return [Reflection] the class's fields by descriptor, name or number
-      attr_reader :reflection
+      # The class's fields by descriptor, name or number.
+      attr_reader :reflection #: Reflection
 
-      # @api private
-      attr_reader :__fields, :__by_number, :__by_name, :__template, :__oneofs, :__required
+      attr_reader :__fields, :__by_number, :__by_name, :__template, :__oneofs, :__required # :nodoc:
 
-      # @param bytes [String, IO::Buffer] never mutated
-      # @param recursion_limit [Integer] how deep messages may nest
-      # @param frozen [Boolean] return a deep-frozen, Ractor-shareable message
-      # @return [Message]
-      # @raise [DecodeError]
+      # - `bytes`: never mutated
+      # - `recursion_limit`: how deep messages may nest
+      # - `frozen`: return a deep-frozen, Ractor-shareable message
+      #
+      # Raises DecodeError.
+      #: (String | IO::Buffer bytes, ?recursion_limit: Integer, ?frozen: bool) -> instance
       def decode(bytes, recursion_limit: Codec::Decoder::RECURSION_LIMIT, frozen: false)
-        Codec::Decoder.decode(self, bytes, recursion_limit: recursion_limit, frozen: frozen)
+        Codec::Decoder.decode(self, bytes, recursion_limit: recursion_limit, frozen: frozen) #: instance
       end
 
       # Reads one message prefixed by its varint length
-      # @param source [String, IO::Buffer, #getbyte and #read] a String is read
+      #
+      # - `source`: a String is read
       #   from its start; an IO from its current position, leaving it after the message
-      # @return [Message, nil] nil when an IO is at its end
-      # @raise [DecodeError]
+      #
+      # Returns nil when an IO is at its end.
+      # Raises DecodeError.
+      #: (String | IO::Buffer | IO source, ?recursion_limit: Integer, ?frozen: bool) -> instance?
       def decode_delimited(source, **options)
-        Codec::Decoder.decode_delimited(self, source, **options)
+        Codec::Decoder.decode_delimited(self, source, **options) #: instance?
       end
 
-      # @param message [Message] an instance of this class
-      # @return [String] binary
+      # - `message`: an instance of this class
+      #
+      # Returns a binary String.
+      #: (instance message) -> String
       def encode(message)
         unless message.instance_of?(self)
           raise Protostar::TypeError, "#{descriptor.full_name}.encode expects a #{descriptor.full_name}, got #{message.class}"
@@ -59,17 +65,17 @@ module Protostar
         message.encode
       end
 
-      # @param json [String]
-      # @param options [Hash] see {JSON.decode}
-      # @return [Message]
-      # @raise [JSON::ParseError]
+      # - `options`: see JSON.decode
+      #
+      # Raises JSON::ParseError.
+      #: (String json, ?ignore_unknown_fields: bool, ?registry: Types::Registry?) -> instance
       def decode_json(json, **options)
-        JSON.decode(self, json, **options)
+        JSON.decode(self, json, **options) #: instance
       end
 
-      # @param message [Message] an instance of this class
-      # @param options [Hash] see {JSON.encode}
-      # @return [String]
+      # - `message`: an instance of this class
+      # - `options`: see JSON.encode
+      #: (instance message, **untyped options) -> String
       def encode_json(message, **options)
         unless message.instance_of?(self)
           raise Protostar::TypeError, "#{descriptor.full_name}.encode_json expects a #{descriptor.full_name}, got #{message.class}"
@@ -77,46 +83,52 @@ module Protostar
         JSON.encode(message, **options)
       end
 
-      # @api private
-      attr_reader :__view_class
+      attr_reader :__view_class # :nodoc:
 
-      # @return [Class] the {View} subclass whose instances read this class's messages
+      # Returns the View subclass whose instances read this class's messages.
+      #: () -> singleton(View)
       def view_class
         @__view_class || raise(NotImplementedError, "#{self} is abstract; define message classes with Protostar::Types")
       end
 
       # A read-only view of an encoded message that decodes fields only when read
-      # @param bytes [String, IO::Buffer] not copied; must not change while the view is used
-      # @param offset [Integer] where the message starts in `bytes`
-      # @param length [Integer, nil] its length, by default up to the end of `bytes`
-      # @param recursion_limit [Integer] how deep messages may nest
-      # @return [View]
-      # @raise [DecodeError] when the top level of the message is malformed
+      #
+      # - `bytes`: not copied; must not change while the view is used
+      # - `offset`: where the message starts in `bytes`
+      # - `length`: its length, by default up to the end of `bytes`
+      # - `recursion_limit`: how deep messages may nest
+      #
+      # Raises DecodeError when the top level of the message is malformed.
+      #: (String | IO::Buffer bytes, ?offset: Integer, ?length: Integer?, ?recursion_limit: Integer) -> View
       def view(bytes, offset: 0, length: nil, recursion_limit: Codec::Decoder::RECURSION_LIMIT)
         view_class.__open(bytes, offset, length, recursion_limit)
       end
 
-      # A message made with a {Builder} block, or with `new` when there is no
+      # A message made with a Builder block, or with `new` when there is no
       # block. `fields` are written first; the block may set them again (the
       # bytes never leave the process, so overwrites are allowed).
       #
-      #   person = Acme::Person.build(name: "Jane") do |pb|
-      #     pb.address { pb.street "x" }
-      #   end
+      # ```ruby
+      # person = Acme::Person.build(name: "Jane") do |pb|
+      #   pb.address { pb.street "x" }
+      # end
+      # ```
       #
-      # @param fields [Hash, nil] field names to values, as {#initialize} takes them
-      # @yieldparam pb [Builder]
-      # @return [Message]
+      # - `fields`: field names to values, as #initialize takes them
+      #: (?Hash[Symbol | String, untyped]? fields, **untyped) ?{ (Builder pb) -> void } -> instance
       def build(fields = nil, **more, &block)
-        return new(fields, **more) unless block
+        unless block
+          return new(fields, **more) #: instance
+        end
         Builder.message(self, overwrites: true) do |pb|
           pb.merge!(fields) if fields
           pb.merge!(more) unless more.empty?
           block.call(pb)
-        end
+        end #: instance
       end
 
-      # @return [Message] a new message with `b` merged into a copy of `a`
+      # Returns a new message with `b` merged into a copy of `a`.
+      #: (instance a, instance b) -> instance
       def merge(a, b)
         a.dup.merge!(b)
       end
@@ -124,22 +136,22 @@ module Protostar
       # What a field of this type makes of a value that is neither an
       # instance nor a Hash. The well-known types' mixins override it, so that
       # a Time can be assigned to a Timestamp field.
-      # @return [Message, nil] nil when the value cannot become one
-      # @api private
-      def __coerce(_value)
+      #
+      # Returns nil when the value cannot become one.
+      #: (untyped) -> Message?
+      def __coerce(_value) # :nodoc:
         nil
       end
 
-      # @return [Message] a message with every field unset, bypassing argument parsing
-      # @api private
-      def __empty
+      # Returns a message with every field unset, bypassing argument parsing.
+      #: () -> Message
+      def __empty # :nodoc:
         m = allocate
         m.__reset
         m
       end
 
-      # @api private
-      def __define(descriptor:, fields:, oneofs:)
+      def __define(descriptor:, fields:, oneofs:) # :nodoc:
         @descriptor = descriptor
         @__fields = fields
         @__by_number = fields.to_h { |f| [f.number, f] }
@@ -159,10 +171,12 @@ module Protostar
       end
     end
 
-    # @param hash [Hash, nil] field names (Symbols or Strings) to values
-    # @param fields [Hash] the same, as keywords
-    # @raise [ArgumentError] for a name that is not a field
-    # @raise [Protostar::TypeError] for a value the field cannot hold
+    # - `hash`: field names (Symbols or Strings) to values
+    # - `fields`: the same, as keywords
+    #
+    # Raises ArgumentError for a name that is not a field.
+    # Raises Protostar::TypeError for a value the field cannot hold.
+    #: (?Hash[Symbol | String, untyped]? hash, **untyped fields) -> void
     def initialize(hash = nil, **fields)
       klass = self.class
       raise NotImplementedError, "#{klass} is abstract; define message classes with Protostar::Types" unless klass.__fields
@@ -172,69 +186,81 @@ module Protostar
       __assign(fields) unless fields.empty?
     end
 
-    # @param name [String, Symbol]
-    # @return [Object] what the field's reader returns
-    # @raise [ArgumentError] when there is no such field
+    # Returns what the field's reader returns.
+    # Raises ArgumentError when there is no such field.
+    #: (String | Symbol name) -> untyped
     def [](name)
       __get(__info(name))
     end
 
-    # @param name [String, Symbol]
-    # @raise [ArgumentError] when there is no such field
+    # Raises ArgumentError when there is no such field.
+    #: (String | Symbol name, untyped value) -> untyped
     def []=(name, value)
       __set(__info(name).index, value)
     end
 
-    # @return [Array<UnknownField>] frozen, in the order they were read
+    # Returns them frozen, in the order they were read.
+    #: () -> Array[UnknownField]
     def unknown_fields
       @unknown || EMPTY_ARRAY
     end
 
-    # @return [String] binary
+    # Returns a binary String.
+    #: () -> String
     def encode
       Codec::Encoder.encode(self)
     end
     alias_method :to_proto, :encode
 
     # Writes the message to an IO without building the whole encoding in memory
-    # @return [IO] the IO given
+    #
+    # Returns the IO given.
+    #: [T] (T io) -> T
     def encode_to(io)
       Codec::Encoder.encode_to(self, io)
       io
     end
 
-    # @param state [::JSON::State, nil] what the stdlib generator passes; its
+    # - `state`: what the stdlib generator passes; its
     #   indentation is honoured, so `JSON.pretty_generate(message)` is indented
-    # @param options [Hash] see {JSON.encode}
-    # @return [String] the message as proto3 JSON
+    # - `options`: see JSON.encode
+    #
+    # Returns the message as proto3 JSON.
+    #: (?untyped state, **untyped options) -> String
     def to_json(state = nil, **options)
       json = JSON.encode(self, **options)
       state.respond_to?(:object_nl) ? JSON.layout(json, state) : json
     end
 
-    # @param options [Hash] see {Text.print}
-    # @return [String] the message in protoc's text format
+    # - `options`: see Text.print
+    #
+    # Returns the message in protoc's text format.
+    #: (**untyped options) -> String
     def to_text(**options)
       Text.print(self, **options)
     end
 
     # The message prefixed by its varint length
-    # @param io [IO, nil] where to write it
-    # @return [String, IO] the bytes when no IO is given, otherwise the IO
+    #
+    # - `io`: where to write it
+    #
+    # Returns the bytes when no IO is given, otherwise the IO.
+    #: () -> String
+    #: [T] (T io) -> T
     def encode_delimited(io = nil)
-      Codec::Encoder.encode_delimited(self, io)
+      Codec::Encoder.encode_delimited(self, io) #: untyped
     end
 
-    # @return [Hash] Symbol keys, every field that is set or not at its
-    #   default; nested messages as Hashes, enums as Symbols
+    # Returns Symbol keys, every field that is set or not at its
+    # default; nested messages as Hashes, enums as Symbols.
+    #: () -> Hash[Symbol, untyped]
     def to_h
       __to_h
     end
 
-    # {#to_h} as Message defines it; well-known types replace to_h (a Struct
+    # #to_h as Message defines it; well-known types replace to_h (a Struct
     # gives a plain Hash), but nested messages always convert field by field
-    # @api private
-    def __to_h
+    def __to_h # :nodoc:
       h = {}
       values = @values
       self.class.__fields.each do |info|
@@ -257,6 +283,7 @@ module Protostar
 
     # Same class and same field values. Unknown fields are ignored, and NaN
     # equals NaN in float and double fields, as protoc's MessageDifferencer has it.
+    #: (untyped other) -> bool
     def ==(other)
       return other == self if other.is_a?(View)
       return true if equal?(other)
@@ -271,6 +298,7 @@ module Protostar
     end
     alias_method :eql?, :==
 
+    #: () -> Integer
     def hash
       h = [self.class]
       self.class.__fields.each { |info| h << Message.__hash_value(info, @values[info.index]) }
@@ -285,6 +313,7 @@ module Protostar
     end
 
     # Deep copy, frozen when the original is (or when asked)
+    #: (?freeze: bool?) -> self
     def clone(freeze: nil)
       copy = dup
       copy.freeze if freeze || (freeze.nil? && frozen?)
@@ -292,7 +321,7 @@ module Protostar
     end
 
     # Freezes the message and everything it holds, after which it is Ractor.shareable?
-    # @return [self]
+    #: () -> self
     def freeze
       return self if frozen?
       @values.each do |v|
@@ -310,7 +339,7 @@ module Protostar
     # Merges `other` into this message: singular fields set in `other`
     # replace ours, messages merge recursively, repeated fields append, maps
     # overwrite by key, unknown fields append.
-    # @return [self]
+    #: (self other) -> self
     def merge!(other)
       unless other.instance_of?(self.class)
         raise Protostar::TypeError, "cannot merge a #{other.class} into a #{self.class.descriptor.full_name}"
@@ -346,14 +375,15 @@ module Protostar
     end
 
     # Unsets every field and drops unknown fields
-    # @return [self]
+    #: () -> self
     def clear!
       __check_frozen
       __reset
       self
     end
 
-    # @return [Boolean] whether every required field is set, here and in every nested message
+    # Returns whether every required field is set, here and in every nested message.
+    #: () -> bool
     def initialized?
       self.class.__required.each { |info| return false if @values[info.index].nil? }
       self.class.__fields.each do |info|
@@ -373,6 +403,7 @@ module Protostar
       true
     end
 
+    #: () -> String
     def inspect
       parts = __shown.map { |name, v| "#{name}: #{v.inspect}" }
       name = self.class.descriptor.full_name
@@ -382,12 +413,12 @@ module Protostar
 
     # For `pp`: the fields `inspect` shows, one per line with nested
     # messages indented when they do not fit on one
+    #: (untyped q) -> void
     def pretty_print(q)
       Message.__pretty_print(q, self.class.descriptor.full_name, __shown)
     end
 
-    # @api private
-    def self.__pretty_print(q, name, fields)
+    def self.__pretty_print(q, name, fields) # :nodoc:
       return q.text("#<#{name}>") if fields.empty?
       q.group(2, "#<#{name}", ">") do
         fields.each_with_index do |(field, v), i|
@@ -400,9 +431,8 @@ module Protostar
     end
 
     # The fields `inspect` shows: set, and not at their zero value
-    # @return [Array<Array(String, Object)>]
-    # @api private
-    def __shown
+    #: () -> Array[[String, untyped]]
+    def __shown # :nodoc:
       shown = []
       self.class.__fields.each do |info|
         v = @values[info.index]
@@ -414,20 +444,17 @@ module Protostar
       shown
     end
 
-    # @api private
-    def __values
+    def __values # :nodoc:
       @values
     end
 
-    # @api private
-    def __reset
+    def __reset # :nodoc:
       @values = self.class.__template.dup
       @unknown = nil
     end
 
     # Appends an unknown field; the decoder's way in
-    # @api private
-    def __add_unknown(field)
+    def __add_unknown(field) # :nodoc:
       u = @unknown
       if u.nil?
         @unknown = [field]
@@ -438,13 +465,11 @@ module Protostar
       end
     end
 
-    # @api private
-    def __seal_unknown
+    def __seal_unknown # :nodoc:
       @unknown&.freeze
     end
 
-    # @api private
-    def __set(index, value)
+    def __set(index, value) # :nodoc:
       __check_frozen
       info = self.class.__fields[index]
       if value.nil?
@@ -456,15 +481,13 @@ module Protostar
       end
     end
 
-    # @api private
-    def __clear(index)
+    def __clear(index) # :nodoc:
       __check_frozen
       @values[index] = nil
     end
 
     # The stored Array or Hash of a repeated or map field, made on first use
-    # @api private
-    def __container(index)
+    def __container(index) # :nodoc:
       info = self.class.__fields[index]
       if frozen?
         info.map ? EMPTY_HASH : EMPTY_ARRAY
@@ -473,8 +496,7 @@ module Protostar
       end
     end
 
-    # @api private
-    def __get(info)
+    def __get(info) # :nodoc:
       v = @values[info.index]
       if info.repeated || info.map
         v || __container(info.index)
@@ -485,8 +507,7 @@ module Protostar
       end
     end
 
-    # @api private
-    def self.__equal_values?(info, a, b)
+    def self.__equal_values?(info, a, b) # :nodoc:
       if info.map
         a ||= EMPTY_HASH
         b ||= EMPTY_HASH
@@ -504,8 +525,7 @@ module Protostar
       end
     end
 
-    # @api private
-    def self.__hash_value(info, v)
+    def self.__hash_value(info, v) # :nodoc:
       if info.map
         return nil if v.nil? || v.empty?
         float_kind?(info.value.kind) ? v.transform_values { |f| hashable_float(f) } : v
@@ -519,8 +539,7 @@ module Protostar
       end
     end
 
-    # @api private
-    def self.__copy_value(v)
+    def self.__copy_value(v) # :nodoc:
       case v
       when Message then v.dup
       when Array then v.map { |e| e.is_a?(Message) ? e.dup : e }

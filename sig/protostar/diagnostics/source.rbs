@@ -1,0 +1,67 @@
+# Generated from lib/protostar/diagnostics/source.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Diagnostics
+    # The text of one `.proto` file, read the way protoc counts positions:
+    # 1-based lines, columns in bytes with a tab advancing to the next
+    # multiple of 8. Maps those columns to what a terminal shows, finds the
+    # token at a position, and applies Edits.
+    class Source
+      TAB_WIDTH: ::Integer
+
+      TOKEN: ::Regexp
+
+      # The lines, without their line ends, as UTF-8.
+      attr_reader lines: Array[String]
+
+      # - `text`: the file's bytes
+      def initialize: (String text) -> void
+
+      # - `number`: 1-based; past the end is an empty line, where
+      #   protoc reports errors at the end of input
+      def line: (Integer number) -> String
+
+      # Returns the number of lines.
+      def size: () -> Integer
+
+      # Returns the line as shown: tabs expanded to the columns protoc counts.
+      def display: (Integer number) -> String
+
+      # - `number`: 1-based line
+      # - `column`: 1-based protoc column
+      #
+      # Returns the 1-based column a terminal shows it at.
+      def display_column: (Integer number, Integer column) -> Integer
+
+      # Returns the 1-based protoc column just past the token starting at
+      # the position (one character when no token starts there).
+      def token_end: (Integer number, Integer column) -> Integer
+
+      # Returns the 1-based column of the first character that is not
+      # whitespace, nil on a blank line.
+      def first_column: (Integer number) -> Integer?
+
+      # Returns the 1-based column just past the last character.
+      def end_column: (Integer number) -> Integer
+
+      # Returns the span with its end filled in: the token at its start when unknown.
+      def resolve: (Span span) -> Span
+
+      # - `edits`: on this text, not overlapping
+      #
+      # Returns the text with the edits made, line ends as they were.
+      def apply: (String text, Array[Edit] edits) -> String
+
+      private
+
+      def each_char: (Integer number) { (String, Integer, Integer, Integer) -> void } -> void
+
+      def char_index: (untyped number, untyped column) -> untyped
+
+      def line_starts: (untyped text) -> untyped
+
+      # The byte offset of a protoc position in the text
+      def offset: (untyped text, untyped starts, untyped number, untyped column) -> untyped
+    end
+  end
+end

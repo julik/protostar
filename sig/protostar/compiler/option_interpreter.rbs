@@ -1,0 +1,78 @@
+# Generated from lib/protostar/compiler/option_interpreter.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    # protoc's OptionInterpreter. Each `option` statement becomes an entry
+    # `[field, value]` (`value` is itself a list of entries for message
+    # fields), accumulated per element the way protoc accumulates unknown
+    # fields, so "already set" checks and the merging of `(a).b = 1` with
+    # `(a).c = 2` behave as in protoc. The entries are then folded into a
+    # Schema::MessageValue: options message fields by name, extensions by
+    # their Schema::Field.
+    #
+    # Option types are read from descriptors: those in the pool, and for the
+    # file being linked its draft, linked but not yet given options, so
+    # options declared and used in the same file (descriptor.proto's own
+    # included) resolve the same way.
+    class OptionInterpreter
+      # :nodoc: all
+      INT32_RANGE: untyped
+
+      INT64_RANGE: untyped
+
+      UINT32_MAX: untyped
+
+      UINT64_MAX: untyped
+
+      # Uninterpreted_option paths to option paths.
+      attr_reader interpreted_paths: Hash[Array[Integer], Array[Integer]]
+
+      # - `fallback`: the bundled descriptor.proto's message for a name
+      def initialize: (Linker linker, Schema::Pool pool, untyped fallback) -> void
+
+      # Returns the options of every element that declared options.
+      def run: (Array[Linker::Pending] pending) ?{ (?) -> untyped } -> Hash[AST::Node, Schema::MessageValue]
+
+      # A Schema descriptor for a symbol table entry
+      def schema_of: (untyped symbol) -> untyped
+
+      # The options message to interpret against, protoc's choice: the pool's
+      # (or this file's) when present, else the one compiled into protoc
+      def options_type: (untyped name) -> untyped
+
+      private
+
+      def interpret: (untyped pending, untyped entries, skip_extensions: untyped, ?earlier: untyped) -> untyped
+
+      def name_error: (untyped option, untyped message) -> untyped
+
+      def value_error: (untyped option, untyped message) -> untyped
+
+      def interpret_single: (untyped option, untyped entries, untyped src_path, untyped skip_extensions) -> untyped
+
+      FAILED: untyped
+
+      # ExamineIfOptionIsSet
+      def already_set?: (untyped intermediate, untyped field, untyped debug, untyped entries, untyped option) -> untyped
+
+      def option_value: (untyped field, untyped option) -> untyped
+
+      def int_option: (untyped option, untyped kind, untyped value, untyped range, untyped type, untyped name) -> untyped
+
+      def out_of_range: (untyped range, untyped type, untyped name) -> untyped
+
+      def must_be_int: (untyped range, untyped type, untyped name) -> untyped
+
+      def enum_option: (untyped field, untyped value_name, untyped option) -> untyped
+
+      public
+
+      # Folds entries into a value the way parsing their serialized form
+      # would: repeated fields append, message fields merge, scalars take the
+      # last value
+      #
+      # - `known`: fields set before any entry (the parser's `map_entry`)
+      def fold: (untyped entries, ?Hash[Symbol, untyped] known) -> Schema::MessageValue
+    end
+  end
+end

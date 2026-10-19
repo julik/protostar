@@ -3,7 +3,7 @@
 module Google
   module Protobuf
     # Included into every message class. Libraries extend it (and
-    # {ClassMethods}) to give all messages more methods, as with the gem.
+    # ClassMethods) to give all messages more methods, as with the gem.
     module MessageExts
       def self.included(klass)
         klass.extend(ClassMethods)
@@ -13,14 +13,16 @@ module Google
       module ClassMethods
       end
 
-      # @param options [Hash] see the class's encode_json
-      # @return [String]
+      # - `options`: see the class's encode_json
+      #: (?Hash[untyped, untyped] options) -> String
       def to_json(options = {})
         self.class.encode_json(self, options)
       end
 
-      # @param options [Hash] see the class's encode
-      # @return [String] binary
+      # - `options`: see the class's encode
+      #
+      # Returns binary.
+      #: (?Hash[untyped, untyped] options) -> String
       def to_proto(options = {})
         self.class.encode(self, options)
       end
@@ -30,11 +32,10 @@ module Google
       end
     end
 
-    # What the gem's message classes inherit from. Classes here inherit from
-    # Protostar::Message instead and include MessageExts directly.
-    class AbstractMessage
+    # What every message class inherits from, as in the gem, where tools
+    # such as tapioca look for its descendants. Private there too.
+    class AbstractMessage < Protostar::Message
       include MessageExts
-      extend MessageExts::ClassMethods
     end
     private_constant :AbstractMessage
   end

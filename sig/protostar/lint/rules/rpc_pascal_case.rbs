@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/rpc_pascal_case.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # RPC_PASCAL_CASE: An rpc name that is not PascalCase
+      class RpcPascalCase < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

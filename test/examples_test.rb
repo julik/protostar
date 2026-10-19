@@ -24,7 +24,7 @@ class ExamplesTest < Minitest::Test
   ].freeze
   MARKER = %r{\A(?:#|//) (examples/[^\s]+)\n}
   # Files a reader never needs to see in full
-  UNSHOWN = /(_pb\.rb|\.binpb|README\.md|Gemfile\.lock)\z/
+  UNSHOWN = /(_pb\.rb[si]?|\.binpb|README\.md|Gemfile\.lock)\z/
   # Commands the playbooks show that only make sense on the reader's machine
   SKIPPED = ["bundle install"].freeze
   HTTP = "03_compose_and_send_over_http"
@@ -54,7 +54,7 @@ class ExamplesTest < Minitest::Test
       end
       shown = Dir.glob("**/*", base: File.join(EXAMPLES, dir)).reject { |f| File.directory?(File.join(EXAMPLES, dir, f)) }
         .grep_v(UNSHOWN).map { |f| "examples/#{dir}/#{f}" }
-      assert_equal shown.sort, slices.keys.grep_v(/_pb\.rb\z/).sort, "examples/#{dir}/README.md must show every file"
+      assert_equal shown.sort, slices.keys.grep_v(/_pb\.rb[si]?\z/).sort, "examples/#{dir}/README.md must show every file"
     end
   end
 

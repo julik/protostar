@@ -5,8 +5,7 @@ module Protostar
     # Reads protoc's text format into a message, with protoc's grammar and
     # its checks: non-repeated fields and oneofs set at most once, enum
     # names and numbers known to closed enums, integers in range.
-    # @api private
-    class Parser
+    class Parser # :nodoc: all
       F = Message::FieldInfo
       RANGES = Message::Coercion::RANGES
       CLOSE = {"{" => "}", "<" => ">"}.freeze
@@ -28,8 +27,7 @@ module Protostar
         @extensions = Extensions.new(registry, pool)
       end
 
-      # @param klass [Class]
-      # @return [Message]
+      #: (Class klass) -> Message
       def parse(klass)
         msg = klass.new
         message_body(msg, nil)
@@ -164,6 +162,7 @@ module Protostar
         t.type == :symbol && CLOSE.key?(t.text)
       end
 
+      #: () { () -> void } -> void
       def list
         out = []
         return out if accept("]")

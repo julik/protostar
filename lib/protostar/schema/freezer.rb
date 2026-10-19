@@ -4,8 +4,7 @@ module Protostar
   module Schema
     # Deep-copies plain data (Hashes, Arrays, Strings, scalars) into frozen,
     # deduplicated form so that building never freezes the caller's input.
-    # @api private
-    module Freezer
+    module Freezer # :nodoc: all
       EMPTY_HASH = {}.freeze
       EMPTY_ARRAY = [].freeze
 

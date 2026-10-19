@@ -2,8 +2,8 @@
 
 # The generated code committed under examples/.
 #
-#   ruby script/examples.rb regenerate   # rewrite every examples/**/*_pb.rb with exe/protostar compile
-#   ruby script/examples.rb check        # fail when a committed *_pb.rb is not what regenerate would write
+#   ruby script/examples.rb regenerate   # rewrite every examples/**/*_pb.rb, .rbs and .rbi with exe/protostar compile
+#   ruby script/examples.rb check        # fail when a committed one is not what regenerate would write
 #
 # Every directory holding .proto files is compiled with itself as the include
 # path, as each playbook's README tells the reader to do.
@@ -16,7 +16,7 @@ require "tmpdir"
 REPO = File.expand_path("..", __dir__)
 EXAMPLES = File.join(REPO, "examples")
 
-# {path relative to examples/ => source} for every _pb.rb `protostar compile` writes
+# {path relative to examples/ => source} for every file `protostar compile` writes
 def generate
   Dir.glob("**/*.proto", base: EXAMPLES).group_by { |rel| File.dirname(rel) }.sort.each_with_object({}) do |(dir, protos), out|
     Dir.mktmpdir do |tmp|
@@ -24,7 +24,7 @@ def generate
         *protos.map { |p| File.basename(p) }.sort]
       _, err, status = Open3.capture3(*cmd, chdir: File.join(EXAMPLES, dir))
       abort "#{cmd.join(" ")} failed in examples/#{dir}:\n#{err}" unless status.success?
-      Dir.glob("*_pb.rb", base: tmp).sort.each do |name|
+      Dir.glob("**/*_pb.{rb,rbs,rbi}", base: tmp).sort.each do |name|
         out[File.join(dir, name)] = File.read(File.join(tmp, name))
       end
     end
@@ -32,7 +32,7 @@ def generate
 end
 
 def committed
-  Dir.glob("**/*_pb.rb", base: EXAMPLES).sort.to_h { |rel| [rel, File.read(File.join(EXAMPLES, rel))] }
+  Dir.glob("**/*_pb.{rb,rbs,rbi}", base: EXAMPLES).sort.to_h { |rel| [rel, File.read(File.join(EXAMPLES, rel))] }
 end
 
 def regenerate

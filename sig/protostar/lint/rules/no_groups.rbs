@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/no_groups.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # NO_GROUPS: A proto2 `group` field
+      class NoGroups < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

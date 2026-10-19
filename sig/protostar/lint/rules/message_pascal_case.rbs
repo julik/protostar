@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/message_pascal_case.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # MESSAGE_PASCAL_CASE: A message name that is not PascalCase
+      class MessagePascalCase < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

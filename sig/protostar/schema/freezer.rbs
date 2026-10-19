@@ -1,0 +1,26 @@
+# Generated from lib/protostar/schema/freezer.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    # Deep-copies plain data (Hashes, Arrays, Strings, scalars) into frozen,
+    # deduplicated form so that building never freezes the caller's input.
+    module Freezer
+      # :nodoc: all
+      EMPTY_HASH: untyped
+
+      EMPTY_ARRAY: untyped
+
+      # Freezes a descriptor graph before `Ractor.make_shareable` sees it.
+      # make_shareable on a graph full of back-references (every field points
+      # at its message, which points at all its fields) re-checks the graph
+      # from each back-reference and goes quadratic: about 1.4s for
+      # unittest.proto. Freezing everything first lets it confirm the graph in
+      # one pass. Arrays and Hashes are always descended into, since they may
+      # be frozen while their members are not; other frozen objects are
+      # finished descriptors of dependencies or immutable values.
+      def self.deep_freeze: (untyped root) -> untyped
+
+      def self.call: (untyped value) -> untyped
+    end
+  end
+end

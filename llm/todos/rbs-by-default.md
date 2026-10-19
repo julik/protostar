@@ -1,6 +1,7 @@
 # Emit `.rbs` by default
 
-**Status:** feature lead from Julik, 2026-10-06. Small, not scheduled. Pairs with
+**Status:** done in WS16 (2026-10-19), together with Sorbet RBI written the same way; see
+`llm/outputs/ws16-report.md`. Was: feature lead from Julik, 2026-10-06. Pairs with
 `cli-ergonomics.md`.
 
 ## Today

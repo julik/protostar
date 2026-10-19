@@ -1,0 +1,45 @@
+# Generated from lib/protostar/schema/service.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    # An RPC service. Its methods are exposed as #rpcs and #rpc so that
+    # Object#methods and Object#method keep working on a descriptor.
+    class Service < Descriptor
+      attr_reader file: File
+
+      def initialize: (name: untyped, full_name: untyped, file: untyped, index: untyped) -> untyped
+
+      def __rpcs: (untyped rpcs) -> untyped
+
+      # Declaration order.
+      attr_reader rpcs: Array[Method]
+
+      def rpc: (String | Symbol name) -> Method?
+
+      def to_proto: () -> Protostar::Google::Protobuf::ServiceDescriptorProto
+    end
+
+    # One RPC of a Service
+    class Method < Descriptor
+      attr_reader service: Service
+
+      attr_reader input_type: Message
+
+      attr_reader output_type: Message
+
+      attr_reader input_type_name: untyped
+
+      attr_reader output_type_name: untyped
+
+      def initialize: (name: untyped, full_name: untyped, service: untyped, index: untyped, input_type_name: untyped, output_type_name: untyped, client_streaming: untyped, server_streaming: untyped) -> untyped
+
+      def file: () -> File
+
+      def client_streaming?: () -> bool
+
+      def server_streaming?: () -> bool
+
+      def to_proto: () -> Protostar::Google::Protobuf::MethodDescriptorProto
+    end
+  end
+end

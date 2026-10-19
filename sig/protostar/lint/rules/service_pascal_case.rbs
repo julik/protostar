@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/service_pascal_case.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # SERVICE_PASCAL_CASE: A service name that is not PascalCase
+      class ServicePascalCase < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

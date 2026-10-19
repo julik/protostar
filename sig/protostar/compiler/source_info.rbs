@@ -1,0 +1,86 @@
+# Generated from lib/protostar/compiler/source_info.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    # Builds `SourceCodeInfo` the way protoc does: the parser opens a
+    # Recorder for every element as it starts reading it, so locations come
+    # out in pre-order with protoc's paths and spans, and comments are
+    # attached at the end of each declaration. After option interpretation
+    # {.rewrite_option_paths} moves option locations from
+    # `uninterpreted_option` paths to the paths of the options they set.
+    module SourceInfo
+      # A `SourceCodeInfo.Location` under construction
+      class Location
+        attr_accessor path: untyped
+
+        attr_accessor span: untyped
+
+        attr_accessor leading_comments: untyped
+
+        attr_accessor trailing_comments: untyped
+
+        attr_accessor leading_detached_comments: untyped
+
+        def initialize: (untyped path, untyped span) -> untyped
+
+        def dup_with_path: (untyped path) -> untyped
+
+        # Returns the finished location, comments as UTF-8.
+        def to_schema: () -> Schema::SourceInfo::Location
+
+        private
+
+        def utf8: (untyped text) -> untyped
+      end
+
+      # protoc's Parser::LocationRecorder. It starts at the current token when
+      # created and, unless ended explicitly, ends at the previous token when
+      # #finished.
+      class Recorder
+        attr_reader location: Location
+
+        # Where the location was added.
+        attr_reader target: Array[Location]
+
+        # - `path`: the parent's path plus this element's components
+        def initialize: (Lexer lexer, Array[Integer] path, Array[Location] target) -> void
+
+        # Returns a child location, its path extended by `components`.
+        def child: (*untyped components, ?target: untyped) -> Recorder
+
+        def add_path: (untyped component) -> untyped
+
+        def path_size: () -> untyped
+
+        def start_at: (untyped token) -> untyped
+
+        def start_at_recorder: (untyped other) -> untyped
+
+        def end_at: (untyped token) -> untyped
+
+        # The LocationRecorder destructor
+        def finish: () -> untyped
+
+        # Records where this element starts, for diagnostics against `node`
+        def record_legacy: (untyped node, untyped kind) -> untyped
+
+        def start: () -> [ Integer, Integer ]
+
+        def attach_comments: (untyped leading, untyped trailing, untyped detached) -> untyped
+      end
+
+      # Where the shortest location starting at a position ends: the extent of
+      # the element whose name, number or type is reported there
+      #
+      # Returns 0-based line and column just past the end.
+      def self.extent: (Array[Location] locations, untyped line, untyped column) -> [ Integer, Integer ]?
+
+      # OptionInterpreter::UpdateSourceCodeInfo: the location of each
+      # interpreted option takes the path of the option it set, and the
+      # locations nested under it (name parts, values) are dropped
+      #
+      # - `interpreted`: uninterpreted_option path to option path
+      def self.rewrite_option_paths: (Array[Location] locations, Hash[Array[Integer], Array[Integer]] interpreted) -> Array[Location]
+    end
+  end
+end

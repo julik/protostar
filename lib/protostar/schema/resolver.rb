@@ -15,15 +15,16 @@ module Protostar
       # Stands for "this name is a package" during lookup
       PACKAGE = Object.new.freeze
 
-      # @param name [String] the name as written, e.g. "Foo.Bar" or ".pkg.Foo.Bar"
-      # @param scope [String] full name of the enclosing message, or the package ("" for none)
-      # @param file [File] the file doing the lookup; it may still be under construction
-      # @param pool [Pool, nil] consulted only to explain a failure ("not imported")
-      # @param types_only [Boolean] when a simple (one-component) name finds something
+      # - `name`: the name as written, e.g. "Foo.Bar" or ".pkg.Foo.Bar"
+      # - `scope`: full name of the enclosing message, or the package ("" for none)
+      # - `file`: the file doing the lookup; it may still be under construction
+      # - `pool`: consulted only to explain a failure ("not imported")
+      # - `types_only`: when a simple (one-component) name finds something
       #   that is not a message or enum, keep searching outward, as protoc does for
       #   type names. Compound names return whatever they reach.
-      # @return [Descriptor]
-      # @raise [ResolveError]
+      #
+      # Raises ResolveError.
+      #: (String name, scope: String, file: File, ?pool: Pool?, ?types_only: bool) -> Descriptor
       def self.resolve(name, scope:, file:, pool: nil, types_only: true)
         if !name.is_a?(String) || name.empty? || name == "."
           raise ResolveError.new("#{name.inspect} is not a valid name", name: name, scope: scope)
@@ -65,9 +66,8 @@ module Protostar
         raise not_defined(name, scope, file, pool)
       end
 
-      # A visible symbol by full name, {PACKAGE} for a visible package, or nil
-      # @api private
-      def self.find(full_name, file)
+      # A visible symbol by full name, PACKAGE for a visible package, or nil
+      def self.find(full_name, file) # :nodoc:
         visible = file.visible_files
         visible.each do |f|
           found = f.symbols[full_name]
@@ -79,18 +79,15 @@ module Protostar
         nil
       end
 
-      # @api private
-      def self.in_package?(package, name)
+      def self.in_package?(package, name) # :nodoc:
         package == name || (package.start_with?(name) && package.getbyte(name.bytesize) == 46) # "."
       end
 
-      # @api private
-      def self.type?(found)
+      def self.type?(found) # :nodoc:
         found.is_a?(Message) || found.is_a?(Enum)
       end
 
-      # @api private
-      def self.aggregate?(found)
+      def self.aggregate?(found) # :nodoc:
         found.equal?(PACKAGE) || found.is_a?(Message) || found.is_a?(Enum) || found.is_a?(Service)
       end
 

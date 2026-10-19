@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/rpc_response_standard_name.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # RPC_RESPONSE_STANDARD_NAME: An rpc whose response is not `<Rpc>Response`
+      class RpcResponseStandardName < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

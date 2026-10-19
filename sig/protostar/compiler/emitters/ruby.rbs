@@ -1,0 +1,142 @@
+# Generated from lib/protostar/compiler/emitters/ruby.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    module Emitters
+      # Writes protostar's own `_pb.rb` files: a Protostar::DSL block
+      # describing the file, then constants named as protoc's Ruby generator
+      # names them. The files are `typed: ignore` for Sorbet, which gets the
+      # classes from ProtostarRbi's `_pb.rbi`.
+      class Ruby
+        # source_code_info path components (descriptor.proto field numbers)
+        FILE_MESSAGE: ::Integer
+
+        FILE_ENUM: ::Integer
+
+        FILE_SERVICE: ::Integer
+
+        FILE_EXTENSION: ::Integer
+
+        MESSAGE_FIELD: ::Integer
+
+        MESSAGE_NESTED: ::Integer
+
+        MESSAGE_ENUM: ::Integer
+
+        MESSAGE_EXTENSION: ::Integer
+
+        MESSAGE_ONEOF: ::Integer
+
+        ENUM_VALUE: ::Integer
+
+        SERVICE_METHOD: ::Integer
+
+        # - `namespaces`: Ruby module paths ("A::B") by file name, overriding
+        #   the package-derived modules; the bootstrap puts google.protobuf under Protostar::Google::Protobuf
+        # - `bootstrap_requires`: require imports of BOOTSTRAP files as
+        #   "protostar/google/protobuf/..._pb" rather than by their own names
+        def initialize: (?namespaces: Hash[String, String], ?bootstrap_requires: bool) -> void
+
+        # Returns a Hash of output path to source.
+        def emit: (Array[Schema::File] files) -> Hash[String, String]
+
+        # Returns the generated source.
+        def file: (Schema::File file) -> String
+
+        # Only the Protostar::DSL.file statement, without requires and constants
+        def definition: (Schema::File file) -> String
+
+        # - `name`: an imported file name
+        #
+        # Returns what a generated file requires for it.
+        def require_path: (String name) -> String
+
+        private
+
+        def emit_file: (untyped file) -> untyped
+
+        def message: (untyped out, untyped depth, untyped var, untyped desc, untyped path) -> untyped
+
+        def message_body: (untyped out, untyped depth, untyped desc, untyped path) -> untyped
+
+        # Fields grouped for emission: [oneof index or nil, [field indexes]]
+        def field_items: (untyped fields, untyped canonical) -> untyped
+
+        # Whether the oneofs are laid out as the DSL's block form and synthetic
+        # oneofs reproduce them: real oneofs in order of their contiguous
+        # members, then one synthetic oneof per proto3 optional field, named
+        # as protoc's parser names them
+        def canonical_oneofs?: (untyped fields, untyped oneofs) -> untyped
+
+        # Nested types written through `map` or `group`: field index to nested index
+        def owned_nested: (untyped desc, untyped fields) -> untyped
+
+        # [key type, value type, value type name] when `m.map` makes exactly this entry
+        def map_sugar: (untyped f, untyped entry) -> untyped
+
+        def entry_field?: (untyped field, untyped name, untyped number) -> untyped
+
+        # Options declared with exactly these fields, no custom or unknown ones
+        def only?: (untyped options, **untyped fields) -> untyped
+
+        def group_sugar?: (untyped f, untyped nested) -> untyped
+
+        def field: (untyped out, untyped depth, untyped var, untyped desc, untyped f, untyped owned, untyped path, untyped explicit_oneof) -> untyped
+
+        def path_for_nested: (untyped index, untyped field_path) -> untyped
+
+        def field_args: (untyped f) -> untyped
+
+        def custom_json_name?: (untyped f) -> untyped
+
+        def extensions: (untyped out, untyped depth, untyped var, untyped list, untyped path) -> untyped
+
+        def enum: (untyped out, untyped depth, untyped var, untyped desc, untyped path) -> untyped
+
+        def service: (untyped out, untyped depth, untyped var, untyped desc, untyped path) -> untyped
+
+        # Options as keywords, custom ones under `extensions:`; verbatim
+        # under `options:` when that cannot be said with keywords. Each is a
+        # `[prefix, value]` pair, rendered by #call.
+        def option_args: (untyped options) -> untyped
+
+        # An options message (or a message inside one) as the DSL spells it:
+        # fields by name, `extensions` by full name, `unknown_fields` as wire
+        # bytes; a field named like either of those two takes a String key. An
+        # extension the file reaches only through `import option` is written
+        # as unknown bytes, as protoc's own generator embeds it: the generated
+        # file does not load that import, so it may not be there to name the
+        # option.
+        def dsl_hash: (untyped value) -> untyped
+
+        RESERVED_KEYS: untyped
+
+        # Whether an extension is defined by the file or one it imports, so
+        # that loading the generated file can find it
+        def reachable?: (untyped extension) -> untyped
+
+        def dsl_value: (untyped value) -> untyped
+
+        # A call on one line when it fits. Otherwise the top-level call puts
+        # one argument per line inside parentheses, and calls in blocks keep
+        # their positional arguments on the first line and continue with one
+        # keyword per line. Arguments are source Strings or `[prefix, value]` pairs.
+        def call: (untyped receiver, untyped args, untyped depth) -> untyped
+
+        KEYWORD: ::Regexp
+
+        def range: (untyped first, untyped last) -> untyped
+
+        def comment: (untyped out, untyped depth, untyped path) -> untyped
+
+        def ind: (untyped depth) -> untyped
+
+        def emit_constants: (untyped file) -> untyped
+
+        def message_constants: (untyped lines, untyped prefix, untyped message) -> untyped
+
+        def enum_constant: (untyped prefix, untyped enum) -> untyped
+      end
+    end
+  end
+end

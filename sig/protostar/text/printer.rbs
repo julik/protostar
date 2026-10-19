@@ -1,0 +1,84 @@
+# Generated from lib/protostar/text/printer.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Text
+    # Prints a message the way protoc's TextFormat::Printer does: fields in
+    # number order, two-space indents, map entries sorted by key, strings
+    # escaped with CEscape, floats in their shortest round-trip form, then
+    # extensions and unknown fields.
+    class Printer
+      # :nodoc: all
+      F: untyped
+
+      # CEscape: named escapes, octal for every other byte outside printable ASCII
+      ESCAPES: untyped
+
+      ESCAPED: ::Regexp
+
+      UTF8_ESCAPED: ::Regexp
+
+      ANY: ::String
+
+      FLOAT_MIN_NORMAL: ::Float
+
+      # Returns whether protoc prints the field by its message type's
+      # name: a group whose field name is the type name in lower case.
+      def self.group_like?: (untyped info) -> bool
+
+      def initialize: (?single_line: untyped, ?expand_any: untyped, ?as_utf8: untyped, ?unknown_fields: untyped, ?registry: untyped, ?pool: untyped) -> untyped
+
+      def print: (Message message) -> String
+
+      private
+
+      def fields: (untyped msg, untyped out, untyped depth) -> untyped
+
+      # Moves the unknown fields that hold extensions into items; returns the rest
+      def extensions_as_items: (untyped unknown, untyped extensions, untyped items) -> untyped
+
+      def field: (untyped info, untyped v, untyped out, untyped depth) -> untyped
+
+      def map_key_order: (untyped k) -> untyped
+
+      def line: (untyped text, untyped out, untyped depth) -> untyped
+
+      def open_block: (untyped name, untyped out, untyped depth) -> untyped
+
+      def close_block: (untyped out, untyped depth) -> untyped
+
+      def scalar: (untyped info, untyped v) -> untyped
+
+      def quote: (untyped s, untyped utf8) -> untyped
+
+      def double: (untyped v) -> untyped
+
+      # protoc reads the short form back with strtof, which it does not trust
+      # for subnormal results, so those always get nine digits
+      def float: (untyped v) -> untyped
+
+      def nonfinite: (untyped v) -> untyped
+
+      def any: (untyped msg, untyped out, untyped depth) -> untyped
+
+      # protoc's PrintUnknownFields: varints unsigned, fixed widths in hex,
+      # length-delimited as a nested block when the bytes read as fields
+      def unknown_fields: (untyped list, untyped out, untyped depth) -> untyped
+
+      def unknown_value: (untyped wire_type, untyped value) -> untyped
+
+      # Reads bytes as a sequence of fields with no schema, the way protoc's
+      # UnknownFieldSet does, to see whether a length-delimited field holds a message
+      module UnknownSet
+        # :nodoc: all
+        MAX_DEPTH: ::Integer
+
+        # Returns number, wire type and
+        # value (Integer, payload String, or the fields of a group); nil when the
+        # bytes are not a well-formed sequence of fields.
+        def self?.parse: (untyped bytes) -> Array[[ Integer, Integer, untyped ]]?
+
+        def self?.read: (untyped r, untyped group, untyped depth) -> untyped
+      end
+    end
+  end
+end

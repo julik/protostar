@@ -6,17 +6,16 @@ module Protostar
       # A copy of a built file for another pool, its imports taken from that
       # pool, with each descriptor's options replaced by what the block
       # returns (a MessageValue, or nil for none)
-      # @param file [Schema::File]
-      # @param pool [Pool] holds the copy's imports
-      # @param source_info [SourceInfo, nil]
-      # @yieldparam descriptor [Descriptor]
-      # @return [Schema::File] frozen; not added to the pool
+      #
+      # - `pool`: holds the copy's imports
+      #
+      # Returns a frozen copy, not added to the pool.
+      #: (Schema::File file, pool: Pool, ?source_info: SourceInfo?) ?{ (Descriptor descriptor) -> untyped } -> Schema::File
       def self.copy(file, pool:, source_info: file.source_info, &options)
         Copy.new(file, options).call(pool, source_info)
       end
 
-      # @api private
-      class Copy
+      class Copy # :nodoc: all
         def initialize(file, options)
           @file = file
           @options = options

@@ -1,0 +1,117 @@
+# Generated from lib/protostar/view.rb by script/types.rb. Do not edit.
+
+module Protostar
+  # A read-only message over the bytes it was encoded in. Making a view
+  # scans the top level once and keeps where each field is; nothing is
+  # decoded until a reader asks, and what a reader decodes is kept. Nested
+  # messages are views over slices of the same buffer, so reading one
+  # field of a large message copies nothing but that field's value.
+  #
+  # ```ruby
+  # view = Person.view(bytes)          # a String or an IO::Buffer
+  # view.name                          # => "Ada"
+  # view.friends[2].name               # a nested view, same buffer
+  # view.encode.equal?(bytes)          # => true
+  # view.to_message                    # the mutable message, decoded eagerly
+  # ```
+  #
+  # Every message class has a view class, `Person.view_class`, with the
+  # same readers as the message: scalars, enums, `has_`, `which_`,
+  # repeated fields as Repeated, maps as Map. Views are frozen; writers
+  # raise FrozenError. A view reads the buffer it was given for as long as
+  # it lives, so that buffer must not change underneath it.
+  #
+  # Malformed input raises DecodeError when the view is made, for the top
+  # level; a nested message is checked when it is first read, and a string
+  # with invalid UTF-8 when the string is read.
+  class View
+    # The message class this view class reads.
+    attr_reader self.message_class: singleton(Message)
+
+    attr_reader self.__fields: untyped
+
+    attr_reader self.__by_name: untyped
+
+    attr_reader self.__readers: untyped
+
+    attr_reader self.__unknown_slot: untyped
+
+    def self.descriptor: () -> Schema::Message
+
+    def self.inspect: () -> untyped
+
+    def self.__define: (untyped message_class, untyped fields) -> untyped
+
+    def self.__new: (untyped buf, untyped offset, untyped length, untyped segments, untyped depth) -> untyped
+
+    def self.__open: (untyped bytes, untyped offset, untyped length, untyped depth) -> untyped
+
+    def descriptor: () -> Schema::Message
+
+    # Returns what the field's reader returns.
+    # Raises ArgumentError when there is no such field.
+    def []: (String | Symbol name) -> untyped
+
+    # Raises FrozenError always.
+    def []=: (untyped _name, untyped _value) -> untyped
+
+    # Raises FrozenError always.
+    def merge!: (untyped _other) -> untyped
+
+    # Raises FrozenError always.
+    def clear!: () -> untyped
+
+    # Returns them frozen, in the order they occur.
+    def unknown_fields: () -> Array[UnknownField]
+
+    # Returns the bytes this view reads: the very String it was
+    # made from when it covers all of it, otherwise a copy of its part.
+    def encode: () -> String
+
+    # Decodes the view's bytes into a message, as Message.decode would
+    #
+    # - `frozen`: return a deep-frozen, Ractor-shareable message
+    def to_message: (?frozen: bool) -> Message
+
+    # Returns what Message#to_h gives for the same bytes.
+    def to_h: () -> Hash[Symbol, untyped]
+
+    def __to_h: () -> untyped
+
+    # Equal to a message of the view's class, or a view of it, with the
+    # same field values (unknown fields aside), as Message#== compares
+    def ==: (untyped other) -> bool
+
+    def hash: () -> Integer
+
+    # Reads every field, nested views and containers included, and freezes
+    # what was read. A view over a frozen String is then Ractor-shareable.
+    def freeze_index: () -> self
+
+    def inspect: () -> String
+
+    # For `pp`, laid out as Message#pretty_print lays out messages
+    def pretty_print: (untyped q) -> void
+
+    # Returns the fields `inspect` shows.
+    def __shown: () -> Array[[ String, untyped ]]
+
+    # Returns offset and length of each
+    # piece of the buffer this view reads, in order.
+    def __segments: () -> Array[[ Integer, Integer ]]
+
+    private
+
+    def __each_segment: () { (Integer, Integer) -> void } -> void
+
+    def __nested: (untyped i, untyped o, untyped n) -> untyped
+
+    def __frozen!: () -> untyped
+
+    alias to_proto encode
+
+    alias eql? ==
+
+    alias to_s inspect
+  end
+end

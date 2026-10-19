@@ -14,10 +14,11 @@ module Protostar
 
       # Splits a number of seconds into whole seconds and nanoseconds of the
       # same sign, rounding to the nearest nanosecond
-      # @param value [Object]
-      # @return [Array(Integer, Integer), nil] nil when the value is not a Numeric
-      # @raise [FloatDomainError] for NaN and Infinity
-      # @raise [RangeError] beyond {MAX_SECONDS}
+      #
+      # Returns nil when the value is not a Numeric.
+      # Raises FloatDomainError for NaN and Infinity.
+      # Raises RangeError beyond MAX_SECONDS.
+      #: (untyped value) -> [ Integer, Integer ]?
       def self.parts(value)
         return nil unless value.is_a?(Numeric)
         r = value.to_r
@@ -35,16 +36,17 @@ module Protostar
         # What a Duration field makes of a value that is neither a Duration
         # nor a Hash: a Numeric of seconds (Integer, Float, Rational) becomes
         # a Duration
-        # @return [Message, nil]
-        # @raise [RangeError] for NaN, Infinity, or beyond Duration's range
-        # @api private
-        def __coerce(value)
+        #
+        # Raises RangeError for NaN, Infinity, or beyond Duration's range.
+        #: (untyped value) -> Message?
+        def __coerce(value) # :nodoc:
           seconds, nanos = Duration.parts(value)
           new(seconds: seconds, nanos: nanos) if seconds
         end
       end
 
-      # @return [Float] seconds
+      # Returns seconds.
+      #: () -> Float
       def to_f
         seconds + nanos.to_f / 1_000_000_000
       end

@@ -31,8 +31,9 @@ $ protoc -I proto --ruby_out=lib proto/acme/person.proto          # before
 $ bundle exec protostar compile -I proto --ruby_out=lib proto/acme/person.proto   # after
 ```
 
-`--ruby_out` writes protostar's own `_pb.rb`. `--google_out` writes what `protoc --ruby_out`
-writes, byte for byte, for the shim path. `--rbs_out`, `--grpc_out` and
+`--ruby_out` writes protostar's own `_pb.rb`, with a `_pb.rbs` and a `_pb.rbi` next to it
+(`--no-rbs`, `--no-rbi` to skip them). `--google_out` writes what `protoc --ruby_out`
+writes, byte for byte, for the shim path, and nothing else. `--rbs_out`, `--rbi_out`, `--grpc_out` and
 `--descriptor_set_out` work too; a plugin for an existing protoc pipeline is
 `protoc --plugin=protoc-gen-protostar --protostar_out=lib`.
 
@@ -143,6 +144,21 @@ What differs from the C gem is listed in
 Gems that pin `google-protobuf` below 4 (`~> 3.18`, say) will not resolve against the
 shim's 4.36.2.1 unless you override their requirement; the shim README shows how. Such
 gems often ship `_pb.rb` files from protoc before 3.21, which do not load (see above).
+
+### Sorbet on the shim path
+
+Sorbet cannot see through protoc's `_pb.rb` files with either gem: their constants are
+assigned from `msgclass` calls. Add them to `--ignore` in `sorbet/config` and give Sorbet
+RBI instead, in one of two ways:
+
+- `protostar compile --google_out=lib --rbi_out=sorbet/rbi/protos` writes the RBI from the
+  `.proto`, in the shape tapioca's protobuf compiler writes. `Google::Protobuf`'s own RBI
+  (`AbstractMessage`, `RepeatedField[T]`, `Map[K, V]`) comes from tapioca as before.
+- `tapioca dsl` with its protobuf compiler, as with the C gem. It works out of the box: the
+  shim's message classes subclass `Google::Protobuf::AbstractMessage` (private, as in the
+  gem), where tapioca looks for them, and that in turn subclasses `Protostar::Message`.
+
+Use one or the other for a file: both declare the same methods.
 
 ## Two pools
 

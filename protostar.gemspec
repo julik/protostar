@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
   spec.metadata["rubygems_mfa_required"] = "true"
 
   # The shim's lib/ stays off require_paths: protostar/google_protobuf_shim puts it on
-  spec.files = Dir["lib/**/*.rb", "lib/protostar/compiler/include/**/*", "sig/**/*.rbs", "exe/*", "LICENSE.txt",
+  spec.files = Dir["lib/**/*.rb", "lib/protostar/compiler/include/**/*", "sig/**/*.rbs", "rbi/**/*.rbi", "exe/*", "LICENSE.txt",
     "shims/google-protobuf/lib/**/*.rb",
     "THIRD_PARTY_NOTICES.md", "README.md",
     "CHANGELOG.md"]
@@ -33,6 +33,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "minitest-fail-fast"
   spec.add_development_dependency "standard", "~> 1.50"
   spec.add_development_dependency "magic_frozen_string_literal"
-  spec.add_development_dependency "yard"
-  spec.add_development_dependency "rbs", ">= 3.5"
+  spec.add_development_dependency "rbs", ">= 4.0"
+  spec.add_development_dependency "rbs-inline", "~> 0.14"
+  spec.add_development_dependency "rdoc", ">= 8.1"
 end

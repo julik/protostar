@@ -1,0 +1,52 @@
+# Generated from lib/protostar/message/coercion.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Message
+    # Checks and converts values assigned to fields. Everything stored in a
+    # message has been through here (or through the decoder, which produces
+    # the same shapes): Integers in range, Floats, true/false, frozen UTF-8 or
+    # binary Strings, enum Symbols (or Integers for numbers without a name),
+    # messages of the field's class.
+    module Coercion
+      # :nodoc: all
+      RANGES: untyped
+
+      ENUM_RANGE: untyped
+
+      FLOAT_MAX: ::Float
+
+      # Halfway between FLT_MAX and 2**128: doubles below it round to FLT_MAX
+      FLOAT_ROUNDS_TO_MAX: ::Float
+
+      UTF_8: untyped
+
+      BINARY: untyped
+
+      # Returns what gets stored for a non-nil value assigned to the field.
+      # Raises Protostar::TypeError.
+      def self?.field: (FieldInfo info, untyped value) -> untyped
+
+      # One value of a singular field, an element of a repeated field, or a map value
+      def self?.single: (untyped info, untyped value) -> untyped
+
+      def self?.scalar: (untyped info, untyped value) -> untyped
+
+      # The nearest single-precision value, as C's double-to-float conversion
+      # gives it. `pack("e")` alone turns everything above FLT_MAX into
+      # Infinity, even values that round down to FLT_MAX, and every NaN into
+      # the same one.
+      def self?.float32: (untyped f) -> untyped
+
+      def self?.string: (untyped info, untyped value) -> untyped
+
+      def self?.enum: (untyped info, untyped value) -> untyped
+
+      # Whether a value found in a repeated field or map is one the encoder can
+      # write. Those containers are plain Arrays and Hashes that callers may
+      # have filled directly, past the writers' checks.
+      def self?.storable?: (untyped info, untyped value) -> untyped
+
+      def self?.raise_type: (untyped info, untyped value, untyped expected) -> untyped
+    end
+  end
+end

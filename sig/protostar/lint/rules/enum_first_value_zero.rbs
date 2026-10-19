@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/enum_first_value_zero.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # ENUM_FIRST_VALUE_ZERO: An enum whose first value is not zero
+      class EnumFirstValueZero < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

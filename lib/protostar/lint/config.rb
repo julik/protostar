@@ -4,30 +4,29 @@ module Protostar
   module Lint
     # The `lint:` section of `.protostar.yml`:
     #
-    #   lint:
-    #     rules: [default]                  # sets, categories or rule ids
-    #     except: [PACKAGE_VERSION_SUFFIX]
-    #     ignore: ["vendor/**"]             # relative to the file's directory
-    #     allow_comment_directives: true
+    # ```ruby
+    # lint:
+    #   rules: [default]                  # sets, categories or rule ids
+    #   except: [PACKAGE_VERSION_SUFFIX]
+    #   ignore: ["vendor/**"]             # relative to the file's directory
+    #   allow_comment_directives: true
+    # ```
     class Config
       FILE_NAME = ".protostar.yml"
       KEYS = %w[rules except ignore allow_comment_directives].freeze
 
-      # @return [Array<String>]
-      attr_reader :rules
-      # @return [Array<String>]
-      attr_reader :except
-      # @return [Array<String>] globs
-      attr_reader :ignore
-      # @return [String] the directory `ignore` globs are relative to
-      attr_reader :root
-      # @return [String, nil] the file read, nil for the defaults
-      attr_reader :file
+      attr_reader :rules #: Array[String]
+      attr_reader :except #: Array[String]
+      # Globs.
+      attr_reader :ignore #: Array[String]
+      # The directory `ignore` globs are relative to.
+      attr_reader :root #: String
+      # The file read, nil for the defaults.
+      attr_reader :file #: String?
 
       # The first `.protostar.yml` next to an input (a directory or a file's
       # directory), else in the current directory, else the defaults
-      # @param inputs [Array<String>]
-      # @return [Config]
+      #: (Array[String] inputs, ?cwd: String) -> Config
       def self.find(inputs, cwd: Dir.pwd)
         dirs = inputs.map { |i| ::File.directory?(i) ? i : ::File.dirname(i) } + [cwd]
         dirs.each do |dir|
@@ -37,9 +36,8 @@ module Protostar
         new({}, root: cwd)
       end
 
-      # @param path [String]
-      # @return [Config]
-      # @raise [Error] when it is not YAML, or the `lint:` section has an unknown key
+      # Raises Error when it is not YAML, or the `lint:` section has an unknown key.
+      #: (String path) -> Config
       def self.load(path)
         require "yaml"
         data = YAML.safe_load_file(path) || {}
@@ -62,12 +60,15 @@ module Protostar
         @file = file
       end
 
+      #: () -> bool
       def allow_comment_directives?
         @directives
       end
 
-      # @param path [String] a file found while walking a directory
-      # @return [Boolean] whether an `ignore` glob matches it or a directory above it
+      # - `path`: a file found while walking a directory
+      #
+      # Returns whether an `ignore` glob matches it or a directory above it.
+      #: (String path) -> bool
       def ignored?(path)
         return false if @ignore.empty?
         rel = relative(::File.expand_path(path))

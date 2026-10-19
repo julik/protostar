@@ -3,14 +3,12 @@
 module Protostar
   class Compiler
     # Builds `SourceCodeInfo` the way protoc does: the parser opens a
-    # {Recorder} for every element as it starts reading it, so locations come
+    # Recorder for every element as it starts reading it, so locations come
     # out in pre-order with protoc's paths and spans, and comments are
     # attached at the end of each declaration. After option interpretation
     # {.rewrite_option_paths} moves option locations from
     # `uninterpreted_option` paths to the paths of the options they set.
-    #
-    # @api private
-    module SourceInfo
+    module SourceInfo # :nodoc: all
       # A `SourceCodeInfo.Location` under construction
       class Location
         attr_accessor :path, :span, :leading_comments, :trailing_comments, :leading_detached_comments
@@ -31,7 +29,8 @@ module Protostar
           copy
         end
 
-        # @return [Schema::SourceInfo::Location] the finished location, comments as UTF-8
+        # Returns the finished location, comments as UTF-8.
+        #: () -> Schema::SourceInfo::Location
         def to_schema
           Schema::SourceInfo::Location.new(path: @path, span: @span, leading_comments: utf8(@leading_comments),
             trailing_comments: utf8(@trailing_comments),
@@ -47,16 +46,14 @@ module Protostar
 
       # protoc's Parser::LocationRecorder. It starts at the current token when
       # created and, unless ended explicitly, ends at the previous token when
-      # {#finish}ed.
+      # #finished.
       class Recorder
-        # @return [Location]
-        attr_reader :location
-        # @return [Array<Location>] where the location was added
-        attr_reader :target
+        attr_reader :location #: Location
+        # Where the location was added.
+        attr_reader :target #: Array[Location]
 
-        # @param lexer [Lexer]
-        # @param path [Array<Integer>] the parent's path plus this element's components
-        # @param target [Array<Location>]
+        # - `path`: the parent's path plus this element's components
+        #: (Lexer lexer, Array[Integer] path, Array[Location] target) -> void
         def initialize(lexer, path, target)
           @lexer = lexer
           @target = target
@@ -65,7 +62,8 @@ module Protostar
           target << @location
         end
 
-        # @return [Recorder] a child location, its path extended by `components`
+        # Returns a child location, its path extended by `components`.
+        #: (*untyped components, ?target: untyped) -> Recorder
         def child(*components, target: @target)
           Recorder.new(@lexer, @location.path + components, target)
         end
@@ -103,7 +101,7 @@ module Protostar
           node.positions[kind] = [@location.span[0], @location.span[1]]
         end
 
-        # @return [Array(Integer, Integer)]
+        #: () -> [Integer, Integer]
         def start
           [@location.span[0], @location.span[1]]
         end
@@ -118,8 +116,9 @@ module Protostar
 
       # Where the shortest location starting at a position ends: the extent of
       # the element whose name, number or type is reported there
-      # @param locations [Array<Location>]
-      # @return [Array(Integer, Integer), nil] 0-based line and column just past the end
+      #
+      # Returns 0-based line and column just past the end.
+      #: (Array[Location] locations, untyped line, untyped column) -> [Integer, Integer]?
       def self.extent(locations, line, column)
         best = nil
         locations.each do |loc|
@@ -134,9 +133,9 @@ module Protostar
       # OptionInterpreter::UpdateSourceCodeInfo: the location of each
       # interpreted option takes the path of the option it set, and the
       # locations nested under it (name parts, values) are dropped
-      # @param locations [Array<Location>]
-      # @param interpreted [Hash{Array<Integer> => Array<Integer>}] uninterpreted_option path to option path
-      # @return [Array<Location>]
+      #
+      # - `interpreted`: uninterpreted_option path to option path
+      #: (Array[Location] locations, Hash[Array[Integer], Array[Integer]] interpreted) -> Array[Location]
       def self.rewrite_option_paths(locations, interpreted)
         return locations if interpreted.empty?
         out = []

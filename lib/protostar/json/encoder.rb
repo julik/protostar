@@ -4,8 +4,7 @@ module Protostar
   module JSON
     # Writes a message as proto3 JSON the way google-protobuf's Ruby gem
     # does: compact, fields in declaration order, unknown fields left out.
-    # @api private
-    class Encoder
+    class Encoder # :nodoc: all
       F = Message::FieldInfo
 
       # Messages whose JSON is not an object of their fields
@@ -40,11 +39,11 @@ module Protostar
       TIMESTAMP_MAX = 253_402_300_799
       DURATION_MAX = 315_576_000_000
 
-      # @param preserve_proto_field_names [Boolean] field names as in the .proto, not lowerCamel
-      # @param emit_defaults [Boolean] also fields without presence at their default, and empty
+      # - `preserve_proto_field_names`: field names as in the .proto, not lowerCamel
+      # - `emit_defaults`: also fields without presence at their default, and empty
       #   repeated fields and maps; never unset message fields or oneof members
-      # @param format_enums_as_integers [Boolean]
-      # @param registry [Types::Registry] where the types inside Any are looked up
+      # - `registry`: where the types inside Any are looked up
+      #: (?preserve_proto_field_names: bool, ?emit_defaults: bool, ?format_enums_as_integers: bool, ?registry: Types::Registry, ?preserve_proto_fieldnames: untyped) -> void
       def initialize(preserve_proto_field_names: false, emit_defaults: false, format_enums_as_integers: false,
         registry: nil, preserve_proto_fieldnames: nil)
         @proto_names = preserve_proto_fieldnames.nil? ? preserve_proto_field_names : preserve_proto_fieldnames
@@ -54,8 +53,8 @@ module Protostar
         @path = []
       end
 
-      # @param message [Message]
-      # @return [String] UTF-8
+      # Returns a UTF-8 String.
+      #: (Message message) -> String
       def encode(message)
         out = +""
         message(message, out)

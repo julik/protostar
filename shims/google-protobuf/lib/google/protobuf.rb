@@ -19,7 +19,7 @@ module Google
     # The gem chooses between its C extension and FFI here; there is only protostar
     PREFER_FFI = false
 
-    # @return [Symbol] which implementation is loaded
+    # Returns which implementation is loaded.
     IMPLEMENTATION = :PROTOSTAR
 
     # descriptor.proto's classes, which descriptors' `options` and `to_proto`
@@ -33,28 +33,30 @@ module Google
       GeneratedCodeInfo Edition SymbolVisibility
     ].each { |name| autoload(name, ::File.expand_path("protobuf/descriptor_pb", __dir__)) }
 
-    # @return [String] the message's binary encoding
+    # Returns the message's binary encoding.
+    #: (untyped msg, ?untyped options) -> String
     def self.encode(msg, options = {})
       msg.to_proto(options)
     end
 
-    # @return [String] the message as JSON
+    # Returns the message as JSON.
+    #: (untyped msg, ?untyped options) -> String
     def self.encode_json(msg, options = {})
       msg.to_json(options)
     end
 
-    # @return [Message]
+    #: (untyped klass, untyped proto, ?untyped options) -> Protostar::Message
     def self.decode(klass, proto, options = {})
       klass.decode(proto, options)
     end
 
-    # @return [Message]
+    #: (untyped klass, untyped json, ?untyped options) -> Protostar::Message
     def self.decode_json(klass, json, options = {})
       klass.decode_json(json, options)
     end
 
-    # @param object [Message, RepeatedField, Map]
-    # @return [Message, RepeatedField, Map] a copy with every nested message copied too
+    # Returns a copy with every nested message copied too.
+    #: ((Protostar::Message | RepeatedField | Map) object) -> (Protostar::Message | RepeatedField | Map)
     def self.deep_copy(object)
       case object
       when RepeatedField, Map then object.__deep_copy
@@ -65,7 +67,7 @@ module Google
 
     # Drops the unknown fields of a message and of every message in it
     # (extensions stay)
-    # @return [nil]
+    #: (untyped message) -> nil
     def self.discard_unknown(message)
       raise FrozenError if message.frozen?
       raise ArgumentError, "Expected message, got #{message.class} instead." unless message.is_a?(MessageExts)
@@ -74,8 +76,7 @@ module Google
     end
 
     module Internal
-      # @api private
-      def self.discard_unknown(message)
+      def self.discard_unknown(message) # :nodoc:
         descriptor = message.class.descriptor.__schema
         kept = message.unknown_fields.select { |u| descriptor.extension_number?(u.number) }
         message.__greplace_unknown(kept) if kept.size != message.unknown_fields.size

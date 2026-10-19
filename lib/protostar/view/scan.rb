@@ -5,8 +5,7 @@ module Protostar
     # What the generated index builders and the lazy containers share: the
     # rare paths of the scan, and turning indexed positions into values.
     # Every check mirrors the eager decoder's, with the same messages and offsets.
-    # @api private
-    module Scan
+    module Scan # :nodoc: all
       F = Message::FieldInfo
       UTF_8 = Encoding::UTF_8
       BINARY = Encoding::BINARY
@@ -15,7 +14,7 @@ module Protostar
 
       # A tag the class has no branch for: an end-group tag, a malformed tag,
       # an unknown field or a known one with the wrong wire type. The field is
-      # skipped and its range kept for {View#unknown_fields}.
+      # skipped and its range kept for View#unknown_fields.
       def other(c, tag, at, ix, u, depth)
         number = tag >> 3
         wt = tag & 7
@@ -27,7 +26,9 @@ module Protostar
       end
 
       # Skips a group's contents and its end tag
-      # @return [Integer] the offset of the end tag, where the contents stop
+      #
+      # Returns the offset of the end tag, where the contents stop.
+      #: (untyped c, untyped number, untyped depth) -> Integer
       def group_end(c, number, depth)
         loop do
           raise DecodeError.new("missing end of group #{number}", offset: c.pos) if c.pos >= c.limit
@@ -72,8 +73,9 @@ module Protostar
         c.pop_limit(old)
       end
 
-      # @return [Boolean] whether a map entry's value is a closed enum's
-      #   unknown number, which sends the whole entry to the unknown fields
+      # Returns whether a map entry's value is a closed enum's
+      # unknown number, which sends the whole entry to the unknown fields.
+      #: (untyped buf, untyped pos, untyped length, untyped info, untyped depth) -> bool
       def map_unknown_enum?(buf, pos, length, info, depth)
         Map.entry(buf, pos, length, info, depth)[2]
       end
@@ -112,7 +114,9 @@ module Protostar
       # Every element of a repeated scalar field. `entries` holds pairs: a
       # value (varint kinds) or an offset (fixed kinds) and -1 for one
       # element, or an offset and a length for a packed run.
-      # @return [Array] frozen
+      #
+      # Returns a frozen value.
+      #: (untyped buf, untyped info, untyped entries) -> Array[untyped]
       def scalars(buf, info, entries)
         out = []
         kind = info.kind

@@ -8,9 +8,9 @@ module Protostar
         base.extend(ClassMethods)
       end
 
-      # @param value [Object]
-      # @return [Array(Integer, Integer), nil] seconds and nanos of a Time, a
-      #   DateTime or a Date; nil for anything else
+      # Returns seconds and nanos of a Time, a
+      # DateTime or a Date; nil for anything else.
+      #: (untyped value) -> [ Integer, Integer ]?
       def self.parts(value)
         time = if value.is_a?(::Time) then value
         elsif defined?(::Date) && value.is_a?(::Date) then value.to_time
@@ -20,42 +20,43 @@ module Protostar
       end
 
       module ClassMethods
-        # @param time [Time]
-        # @return [Message] a new Timestamp at the same instant, to the nanosecond
+        # Returns a new Timestamp at the same instant, to the nanosecond.
+        #: (Time time) -> Google::Protobuf::Timestamp
         def from_time(time)
           new.from_time(time)
         end
 
         # What a Timestamp field makes of a value that is neither a Timestamp
         # nor a Hash: a Time, a DateTime or a Date becomes a Timestamp
-        # @return [Message, nil]
-        # @api private
-        def __coerce(value)
+        #: (untyped value) -> Message?
+        def __coerce(value) # :nodoc:
           seconds, nanos = Timestamp.parts(value)
           new(seconds: seconds, nanos: nanos) if seconds
         end
       end
 
-      # @param time [Time]
-      # @return [self]
+      #: (Time time) -> self
       def from_time(time)
         self.seconds = time.to_i
         self.nanos = time.nsec
         self
       end
 
-      # @return [Time] in the local zone, as `Time.at` gives it
+      # Returns a Time in the local zone, as `Time.at` gives it.
+      #: () -> Time
       def to_time
         ::Time.at(seconds, nanos, :nanosecond)
       end
 
-      # @return [Integer] seconds since the epoch
+      # Returns seconds since the epoch.
+      #: () -> Integer
       def to_i
         seconds
       end
 
-      # @return [Rational] seconds since the epoch, exact; google-protobuf
-      #   returns a Rational here too
+      # Returns seconds since the epoch, exact; google-protobuf
+      # returns a Rational here too.
+      #: () -> Rational
       def to_f
         seconds + nanos.quo(1_000_000_000)
       end

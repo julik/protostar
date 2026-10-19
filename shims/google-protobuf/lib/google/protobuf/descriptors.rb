@@ -5,12 +5,11 @@ require "forwardable"
 module Google
   module Protobuf
     module Internal
-      # What every descriptor wrapper shares: a {Protostar::Schema} descriptor
+      # What every descriptor wrapper shares: a Protostar::Schema descriptor
       # and the DescriptorPool it belongs to. Methods the gem does not have are
       # passed to the schema descriptor, because protostar's runtime reads
-      # `klass.descriptor` (here a wrapper) as a {Protostar::Schema::Message}.
-      # @api private
-      module Wrapper
+      # `klass.descriptor` (here a wrapper) as a Protostar::Schema::Message.
+      module Wrapper # :nodoc: all
         def self.included(base)
           base.extend(ClassMethods)
         end
@@ -20,19 +19,16 @@ module Google
             raise "Descriptor objects may not be created from Ruby."
           end
 
-          # @api private
-          def __wrap(schema, pool)
+          def __wrap(schema, pool) # :nodoc:
             instance = allocate
             instance.send(:initialize, schema, pool)
             instance
           end
         end
 
-        # @return [DescriptorPool]
-        attr_reader :descriptor_pool
+        attr_reader :descriptor_pool #: DescriptorPool
 
-        # @api private
-        attr_reader :__schema
+        attr_reader :__schema # :nodoc:
 
         def to_s
           inspect
@@ -75,16 +71,16 @@ module Google
     # A message type
     class Descriptor
       include Internal::Wrapper
-      include Enumerable
+      include Enumerable #[untyped]
       extend Forwardable
 
       # protostar's runtime reads `klass.descriptor` as a Protostar::Schema::Message
       # (JSON, text, Any); these are the methods it calls
-      # @api private
       def_delegators :@__schema, :full_name, :file, :fields, :fields_by_name, :fields_by_number,
         :fields_by_json_name, :map_entry?, :message_set_wire_format?, :extension_number?
 
-      # @return [String] the full name
+      # Returns the full name.
+      #: () -> String
       def name
         @__schema.full_name
       end
@@ -93,13 +89,13 @@ module Google
         "Descriptor - (not the message class) #{name}"
       end
 
-      # @return [FileDescriptor]
+      #: () -> FileDescriptor
       def file_descriptor
         wrap(@__schema.file)
       end
 
       # Yields each field, in declaration order
-      # @yieldparam field [FieldDescriptor]
+      #: () ?{ (FieldDescriptor field) -> untyped } -> untyped
       def each
         return enum_for(:each) unless block_given?
         @__schema.fields.each { |f| yield wrap(f) }
@@ -107,42 +103,41 @@ module Google
       end
 
       # Yields each oneof, synthetic ones (proto3 `optional`) included
-      # @yieldparam oneof [OneofDescriptor]
+      #: () ?{ (OneofDescriptor oneof) -> untyped } -> untyped
       def each_oneof
         return enum_for(:each_oneof) unless block_given?
         @__schema.oneofs.each { |o| yield wrap(o) }
         nil
       end
 
-      # @param name [String]
-      # @return [FieldDescriptor, nil]
+      #: (String name) -> FieldDescriptor?
       def lookup(name)
         wrap(@__schema.fields_by_name[name.to_s])
       end
 
-      # @param name [String]
-      # @return [OneofDescriptor, nil]
+      #: (String name) -> OneofDescriptor?
       def lookup_oneof(name)
         wrap(@__schema.oneofs.find { |o| o.name == name.to_s })
       end
 
-      # @return [Class] the message class
+      # Returns the message class.
+      #: () -> Class
       def msgclass
         @msgclass ||= @descriptor_pool.__msgclass(@__schema)
       end
 
-      # @return [Google::Protobuf::MessageOptions] frozen
+      # Returns frozen.
+      #: () -> Google::Protobuf::MessageOptions
       def options
         @options ||= options_message(:MessageOptions)
       end
 
-      # @return [Google::Protobuf::DescriptorProto]
+      #: () -> Google::Protobuf::DescriptorProto
       def to_proto
         @to_proto ||= proto_message(:DescriptorProto, @__schema.to_proto(default_json_names: false))
       end
 
-      # @api private
-      def __msgclass=(klass)
+      def __msgclass=(klass) # :nodoc:
         @msgclass = klass
       end
 
@@ -168,27 +163,29 @@ module Google
         bool: :bool, string: :string, bytes: :bytes, enum: :enum, message: :message, group: :message
       }.freeze
 
-      # @return [String]
+      #: () -> String
       def name
         @__schema.name
       end
 
-      # @return [String]
+      #: () -> String
       def json_name
         @__schema.json_name
       end
 
-      # @return [Integer]
+      #: () -> Integer
       def number
         @__schema.number
       end
 
-      # @return [Symbol] :int32, :string, :message, :group and so on; map fields are :message
+      # Returns :int32, :string, :message, :group and so on; map fields are :message.
+      #: () -> Symbol
       def type
         @__schema.type
       end
 
-      # @return [Symbol] :optional, :required or :repeated
+      # Returns :optional, :required or :repeated.
+      #: () -> Symbol
       def label
         if @__schema.repeated? then :repeated
         elsif @__schema.required? then :required
@@ -196,7 +193,8 @@ module Google
         end
       end
 
-      # @return [Object, nil] the default as the field's reader gives it; nil for messages
+      # Returns the default as the field's reader gives it; nil for messages.
+      #: () -> untyped
       def default
         return nil if sub_message?
         if repeated?
@@ -209,14 +207,16 @@ module Google
         end
       end
 
-      # @return [String, nil] the full name of the message or enum type
+      # Returns the full name of the message or enum type.
+      #: () -> String?
       def submsg_name
         sub = @__schema.message_type || @__schema.enum_type
         sub&.full_name
       end
 
-      # @return [Descriptor, EnumDescriptor, nil] for message and enum fields;
-      #   a map field's is its entry message
+      # Returns for message and enum fields;
+      # a map field's is its entry message.
+      #: () -> (Descriptor | EnumDescriptor)?
       def subtype
         return @subtype if defined?(@subtype)
         @subtype = wrap(@__schema.message_type || @__schema.enum_type)
@@ -251,9 +251,9 @@ module Google
         sub.is_a?(Descriptor) && sub.send(:wrapper?)
       end
 
-      # @param msg [Message]
-      # @return [Object] the field's value on the message
-      # @raise [TypeError] when the message is not of the field's message type
+      # Returns the field's value on the message.
+      # Raises TypeError when the message is not of the field's message type.
+      #: (Protostar::Message msg) -> untyped
       def get(msg)
         check_owner(msg, "get")
         msg.__gget(self)
@@ -266,7 +266,7 @@ module Google
         nil
       end
 
-      # @raise [ArgumentError] when the field does not track presence
+      # Raises ArgumentError when the field does not track presence.
       def has?(msg)
         check_owner(msg, "has")
         raise ArgumentError, "does not track presence" unless has_presence?
@@ -279,19 +279,20 @@ module Google
         nil
       end
 
-      # @return [Google::Protobuf::FieldOptions] frozen
+      # Returns frozen.
+      #: () -> Google::Protobuf::FieldOptions
       def options
         @options ||= options_message(:FieldOptions)
       end
 
-      # @return [Google::Protobuf::FieldDescriptorProto]
+      #: () -> Google::Protobuf::FieldDescriptorProto
       def to_proto
         @to_proto ||= proto_message(:FieldDescriptorProto, @__schema.to_proto(default_json_names: false))
       end
 
-      # @api private
-      # @return [Protostar::Message::FieldInfo, nil] nil for extensions
-      def __info
+      # Returns nil for extensions.
+      #: () -> Protostar::Message::FieldInfo?
+      def __info # :nodoc:
         return @__info if defined?(@__info)
         @__info = if @__schema.extension?
           nil
@@ -300,19 +301,17 @@ module Google
         end
       end
 
-      # @api private
-      def __ctype
+      def __ctype # :nodoc:
         CTYPES.fetch(type)
       end
 
-      # @api private
-      def __extension?
+      def __extension? # :nodoc:
         @__schema.extension?
       end
 
-      # @api private
-      # @return [Descriptor] the message the field belongs to (an extension's extendee)
-      def __owner
+      # Returns the message the field belongs to (an extension's extendee).
+      #: () -> Descriptor
+      def __owner # :nodoc:
         @__owner ||= wrap(@__schema.extension? ? @__schema.extendee : @__schema.containing_message)
       end
 
@@ -327,25 +326,26 @@ module Google
     # A oneof of a message
     class OneofDescriptor
       include Internal::Wrapper
-      include Enumerable
+      include Enumerable #[untyped]
 
       def name
         @__schema.name
       end
 
-      # @yieldparam field [FieldDescriptor]
+      #: () ?{ (FieldDescriptor field) -> untyped } -> untyped
       def each
         return enum_for(:each) unless block_given?
         @__schema.fields.each { |f| yield wrap(f) }
         nil
       end
 
-      # @return [Google::Protobuf::OneofOptions] frozen
+      # Returns frozen.
+      #: () -> Google::Protobuf::OneofOptions
       def options
         @options ||= options_message(:OneofOptions)
       end
 
-      # @return [Google::Protobuf::OneofDescriptorProto]
+      #: () -> Google::Protobuf::OneofDescriptorProto
       def to_proto
         @to_proto ||= proto_message(:OneofDescriptorProto, @__schema.to_proto)
       end
@@ -354,68 +354,70 @@ module Google
     # An enum type
     class EnumDescriptor
       include Internal::Wrapper
-      include Enumerable
+      include Enumerable #[untyped]
 
-      # @return [String] the full name
+      # Returns the full name.
+      #: () -> String
       def name
         @__schema.full_name
       end
 
-      # @return [FileDescriptor]
+      #: () -> FileDescriptor
       def file_descriptor
         wrap(@__schema.file)
       end
 
-      # @param name [String, Symbol]
-      # @return [Integer, nil]
+      #: ((String | Symbol) name) -> Integer?
       def lookup_name(name)
         __numbers[name.to_sym]
       end
 
-      # @param number [Integer]
-      # @return [Symbol, nil] the first name declared for the number
+      # Returns the first name declared for the number.
+      #: (Integer number) -> Symbol?
       def lookup_value(number)
         __names[number]
       end
 
       # Yields every value, aliases included
-      # @yieldparam name [Symbol]
-      # @yieldparam number [Integer]
+      #: () ?{ (Symbol name, Integer number) -> untyped } -> untyped
       def each
         return enum_for(:each) unless block_given?
         @__schema.values.each { |v| yield v.name.to_sym, v.number }
         nil
       end
 
-      # @return [false] the gem treats every enum as open, whatever the .proto says
+      # Returns the gem treats every enum as open, whatever the .proto says.
+      #: () -> bool
       def is_closed?
         false
       end
 
-      # @return [Module] the enum module: a constant per value, `lookup`, `resolve`, `descriptor`
+      # Returns the enum module: a constant per value, `lookup`, `resolve`, `descriptor`.
+      #: () -> Module
       def enummodule
         @enummodule ||= build_module
       end
 
-      # @return [Google::Protobuf::EnumOptions] frozen
+      # Returns frozen.
+      #: () -> Google::Protobuf::EnumOptions
       def options
         @options ||= options_message(:EnumOptions)
       end
 
-      # @return [Google::Protobuf::EnumDescriptorProto]
+      #: () -> Google::Protobuf::EnumDescriptorProto
       def to_proto
         @to_proto ||= proto_message(:EnumDescriptorProto, @__schema.to_proto)
       end
 
-      # @api private
-      # @return [Hash{Integer => Symbol}] number to its first name
-      def __names
+      # Returns number to its first name.
+      #: () -> Hash[Integer, Symbol]
+      def __names # :nodoc:
         @__names ||= @__schema.values.each_with_object({}) { |v, h| h[v.number] ||= v.name.to_sym }.freeze
       end
 
-      # @api private
-      # @return [Hash{Symbol => Integer}] every name to its number
-      def __numbers
+      # Returns every name to its number.
+      #: () -> Hash[Symbol, Integer]
+      def __numbers # :nodoc:
         @__numbers ||= @__schema.values.to_h { |v| [v.name.to_sym, v.number] }.freeze
       end
 
@@ -442,17 +444,15 @@ module Google
 
     module Internal
       # Extended by every enum module
-      # @api private
-      module EnumModule
-        # @return [EnumDescriptor]
-        attr_reader :descriptor
+      module EnumModule # :nodoc: all
+        attr_reader :descriptor #: EnumDescriptor
 
-        # @return [Symbol, nil]
+        #: (untyped number) -> Symbol?
         def lookup(number)
           @descriptor.lookup_value(number)
         end
 
-        # @return [Integer, nil]
+        #: (untyped name) -> Integer?
         def resolve(name)
           @descriptor.lookup_name(name)
         end
@@ -462,31 +462,33 @@ module Google
     # A service
     class ServiceDescriptor
       include Internal::Wrapper
-      include Enumerable
+      include Enumerable #[untyped]
 
-      # @return [String] the full name
+      # Returns the full name.
+      #: () -> String
       def name
         @__schema.full_name
       end
 
-      # @return [FileDescriptor]
+      #: () -> FileDescriptor
       def file_descriptor
         wrap(@__schema.file)
       end
 
-      # @yieldparam method [MethodDescriptor]
+      #: () ?{ (MethodDescriptor method) -> untyped } -> untyped
       def each
         return enum_for(:each) unless block_given?
         @__schema.rpcs.each { |m| yield wrap(m) }
         nil
       end
 
-      # @return [Google::Protobuf::ServiceOptions] frozen
+      # Returns frozen.
+      #: () -> Google::Protobuf::ServiceOptions
       def options
         @options ||= options_message(:ServiceOptions)
       end
 
-      # @return [Google::Protobuf::ServiceDescriptorProto]
+      #: () -> Google::Protobuf::ServiceDescriptorProto
       def to_proto
         @to_proto ||= proto_message(:ServiceDescriptorProto, @__schema.to_proto)
       end
@@ -500,12 +502,12 @@ module Google
         @__schema.name
       end
 
-      # @return [Descriptor]
+      #: () -> Descriptor
       def input_type
         wrap(@__schema.input_type)
       end
 
-      # @return [Descriptor]
+      #: () -> Descriptor
       def output_type
         wrap(@__schema.output_type)
       end
@@ -518,12 +520,13 @@ module Google
         @__schema.server_streaming?
       end
 
-      # @return [Google::Protobuf::MethodOptions] frozen
+      # Returns frozen.
+      #: () -> Google::Protobuf::MethodOptions
       def options
         @options ||= options_message(:MethodOptions)
       end
 
-      # @return [Google::Protobuf::MethodDescriptorProto]
+      #: () -> Google::Protobuf::MethodDescriptorProto
       def to_proto
         @to_proto ||= proto_message(:MethodDescriptorProto, @__schema.to_proto)
       end
@@ -537,12 +540,13 @@ module Google
         @__schema.name
       end
 
-      # @return [Google::Protobuf::FileOptions] frozen
+      # Returns frozen.
+      #: () -> Google::Protobuf::FileOptions
       def options
         @options ||= options_message(:FileOptions)
       end
 
-      # @return [Google::Protobuf::FileDescriptorProto]
+      #: () -> Google::Protobuf::FileDescriptorProto
       def to_proto
         @to_proto ||= Google::Protobuf::FileDescriptorProto.decode(
           Protostar::Compiler::Emitters::GoogleRuby.serialized(@__schema)

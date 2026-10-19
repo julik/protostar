@@ -4,12 +4,10 @@ module Protostar
   module JSON
     # Where the encoder or parser is in a message, kept as a stack of field
     # names, Integer indexes and map keys, turned into text only for errors
-    # @api private
-    module Path
+    module Path # :nodoc: all
       # A map key on the stack, printed as `[key]`
       class MapKey
-        # @return [Object]
-        attr_reader :key
+        attr_reader :key #: untyped
 
         def initialize(key)
           @key = key
@@ -19,8 +17,8 @@ module Protostar
 
       module_function
 
-      # @param stack [Array<String, Integer, MapKey>]
-      # @return [String] e.g. `friends[2].name` or `labels["x"]`
+      # Returns a name such as `friends[2].name` or `labels["x"]`.
+      #: ((Array[(String | Integer | MapKey)]) stack) -> String
       def to_s(stack)
         out = +""
         stack.each do |seg|

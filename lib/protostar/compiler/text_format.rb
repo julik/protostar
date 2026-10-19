@@ -5,9 +5,7 @@ module Protostar
     # Just enough of protoc's text-format parser to read aggregate option
     # values (`option (opt) = { a: 1 b { c: "x" } [ext]: 2 };`) into option
     # entries, with protoc's error messages for the common mistakes.
-    #
-    # @api private
-    class TextFormat
+    class TextFormat # :nodoc: all
       ANY_PREFIXES = ["type.googleapis.com/", "type.googleprod.com/"].freeze
       INT32_MAX = 2**31 - 1
       INT64_MAX = 2**63 - 1
@@ -15,13 +13,12 @@ module Protostar
       UINT64_MAX = 2**64 - 1
       RECURSION_LIMIT = 100
 
-      # @return [Array<String>]
-      attr_reader :errors
+      attr_reader :errors #: Array[String]
 
-      # @param text [String] the aggregate value, braces excluded
-      # @param type [Schema::Message]
-      # @param interpreter [OptionInterpreter] maps symbols to descriptors
-      # @param table [SymbolTable] resolves `[extension]` names
+      # - `text`: the aggregate value, braces excluded
+      # - `interpreter`: maps symbols to descriptors
+      # - `table`: resolves `[extension]` names
+      #: (String text, Schema::Message, OptionInterpreter interpreter, SymbolTable table) -> void
       def initialize(text, type, interpreter, table)
         @type = type
         @interpreter = interpreter
@@ -32,7 +29,8 @@ module Protostar
         @depth = RECURSION_LIMIT
       end
 
-      # @return [Array, nil] the entries, or nil after errors
+      # Returns the entries, or nil after errors.
+      #: () -> Array[untyped]?
       def parse
         entries = []
         until looking_at_type?(:end)

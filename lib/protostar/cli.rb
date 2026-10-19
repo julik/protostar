@@ -7,17 +7,23 @@ require "protostar"
 module Protostar
   # `protostar compile`, with protoc's flag names and protoc's messages
   #
-  #   protostar compile -I proto --ruby_out=lib --grpc_out=lib acme/service.proto
+  # ```sh
+  # protostar compile -I proto --ruby_out=lib --grpc_out=lib acme/service.proto
+  # ```
   #
   # `compile` is the default command. Without `-I` every input's own directory
   # is an include path, and one input with no `--*_out` prints its native Ruby:
   #
-  #   protostar proto/acme/person.proto > person_pb.rb
+  # ```sh
+  # protostar proto/acme/person.proto > person_pb.rb
+  # ```
   class CLI
     USAGE = "Usage: protostar [compile] [OPTION] PROTO_FILES\n       protostar lint [OPTION] PROTO_FILES_OR_DIRS\n" \
       "       protostar --version"
     DEFAULTS = "Without -I, the directory of each PROTO_FILE is an include path and the file is named by its\n" \
-      "basename. With one PROTO_FILE and no --*_out, what --ruby_out would write is printed to stdout."
+      "basename. With one PROTO_FILE and no --*_out, what --ruby_out would write is printed to stdout.\n" \
+      "--ruby_out also writes RBS (*_pb.rbs) and Sorbet RBI (*_pb.rbi) next to each *_pb.rb; --no-rbs and\n" \
+      "--no-rbi turn that off, --rbs_out and --rbi_out write them elsewhere."
     NO_STDIN = "Reading a .proto from stdin (-) is not supported; pass the file's path."
     Emitters = Compiler::Emitters
     RBS_EDITIONS = "is an editions file, but code generator --rbs_out hasn't been updated to support editions yet.  " \
@@ -31,17 +37,14 @@ module Protostar
     # Raised to stop with a message on stderr and exit status 1
     class Failure < Protostar::Error; end
 
-    # @param argv [Array<String>]
-    # @param out [IO]
-    # @param err [IO]
-    # @return [Integer] the exit status
+    # Returns the exit status.
+    #: (Array[String] argv, ?out: IO, ?err: IO) -> Integer
     def self.run(argv, out: $stdout, err: $stderr)
       new(out, err).run(argv)
     end
 
     # Whether to colour what goes to `io`: a terminal, and NO_COLOR unset
-    # @api private
-    def self.color?(io)
+    def self.color?(io) # :nodoc:
       io.respond_to?(:tty?) && io.tty? && ENV.fetch("NO_COLOR", "").empty?
     end
 
@@ -50,7 +53,7 @@ module Protostar
       @err = err
     end
 
-    # @return [Integer]
+    #: (untyped argv) -> Integer
     def run(argv)
       argv = argv.dup
       case argv.first
@@ -93,6 +96,9 @@ module Protostar
         o.on("--ruby_out=DIR", "Write protostar's native Ruby (*_pb.rb)") { |v| opts[:ruby] = v }
         o.on("--google_out=DIR", "Write protoc's google-protobuf Ruby (*_pb.rb)") { |v| opts[:google] = v }
         o.on("--rbs_out=DIR", "Write RBS signatures (*_pb.rbs): for protostar's classes with --ruby_out, else protoc's") { |v| opts[:rbs] = v }
+        o.on("--rbi_out=DIR", "Write Sorbet RBI (*_pb.rbi): for protostar's classes with --ruby_out, else google-protobuf's") { |v| opts[:rbi] = v }
+        o.on("--no-rbs", "With --ruby_out, write no *_pb.rbs next to each *_pb.rb") { opts[:no_rbs] = true }
+        o.on("--no-rbi", "With --ruby_out, write no *_pb.rbi next to each *_pb.rb") { opts[:no_rbi] = true }
         o.on("--grpc_out=DIR", "Write gRPC service stubs (*_services_pb.rb)") { |v| opts[:grpc] = v }
         o.on("--descriptor_set_out=FILE", "Write a FileDescriptorSet") { |v| opts[:descriptor_set] = v }
         o.on("--include_imports", "With --descriptor_set_out, include every import") { opts[:include_imports] = true }
@@ -115,7 +121,8 @@ module Protostar
       @format = format.to_sym
       raise Failure, NO_STDIN if files.include?("-")
       raise Failure, "Missing input file." if files.empty?
-      outputs = %i[ruby google rbs grpc descriptor_set].select { |k| opts[k] }
+      sidecars(opts)
+      outputs = %i[ruby google rbs rbi grpc descriptor_set].select { |k| opts[k] }
       if outputs.empty?
         raise Failure, "--include_imports writes a set of files; add --descriptor_set_out=FILE." if opts[:include_imports]
         raise Failure, "#{files.size} files cannot share stdout; add --ruby_out=DIR to write a _pb.rb for each." if files.size > 1
@@ -139,6 +146,16 @@ module Protostar
         ::File.binwrite(path, content)
       end
       0
+    end
+
+    # Next to --ruby_out, protostar's own signatures go beside the Ruby unless
+    # declined or sent elsewhere. --google_out writes only what protoc writes.
+    def sidecars(opts)
+      %i[rbs rbi].each do |kind|
+        no = :"no_#{kind}"
+        raise Failure, "--#{kind}_out and --no-#{kind} contradict each other." if opts[kind] && opts[no]
+        opts[kind] ||= opts[:ruby] if native_rbs?(opts) && !opts[no]
+      end
     end
 
     # protoc's one line, or with --error_format=rich, rustc's several
@@ -199,7 +216,7 @@ module Protostar
     # Every output, generated before anything is written, as protoc does
     def generate(opts, named, compiled, compiler)
       written = {}
-      %i[ruby google rbs grpc].each do |kind|
+      %i[ruby google rbs rbi grpc].each do |kind|
         next unless (dir = opts[kind])
         check_dir(dir)
         flag = "--#{kind}_out"
@@ -227,12 +244,13 @@ module Protostar
       when :ruby then Emitters::Ruby.new
       when :google then Emitters::GoogleRuby.new(pool: compiler.pool)
       when :rbs then native_rbs?(opts) ? Emitters::ProtostarRbs.new : Emitters::Rbs.new
+      when :rbi then native_rbs?(opts) ? Emitters::ProtostarRbi.new : Emitters::Rbi.new
       when :grpc then Emitters::Grpc.new
       end
     end
 
-    # --rbs_out describes protostar's classes next to --ruby_out, and
-    # google-protobuf's as protoc does otherwise
+    # --rbs_out and --rbi_out describe protostar's classes next to --ruby_out,
+    # and google-protobuf's otherwise
     def native_rbs?(opts)
       opts[:ruby] && !opts[:google]
     end

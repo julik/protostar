@@ -1,0 +1,42 @@
+# Generated from lib/protostar/plugin.rb by script/types.rb. Do not edit.
+
+module Protostar
+  # `protoc-gen-protostar`: a protoc plugin writing the same files as
+  # `protostar compile`. The parameter selects the outputs, comma-separated:
+  # `ruby` (protostar's native Ruby, the default), `google` (protoc's
+  # google-protobuf Ruby), `rbs`, `rbi` and `grpc`. `ruby` brings its RBS and
+  # RBI along unless the parameter also says `no-rbs` or `no-rbi`.
+  #
+  # ```sh
+  # protoc --plugin=protoc-gen-protostar --protostar_out=ruby,grpc:lib acme/service.proto
+  # ```
+  module Plugin
+    Compiler: untyped
+
+    Emitters: untyped
+
+    Request: untyped
+
+    Response: untyped
+
+    Feature: untyped
+
+    OUTPUTS: untyped
+
+    # Parameters that turn off an output `ruby` brings along
+    DECLINE: untyped
+
+    # Reads a CodeGeneratorRequest from `input` and writes the response to `output`
+    def self?.run: (?untyped input, ?untyped output) -> untyped
+
+    # - `bytes`: a serialized CodeGeneratorRequest
+    #
+    # Returns a serialized CodeGeneratorResponse.
+    def self?.respond: (String bytes) -> String
+
+    # Returns file name to content.
+    def self?.generate: (Protostar::Google::Protobuf::Compiler::CodeGeneratorRequest request) -> Hash[String, String]
+
+    def self?.emitter: (untyped output, untyped pool, untyped outputs) -> untyped
+  end
+end

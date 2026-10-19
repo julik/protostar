@@ -5,23 +5,25 @@ module Protostar
   # message. Protobuf merges by concatenation, so a builder needs no object
   # graph: each call writes its field at once.
   #
-  #   bytes = Protostar::Builder.build(Acme::Person) do |pb|
-  #     pb.name "Jane"                                    # written now
-  #     pb.friends(people) { |p| pb.name p.name }         # one element per item
-  #     pb.address { pb.street "x" }                      # nested, length-prefixed when the block ends
-  #     pb.attrs("a" => "b")                              # a map
-  #     pb.created_at Time.now                            # a Timestamp
-  #     pb.extract! user, :email, :phone                  # fields read from an object
-  #     pb.cache!("person/#{id}") { pb.bio bio }          # bytes cached; a hit appends them
-  #   end
-  #   person = Protostar::Builder.message(Acme::Person) { |pb| ... }
-  #   Protostar::Builder.write(io, Acme::Person) { |pb| ... }
+  # ```ruby
+  # bytes = Protostar::Builder.build(Acme::Person) do |pb|
+  #   pb.name "Jane"                                    # written now
+  #   pb.friends(people) { |p| pb.name p.name }         # one element per item
+  #   pb.address { pb.street "x" }                      # nested, length-prefixed when the block ends
+  #   pb.attrs("a" => "b")                              # a map
+  #   pb.created_at Time.now                            # a Timestamp
+  #   pb.extract! user, :email, :phone                  # fields read from an object
+  #   pb.cache!("person/#{id}") { pb.bio bio }          # bytes cached; a hit appends them
+  # end
+  # person = Protostar::Builder.message(Acme::Person) { |pb| ... }
+  # Protostar::Builder.write(io, Acme::Person) { |pb| ... }
+  # ```
   #
   # A builder has one method per field name of the message and of every
   # message reachable from it; inside a nested block the same builder writes
   # the nested message's fields. Names that are also methods of Object (or of
   # the builder itself), such as `hash`, `format` or `test`, are reached with
-  # {#set!}.
+  # #set!.
   #
   # Only what the wire format needs is held back: a nested message is built
   # into a buffer of its own because its length comes first, and packed
@@ -33,7 +35,7 @@ module Protostar
   # `google.protobuf.Timestamp`, a Numeric for a `google.protobuf.Duration`,
   # a scalar for a wrapper type, a Hash or anything with `to_h` for a
   # message, and a message instance (written as its encoded bytes). `nil`
-  # writes nothing. Errors raise {Error} with the path of the field.
+  # writes nothing. Errors raise Error with the path of the field.
   #
   # By default a singular field may be written once per message: writing it
   # again (or a second member of a oneof) raises. With `overwrites: true` the
@@ -46,9 +48,10 @@ module Protostar
     # Raised for a value a field cannot take, a field the message does not
     # have, or a field written twice without `overwrites: true`
     class Error < Protostar::Error
-      # @return [String] where the problem is, as in `friends[2].address.street`
-      attr_reader :path
+      # Where the problem is, as in `friends[2].address.street`.
+      attr_reader :path #: String?
 
+      #: (String message, ?path: String?) -> void
       def initialize(message, path: nil)
         @path = path
         super((path.nil? || path.empty?) ? message : "#{path}: #{message}")
@@ -76,10 +79,11 @@ module Protostar
     WELL_KNOWN = WRAPPERS.merge("google.protobuf.Timestamp" => :timestamp, "google.protobuf.Duration" => :duration).freeze
 
     class << self
-      # @param klass [Class, Schema::Message] the message class, or its descriptor
-      # @param options [Hash] see {#initialize}
-      # @yieldparam pb [Builder]
-      # @return [String] binary, the message's encoding
+      # - `klass`: the message class, or its descriptor
+      # - `options`: see #initialize
+      #
+      # Returns binary, the message's encoding.
+      #: (untyped klass, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace, ?buffer: Integer, ?chunk_nested_at: Integer?) { (Builder pb) -> void } -> String
       def build(klass, **options)
         b = new(klass, nil, **options)
         yield b
@@ -87,7 +91,9 @@ module Protostar
       end
 
       # Builds the bytes and decodes them
-      # @return [Message] an instance of `klass`
+      #
+      # Returns an instance of `klass`.
+      #: (untyped klass, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace, ?buffer: Integer, ?chunk_nested_at: Integer?) { (Builder pb) -> void } -> Message
       def message(klass, **options, &block)
         klass = resolve(klass)
         klass.decode(build(klass, **options, &block))
@@ -97,8 +103,11 @@ module Protostar
       # as they complete, through a buffer of `buffer:` bytes (64 KiB unless
       # told otherwise); a nested message goes out once it is complete, or in
       # pieces with `chunk_nested_at:`. See docs/concepts/streaming.md.
-      # @param io [#write, #<<, #call, String] the sink (see {#initialize})
-      # @return [Object] io, after its `flush` when it has one
+      #
+      # - `io`: the sink (see #initialize)
+      #
+      # Returns io, after its `flush` when it has one.
+      #: [T < sink] (T io, untyped klass, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace, ?buffer: Integer, ?chunk_nested_at: Integer?) { (Builder pb) -> void } -> T
       def write(io, klass, **options)
         b = new(klass, io, **options)
         yield b
@@ -106,18 +115,22 @@ module Protostar
       end
 
       # Writes a sequence of messages, each with its length as a varint
-      # before it, as {Message#encode_delimited} does; read them back with
+      # before it, as Message#encode_delimited does; read them back with
       # `decode_delimited`. Each message goes to the sink once it is complete.
       #
-      #   Protostar::Builder.each(file, Acme::Event, rows) do |pb, row|
-      #     pb.name row.name
-      #   end
+      # ```ruby
+      # Protostar::Builder.each(file, Acme::Event, rows) do |pb, row|
+      #   pb.name row.name
+      # end
+      # ```
       #
-      # @param io [#write, #<<, #call, String, nil] the sink; nil for a new String
-      # @param collection [#each] one message per element
-      # @yieldparam pb [Builder] the same builder for every message
-      # @yieldparam element [Object]
-      # @return [Object] io, or the String when io is nil
+      # - `io`: the sink; nil for a new String
+      # - `collection`: one message per element
+      # - yields `pb`: the same builder for every message
+      #
+      # Returns io, or the String when io is nil.
+      #: [T < sink, E] (T io, untyped klass, _Each[E] collection, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace, ?buffer: Integer, ?chunk_nested_at: Integer?) { (Builder pb, E element) -> void } -> T
+      #: [E] (nil io, untyped klass, _Each[E] collection, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace, ?buffer: Integer, ?chunk_nested_at: Integer?) { (Builder pb, E element) -> void } -> String
       def each(io, klass, collection, **options, &block)
         raise ArgumentError, "needs a collection (something with #each), got #{collection.class}" unless collection.respond_to?(:each)
         b = new(klass, io, **options)
@@ -129,10 +142,11 @@ module Protostar
       # Enumerator is iterated: a Rack body, or anything that pulls. Each
       # iteration runs the block again.
       #
-      #   body = Protostar::Builder.each_chunk(Acme::Person, buffer: 16_384) { |pb| ... }
-      #   body.each { |bytes| socket.write(bytes) }
-      #
-      # @return [Enumerator<String>]
+      # ```ruby
+      # body = Protostar::Builder.each_chunk(Acme::Person, buffer: 16_384) { |pb| ... }
+      # body.each { |bytes| socket.write(bytes) }
+      # ```
+      #: (untyped klass, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace, ?buffer: Integer, ?chunk_nested_at: Integer?) { (Builder pb) -> void } -> Enumerator[String, nil]
       def each_chunk(klass, **options, &block)
         raise ArgumentError, "each_chunk needs a block that writes the message" unless block
         resolve(klass)
@@ -142,9 +156,10 @@ module Protostar
         end
       end
 
-      # @param klass [Class, Schema::Message]
-      # @param target [String, #write, #<<, #call, nil] where the bytes go: nil for a new String
-      # @return [Builder] an instance of the builder class for `klass`
+      # - `target`: where the bytes go: nil for a new String
+      #
+      # Returns an instance of the builder class for `klass`.
+      #: (untyped klass, ?sink? target, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace, ?buffer: Integer, ?chunk_nested_at: Integer?) -> Builder
       def new(klass, target = nil, **options)
         return super if superclass.equal?(Builder)
         self.for(klass).new(klass, target, **options)
@@ -154,7 +169,7 @@ module Protostar
       # method per field name of the message and of every message it reaches.
       # Made on first use and kept on the message class (in the main Ractor;
       # other Ractors make their own).
-      # @return [Class]
+      #: (untyped klass) -> singleton(Builder)
       def for(klass)
         klass = resolve(klass)
         made = klass.instance_variable_get(:@__builder)
@@ -164,43 +179,46 @@ module Protostar
         made
       end
 
-      # @return [Class] the message class for a class or a descriptor
+      # Returns the message class for a class or a descriptor.
+      #: (untyped klass) -> singleton(Message)
       def resolve(klass)
         return klass if klass.is_a?(Class) && klass < Message && klass.__fields
         if klass.is_a?(Schema::Message)
-          return Types.find(klass.full_name) || raise(ArgumentError, "#{klass.full_name} has no class in Protostar::Types.registry")
+          found = Types.find(klass.full_name) #: singleton(Message)?
+          return found || raise(ArgumentError, "#{klass.full_name} has no class in Protostar::Types.registry")
         end
         return resolve(klass.msgclass) if klass.respond_to?(:msgclass)
         raise ArgumentError, "#{klass.inspect} is not a protostar message class or descriptor"
       end
     end
 
-    # @param klass [Class, Schema::Message] the message class, or its descriptor
-    # @param target [String, #write, #<<, #call, nil] a String to append to
+    # - `klass`: the message class, or its descriptor
+    # - `target`: a String to append to
     #   (switched to binary encoding), nil for a new String, or a sink: anything
     #   answering `write` (an IO, a socket, a Rack or ActionController::Live
     #   stream), `<<` (an Array, an Enumerator::Yielder) or `call` (a Proc).
     #   Every chunk a sink gets is a binary String; an IO or StringIO is handed
     #   the builder's buffer, anything else a copy it may keep. A sink's `flush`
-    #   is called by {#target!}. An error the sink raises is re-raised with
+    #   is called by #target!. An error the sink raises is re-raised with
     #   the field being written added to its message.
-    # @param cache_store [#fetch, nil] where {#cache!} keeps fragments, such as
-    #   `Rails.cache`; without one, {#cache!} just runs its block
-    # @param overwrites [Boolean] let a singular field be written again in the
+    # - `cache_store`: where #cache! keeps fragments, such as
+    #   `Rails.cache`; without one, #cache! just runs its block
+    # - `overwrites`: let a singular field be written again in the
     #   same message, the later value winning (see the class notes)
-    # @param repeated [Symbol] `:append` (default): each write to a repeated field
+    # - `repeated`: `:append` (default): each write to a repeated field
     #   adds elements. `:replace`: assigning a list (or one value without a block)
     #   replaces what earlier assignments in the same message gave; those lists
     #   are held until the message ends. Elements built with a block always stream.
-    # @param buffer [Integer] bytes collected before a sink is written to.
+    # - `buffer`: bytes collected before a sink is written to.
     #   0 writes each top-level field as it completes, for sinks that buffer
     #   on their own. A nested message larger than the buffer is handed to the
     #   sink as it is, not copied into the buffer first.
-    # @param chunk_nested_at [Integer, nil] write a singular nested message
+    # - `chunk_nested_at`: write a singular nested message
     #   that grows past this many bytes as several occurrences of its field,
     #   which readers merge into one, so that memory is bounded by this size
     #   rather than by the message. Needs `overwrites: false` and
     #   `repeated: :append`. Repeated and map fields are never split.
+    #: ((Class | Schema::Message) klass, ?untyped target, ?cache_store: untyped, ?overwrites: bool, ?repeated: Symbol, ?buffer: Integer, ?chunk_nested_at: Integer?) -> void
     def initialize(klass, target = nil, cache_store: nil, overwrites: false, repeated: :append,
       buffer: Wire::Writer::FLUSH_AT, chunk_nested_at: nil)
       raise ArgumentError, "repeated: must be :append or :replace" unless repeated == :append || repeated == :replace
@@ -234,7 +252,9 @@ module Protostar
     # Finishes the top-level message: writes the packed runs collected so far,
     # in field number order.
     # The builder can keep writing afterwards; call this again to finish again.
-    # @return [String, IO] the bytes, or the IO after flushing it
+    #
+    # Returns the bytes, or the IO after flushing it.
+    #: () -> untyped
     def target!
       __flush_pending if @pending
       top = @top
@@ -249,23 +269,25 @@ module Protostar
       io
     end
 
-    # @return [Class] the class of the message being written: the top-level
-    #   one, or the nested message whose block is running
+    # Returns the class of the message being written: the top-level
+    # one, or the nested message whose block is running.
+    #: () -> singleton(Message)
     def message_class
       self.class::CLASSES[@k]
     end
 
     # Writes a field by name, for names that have no method of their own.
     #
-    #   pb.set! :name, "Jane"
-    #   pb.set!(:address) { pb.street "x" }
-    #   pb.set! :friends, people, :name, :id    # each friend gets name and id from an element
-    #   pb.set! :address, user, :street, :city  # extract! into the nested message
+    # ```ruby
+    # pb.set! :name, "Jane"
+    # pb.set!(:address) { pb.street "x" }
+    # pb.set! :friends, people, :name, :id    # each friend gets name and id from an element
+    # pb.set! :address, user, :street, :city  # extract! into the nested message
+    # ```
     #
-    # @param name [String, Symbol]
-    # @param value [Object] the value; a collection with a block or attribute names
-    # @param attributes [Array<Symbol>] read from `value` (or from each element) with {#extract!}
-    # @return [self]
+    # - `value`: the value; a collection with a block or attribute names
+    # - `attributes`: read from `value` (or from each element) with #extract!
+    #: (String | Symbol name, *untyped value_and_attributes) ?{ (?untyped element) -> void } -> self
     def set!(name, value = NONE, *attributes, &block)
       __set(__field(name), value, attributes, &block)
       self
@@ -273,7 +295,7 @@ module Protostar
 
     # Writes the named fields with the values of the same names read from
     # `object`: method calls, or keys for a Hash (Symbol or String keys).
-    # @return [self]
+    #: (untyped object, *String | Symbol names) -> self
     def extract!(object, *names)
       if object.is_a?(Hash)
         names.each do |n|
@@ -286,8 +308,8 @@ module Protostar
       self
     end
 
-    # Writes every field of a Hash (Symbol or String keys), as {#set!} would
-    # @return [self]
+    # Writes every field of a Hash (Symbol or String keys), as #set! would
+    #: (Hash[String | Symbol, untyped] hash) -> self
     def merge!(hash)
       raise __error(nil, "merge! takes a Hash, got #{hash.class}") unless hash.is_a?(Hash)
       __hash(hash)
@@ -299,9 +321,10 @@ module Protostar
     # one (each String is one element). The bytes are written as they are,
     # unchecked; a group's bytes are its fields, without the group's tags.
     #
-    #   pb.encoded!(:friends, rendered_partials)
-    #
-    # @return [self]
+    # ```ruby
+    # pb.encoded!(:friends, rendered_partials)
+    # ```
+    #: (String | Symbol name, String | Array[String] bytes) -> self
     def encoded!(name, bytes)
       info = __field(name)
       raise __error(info, "is not a message field, it cannot take encoded messages") unless info.message? && !info.map
@@ -317,10 +340,11 @@ module Protostar
     # Writes the bytes the block writes, keeping them in the cache store under
     # `key`; when the store has them, appends them without running the block.
     # Without a cache store, runs the block.
-    # @param key [Object] passed to the store as it is
-    # @param options [Hash] passed to the store's `fetch`, such as `expires_in:`
-    # @yieldparam pb [Builder] this builder
-    # @return [self]
+    #
+    # - `key`: passed to the store as it is
+    # - `options`: passed to the store's `fetch`, such as `expires_in:`
+    # - yields `pb`: this builder
+    #: (untyped key, **untyped options) { (Builder pb) -> void } -> self
     def cache!(key, **options, &block)
       store = @store
       return tap(&block) unless store
@@ -337,8 +361,8 @@ module Protostar
       self
     end
 
-    # {#cache!} when `condition` holds, else runs the block
-    # @return [self]
+    # #cache! when `condition` holds, else runs the block
+    #: (boolish condition, untyped key, **untyped options) { (Builder pb) -> void } -> self
     def cache_if!(condition, key, **options, &block)
       condition ? cache!(key, **options, &block) : tap(&block)
     end
@@ -360,6 +384,7 @@ module Protostar
 
     # Everything a field method or set! can be given. The block is only
     # yielded to, never made into a Proc, which would cost an object per call.
+    #: (Message::FieldInfo info, untyped value, Array[String | Symbol] attributes) ?{ (?) -> untyped } -> void
     def __set(info, value, attributes)
       if block_given?
         unless info.message? && !info.map
@@ -405,7 +430,9 @@ module Protostar
     end
 
     # Records that a singular field was written in the current message.
-    # @return [Boolean] whether it had been written before (with overwrites allowed)
+    #
+    # Returns whether it had been written before (with overwrites allowed).
+    #: (untyped info) -> bool
     def __mark(info)
       bit = 1 << info.index
       if @written.anybits?(bit)
@@ -465,6 +492,7 @@ module Protostar
       end
     end
 
+    #: (Message::FieldInfo info, untyped collection) { (untyped) -> untyped } -> void
     def __each(info, collection)
       raise __error(info, "needs a collection (something with #each), got #{collection.class}") unless collection.respond_to?(:each)
       i = 0
@@ -509,7 +537,8 @@ module Protostar
       __boundary if @boundary
     end
 
-    # @return [Boolean] whether `v` was a Ruby form of the well-known type and got written
+    # Returns whether `v` was a Ruby form of the well-known type and got written.
+    #: (untyped info, untyped wk, untyped v, untyped index) -> bool
     def __well_known(info, wk, v, index)
       fields = info.message_class.__fields
       case wk
@@ -545,6 +574,7 @@ module Protostar
     # Runs the block with a buffer of its own as the current message, then
     # writes tag, length and the buffer. Groups need no length and are
     # written in place between their tags.
+    #: (Message::FieldInfo info, ?Integer? index) { () -> untyped } -> void
     def __nested(info, index = nil)
       k = self.class::INDEX[info.message_class]
       saved_k = @k
@@ -657,6 +687,7 @@ module Protostar
     end
 
     # One length-prefixed message per element, each the top-level message
+    #: (untyped collection) { (Builder, untyped) -> untyped } -> void
     def __sequence(collection)
       top = @top
       child = Wire::Writer.new
@@ -885,7 +916,9 @@ module Protostar
     end
 
     # Runs a cache! block into a buffer of its own, in the current message
-    # @return [String] the bytes, frozen
+    #
+    # Returns the bytes, frozen.
+    #: (untyped block) -> String
     def __capture(block)
       saved_w = @w
       saved_buf = @buf

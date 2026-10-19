@@ -6,7 +6,7 @@ module Protostar
     # resolved as the editions EDITION_PROTO2 and EDITION_PROTO3, the way protoc
     # does internally, so every descriptor has a complete set.
     #
-    # Custom (extension) features such as `pb.cpp` are carried in {#extensions}
+    # Custom (extension) features such as `pb.cpp` are carried in #extensions
     # as merged explicit values; their defaults are not known to this model.
     class Features
       # The Edition enum from descriptor.proto (lines 45-82)
@@ -57,16 +57,15 @@ module Protostar
       # Names of the core features, in FeatureSet field number order
       NAMES = DEFAULTS.keys.freeze
 
-      # @param edition [Symbol, Integer] an Edition enum name or number
-      # @return [Integer]
+      # - `edition`: an Edition enum name or number
+      #: ((Symbol | Integer) edition) -> Integer
       def self.edition_number(edition)
         return edition if edition.is_a?(Integer)
         EDITIONS.fetch(edition) { raise Error, "unknown edition #{edition.inspect}" }
       end
 
       # The defaults for an edition, as protoc computes them from descriptor.proto
-      # @param edition [Symbol, Integer]
-      # @return [Features]
+      #: ((Symbol | Integer) edition) -> Features
       def self.defaults(edition)
         number = edition_number(edition)
         values = DEFAULTS.transform_values do |pairs|
@@ -77,11 +76,10 @@ module Protostar
         new(values, Freezer::EMPTY_HASH)
       end
 
-      # @return [Hash{Field => MessageValue}] merged explicit custom features by extension
-      attr_reader :extensions
+      # Merged explicit custom features by extension.
+      attr_reader :extensions #: Hash[Field, MessageValue]
 
-      # @api private
-      def initialize(values, extensions)
+      def initialize(values, extensions) # :nodoc:
         @values = values.freeze
         @extensions = extensions
         NAMES.each { |name| instance_variable_set(:"@#{name}", values.fetch(name)) }
@@ -89,30 +87,24 @@ module Protostar
         freeze
       end
 
-      # @!attribute [r] field_presence
-      #   @return [Symbol] :EXPLICIT, :IMPLICIT or :LEGACY_REQUIRED
-      # @!attribute [r] enum_type
-      #   @return [Symbol] :OPEN or :CLOSED
-      # @!attribute [r] repeated_field_encoding
-      #   @return [Symbol] :PACKED or :EXPANDED
-      # @!attribute [r] utf8_validation
-      #   @return [Symbol] :VERIFY or :NONE
-      # @!attribute [r] message_encoding
-      #   @return [Symbol] :LENGTH_PREFIXED or :DELIMITED
-      # @!attribute [r] json_format
-      #   @return [Symbol] :ALLOW or :LEGACY_BEST_EFFORT
-      # @!attribute [r] enforce_naming_style
-      #   @return [Symbol]
-      # @!attribute [r] default_symbol_visibility
-      #   @return [Symbol]
-      # @!attribute [r] enforce_proto_limits
-      #   @return [Symbol]
-      attr_reader :field_presence, :enum_type, :repeated_field_encoding, :utf8_validation, :message_encoding,
-        :json_format, :enforce_naming_style, :default_symbol_visibility, :enforce_proto_limits
+      # :EXPLICIT, :IMPLICIT or :LEGACY_REQUIRED
+      attr_reader :field_presence #: Symbol
+      # :OPEN or :CLOSED
+      attr_reader :enum_type #: Symbol
+      # :PACKED or :EXPANDED
+      attr_reader :repeated_field_encoding #: Symbol
+      # :VERIFY or :NONE
+      attr_reader :utf8_validation #: Symbol
+      # :LENGTH_PREFIXED or :DELIMITED
+      attr_reader :message_encoding #: Symbol
+      # :ALLOW or :LEGACY_BEST_EFFORT
+      attr_reader :json_format #: Symbol
+      attr_reader :enforce_naming_style, :default_symbol_visibility, :enforce_proto_limits #: Symbol
 
       # Overlays a declared `features` option (a FeatureSet) on these features
-      # @param declared [MessageValue, nil]
-      # @return [Features] self when the overlay changes nothing
+      #
+      # Returns self when the overlay changes nothing.
+      #: (MessageValue? declared) -> Features
       def merge(declared)
         return self if declared.nil? || declared.empty?
         values = @values
@@ -125,14 +117,17 @@ module Protostar
         Features.new(values, extensions)
       end
 
-      # @param values [Hash{Symbol => Symbol}] core features to override
-      # @return [Features] self when nothing changes
+      # - `values`: core features to override
+      #
+      # Returns self when nothing changes.
+      #: (**untyped values) -> Features
       def with(**values)
         return self if values.all? { |k, v| @values[k] == v }
         Features.new(@values.merge(values), @extensions)
       end
 
-      # @return [Hash{Symbol => Symbol}] the core features by name
+      # Returns the core features by name.
+      #: () -> Hash[Symbol, Symbol]
       def to_h
         @values
       end

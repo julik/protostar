@@ -1,0 +1,200 @@
+# Generated from lib/protostar/dsl.rb by script/types.rb. Do not edit.
+
+module Protostar
+  # The runtime of generated `_pb.rb` files, also meant to be written by hand.
+  # A block describes one `.proto` file through Schema::File.draft; the
+  # file is resolved and frozen into Protostar.generated_pool, and its
+  # message classes and enum modules are defined.
+  #
+  # ```ruby
+  # Protostar::DSL.file("acme/person.proto", package: "acme", syntax: :proto3) do |f|
+  #   f.message "Person" do |m|
+  #     m.field :name, 1, :string
+  #     m.field :friends, 2, :message, ".acme.Person", label: :repeated
+  #     m.oneof :contact do |o|
+  #       o.field :email, 3, :string
+  #     end
+  #     m.map :attrs, 4, :string, :string
+  #   end
+  # end
+  # module Acme
+  #   Person = Protostar::DSL.message("acme.Person")
+  # end
+  # ```
+  #
+  # Every descriptor-level call takes the options of its descriptor as extra
+  # keywords: `deprecated: true`, `packed: false`, `features: {...}`, with
+  # custom options by extension full name under `extensions:` and fields
+  # nobody could interpret as wire bytes under `unknown_fields:`. An
+  # `options:` Hash is taken as the options message verbatim instead, in the
+  # same spelling, and is how an empty options message is written. Option
+  # values that are messages are Hashes in that spelling too; a field of
+  # such a message that is itself named `extensions` or `unknown_fields` is
+  # given with a String key.
+  #
+  # The earlier spellings, `__extensions:`, `__unknown_fields:` (as
+  # `[number, wire_type, bytes]` triples) and `visibility: :VISIBILITY_EXPORT`,
+  # are still read until 0.2.0, with a deprecation warning.
+  module DSL
+    # Raised for a call the DSL cannot turn into a descriptor
+    class Error < Protostar::Error
+    end
+
+    SYNTAXES: untyped
+
+    LABELS: untyped
+
+    OLD_VISIBILITIES: untyped
+
+    # Describes, builds and defines one `.proto` file. Loading a file the pool
+    # already has is a no-op that returns the file there.
+    #
+    # - `name`: the file name as imported, e.g. "acme/person.proto"
+    # - `syntax`: :proto2, :proto3 or :editions; omitted for proto2 as protoc does
+    # - `edition`: e.g. :EDITION_2023 or 2023; implies `syntax: :editions`
+    # - `dependencies`: imported file names, which must be loaded already
+    # - `public_dependencies`: names (or indexes) of `import public` files
+    # - `option_dependencies`: `import option` file names
+    # - `options`: the FileOptions verbatim
+    # - `pool`: where the file is built and added
+    # - `registry`: where classes are defined; nil builds the file only
+    # - `file_options`: FileOptions fields as keywords, custom ones under `extensions:`
+    def self.file: (String name, ?package: String?, ?syntax: (Symbol | String)?, ?edition: (Symbol | Integer)?, ?dependencies: Array[String], ?public_dependencies: Array[String | Integer], ?weak_dependencies: Array[String | Integer], ?option_dependencies: Array[String], ?options: Hash[untyped, untyped]?, ?pool: Schema::Pool, ?registry: Types::Registry?, **untyped file_options) ?{ (FileBuilder f) -> untyped } -> Schema::File
+
+    # - `full_name`: e.g. "acme.Person"
+    #
+    # Returns the message class defined for it.
+    # Raises Error when no file defined it.
+    def self.message: (String full_name, ?registry: untyped) -> Class
+
+    # Returns the enum module defined for it.
+    def self.enum: (String full_name, ?registry: untyped) -> Module
+
+    # A Module standing for a service, which gRPC stubs reopen to add
+    # `Service` and `Stub`
+    #
+    # Returns answering `descriptor` with the Schema::Service.
+    def self.service: (String full_name, ?pool: untyped) -> Module
+
+    # Options given as keywords merged into a verbatim options Hash
+    def self.options: (untyped verbatim, untyped keywords) -> untyped
+
+    # :local or :export; the deprecated protoc spellings are read with a warning
+    def self.visibility: (untyped value) -> untyped
+
+    # protoc's name for the entry message of a map field
+    def self.map_entry_name: (String field_name) -> String
+
+    # A field type as the draft spells it: a short type Symbol, or a type name
+    def self.type: (untyped type) -> untyped
+
+    def self.label: (untyped label) -> untyped
+
+    private def self.syntax: (untyped name, untyped syntax) -> untyped
+
+    private def self.edition: (untyped edition) -> untyped
+
+    # Extended by the Modules DSL.service returns
+    module ServiceModule
+      attr_reader descriptor: Schema::Service
+    end
+
+    # Common to every scope that holds messages, enums and extensions
+    class Scope
+      # :nodoc: all
+      def initialize: (untyped draft) -> untyped
+
+      # A nested (or top-level) message
+      #
+      # - `visibility`: :local or :export (edition 2024)
+      # - `options`: MessageOptions verbatim
+      def message: (String name, ?visibility: Symbol?, ?options: Hash[untyped, untyped]?, **untyped message_options) ?{ (MessageBuilder m) -> untyped } -> untyped
+
+      # An enum
+      def enum: (untyped name, ?visibility: untyped, ?options: untyped, **untyped enum_options) ?{ (EnumBuilder e) -> untyped } -> untyped
+
+      # Extensions of another message declared in this scope
+      #
+      # - `extendee`: the extended message, e.g. ".acme.Base"
+      def extend: (String extendee) ?{ (ExtendBuilder e) -> untyped } -> untyped
+    end
+
+    # The block argument of DSL.file
+    class FileBuilder < Scope
+      def service: (String name, ?options: untyped, **untyped service_options) ?{ (ServiceBuilder s) -> untyped } -> untyped
+    end
+
+    # The block argument of Scope#message
+    class MessageBuilder < Scope
+      # A field
+      #
+      # - `type`: :int32, :string, :message, :enum, :group, ...; a String is taken as
+      #   the type name of a message or enum, its kind looked up when the file is built
+      # - `type_name`: the message or enum type, e.g. ".acme.Person"
+      # - `label`: :optional (the default), :required or :repeated
+      # - `default`: the default as protoc stores it: text, C-escaped for bytes
+      # - `json_name`: when not the one derived from the name
+      # - `proto3_optional`: a proto3 `optional` field; its synthetic oneof is made for it
+      # - `oneof`: the oneof the field belongs to
+      # - `options`: FieldOptions verbatim
+      def field: (Symbol | String name, Integer number, Symbol | String, ?String? type_name, ?label: Symbol?, ?default: untyped, ?json_name: String?, ?proto3_optional: bool, ?oneof: (Symbol | String)?, ?options: Hash[untyped, untyped]?, **untyped field_options) -> untyped
+
+      # A `map<K, V>` field and its synthesized entry message
+      #
+      # - `value_type`: a scalar type, :message or :enum (then give `value_type_name`),
+      #   or the value's type name
+      def map: (untyped name, untyped number, Symbol key_type, Symbol | String value_type, ?untyped value_type_name, ?json_name: untyped, ?options: untyped, **untyped field_options) -> untyped
+
+      # A proto2 group: a field of type group and its nested message, named as
+      # in `group Name = number { ... }`
+      def group: (untyped name, untyped number, ?label: untyped, ?json_name: untyped, ?oneof: untyped, ?options: untyped, ?message_options: untyped, **untyped field_options) ?{ (MessageBuilder g) -> untyped } -> untyped
+
+      # A oneof. Fields given in the block belong to it; fields elsewhere may
+      # name it with `oneof:`.
+      def oneof: (untyped name, ?options: untyped, **untyped oneof_options) ?{ (OneofBuilder o) -> untyped } -> untyped
+
+      # Extension ranges, inclusive
+      def extensions: (*Range[untyped] | Integer ranges, ?options: untyped, **untyped range_options) -> untyped
+
+      # Reserved numbers (Integers or inclusive Ranges) and names (Strings)
+      def reserved: (*untyped items) -> untyped
+    end
+
+    # The block argument of MessageBuilder#oneof
+    class OneofBuilder
+      def initialize: (untyped message, untyped name) -> untyped
+
+      # A member field; same arguments as MessageBuilder#field
+      def field: (untyped name, untyped number, untyped type, ?untyped type_name, **untyped kwargs) -> untyped
+
+      # A member group; same arguments as MessageBuilder#group
+      def group: (untyped name, untyped number, **untyped kwargs) ?{ (?) -> untyped } -> untyped
+    end
+
+    # The block argument of Scope#extend
+    class ExtendBuilder
+      def initialize: (untyped draft, untyped extendee) -> untyped
+
+      # An extension field; same arguments as MessageBuilder#field
+      def field: (untyped name, untyped number, untyped type, ?untyped type_name, ?label: untyped, ?default: untyped, ?json_name: untyped, ?proto3_optional: untyped, ?options: untyped, **untyped field_options) -> untyped
+    end
+
+    # The block argument of Scope#enum
+    class EnumBuilder
+      def initialize: (untyped draft) -> untyped
+
+      def value: (Symbol | String name, Integer number, ?options: untyped, **untyped value_options) -> untyped
+
+      # Reserved numbers (Integers or inclusive Ranges) and names (Strings)
+      def reserved: (*untyped items) -> untyped
+    end
+
+    # The block argument of FileBuilder#service
+    class ServiceBuilder
+      def initialize: (untyped draft) -> untyped
+
+      # - `input_type`: e.g. ".acme.Request"
+      def rpc: (Symbol | String name, String input_type, String output_type, ?client_streaming: untyped, ?server_streaming: untyped, ?options: untyped, **untyped method_options) -> untyped
+    end
+  end
+end

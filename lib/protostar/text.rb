@@ -3,8 +3,10 @@
 module Protostar
   # protoc's text format: what `protoc --decode` prints and `--encode` reads.
   #
-  #   text = Protostar::Text.print(person)      # also person.to_text
-  #   Protostar::Text.parse(Person, text) == person
+  # ```ruby
+  # text = Protostar::Text.print(person)      # also person.to_text
+  # Protostar::Text.parse(Person, text) == person
+  # ```
   #
   # Extensions have no API of their own yet: they travel as unknown fields.
   # The printer shows an unknown field as `[full.name]` when it is an
@@ -12,15 +14,15 @@ module Protostar
   # parser turns `[full.name]` into the unknown field the binary codec would
   # have kept.
   module Text
-    # Raised by everything in {Text}
+    # Raised by everything in Text
     class Error < Protostar::Error; end
 
     # Raised for text that does not describe a message of the class it is
     # parsed into. The message starts with `line:column:`, both 1-based.
     class ParseError < Error
-      # @return [Integer]
-      attr_reader :line, :column
+      attr_reader :line, :column #: Integer
 
+      #: (String message, Integer line, Integer column) -> void
       def initialize(message, line, column)
         @line = line
         @column = column
@@ -29,31 +31,30 @@ module Protostar
     end
 
     class << self
-      # @param message [Message]
-      # @option options [Boolean] :single_line everything on one line, fields separated by spaces
-      # @option options [Boolean] :expand_any print an Any whose type is known as
+      # - `single_line:` everything on one line, fields separated by spaces
+      # - `expand_any:` print an Any whose type is known as
       #   `[type_url] { ... }`; off by default, as in `protoc --decode`
       #   (protoc's DebugString expands)
-      # @option options [Boolean] :as_utf8 keep valid UTF-8 in strings readable instead of
+      # - `as_utf8:` keep valid UTF-8 in strings readable instead of
       #   escaping every byte above 0x7e in octal as protoc does
-      # @option options [Boolean] :unknown_fields false leaves unknown fields out, as
+      # - `unknown_fields:` false leaves unknown fields out, as
       #   protoc's Printer#SetHideUnknownFields does; extensions still print
-      # @option options [Types::Registry] :registry where classes for Any and extensions are found
-      # @option options [Schema::Pool, nil] :pool where extensions are found; by default
+      # - `registry:` where classes for Any and extensions are found
+      # - `pool:` where extensions are found; by default
       #   the message's file and the files it imports
-      # @return [String]
+      #: (Message | View message, ?single_line: bool, ?expand_any: bool, ?as_utf8: bool, ?unknown_fields: bool, ?registry: Types::Registry?, ?pool: untyped) -> String
       def print(message, **options)
         Printer.new(**options).print(message)
       end
 
-      # @param klass [Class] a message class
-      # @param text [String]
-      # @option options [Boolean] :allow_unknown_fields skip fields and extensions that are not known
-      # @option options [Boolean] :allow_partial when false, raise if a required field is missing
-      # @option options [Types::Registry] :registry where classes for Any and extensions are found
-      # @option options [Schema::Pool, nil] :pool where extensions are found
-      # @return [Message]
-      # @raise [ParseError]
+      # - `klass`: a message class
+      # - `allow_unknown_fields:` skip fields and extensions that are not known
+      # - `allow_partial:` when false, raise if a required field is missing
+      # - `registry:` where classes for Any and extensions are found
+      # - `pool:` where extensions are found
+      #
+      # Raises ParseError.
+      #: (singleton(Message) klass, String text, ?allow_unknown_fields: bool, ?allow_partial: bool, ?registry: Types::Registry?, ?pool: untyped) -> Message
       def parse(klass, text, **options)
         Parser.new(text, **options).parse(klass)
       end

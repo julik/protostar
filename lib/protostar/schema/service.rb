@@ -2,14 +2,12 @@
 
 module Protostar
   module Schema
-    # An RPC service. Its methods are exposed as {#rpcs} and {#rpc} so that
+    # An RPC service. Its methods are exposed as #rpcs and #rpc so that
     # Object#methods and Object#method keep working on a descriptor.
     class Service < Descriptor
-      # @return [File]
-      attr_reader :file
+      attr_reader :file #: File
 
-      # @api private
-      def initialize(name:, full_name:, file:, index:)
+      def initialize(name:, full_name:, file:, index:) # :nodoc:
         @name = name
         @full_name = full_name
         @file = file
@@ -18,42 +16,35 @@ module Protostar
         @rpcs_by_name = Freezer::EMPTY_HASH
       end
 
-      # @api private
-      def __rpcs(rpcs)
+      def __rpcs(rpcs) # :nodoc:
         @rpcs = rpcs
         @rpcs_by_name = rpcs.to_h { |m| [m.name, m] }.freeze
         self
       end
 
-      # @return [Array<Method>] declaration order
-      attr_reader :rpcs
+      # Declaration order.
+      attr_reader :rpcs #: Array[Method]
 
-      # @param name [String, Symbol]
-      # @return [Method, nil]
+      #: ((String | Symbol) name) -> Method?
       def rpc(name)
         @rpcs_by_name[name.to_s]
       end
 
-      # @return [Protostar::Google::Protobuf::ServiceDescriptorProto]
+      #: () -> Protostar::Google::Protobuf::ServiceDescriptorProto
       def to_proto
         Proto::Writer.service(self)
       end
     end
 
-    # One RPC of a {Service}
+    # One RPC of a Service
     class Method < Descriptor
-      # @return [Service]
-      attr_reader :service
-      # @return [Message]
-      attr_reader :input_type
-      # @return [Message]
-      attr_reader :output_type
+      attr_reader :service #: Service
+      attr_reader :input_type #: Message
+      attr_reader :output_type #: Message
 
-      # @api private
-      attr_reader :input_type_name, :output_type_name
+      attr_reader :input_type_name, :output_type_name # :nodoc:
 
-      # @api private
-      def initialize(name:, full_name:, service:, index:, input_type_name:, output_type_name:,
+      def initialize(name:, full_name:, service:, index:, input_type_name:, output_type_name:, # :nodoc:
         client_streaming:, server_streaming:)
         @name = name
         @full_name = full_name
@@ -65,22 +56,22 @@ module Protostar
         @server_streaming = server_streaming
       end
 
-      # @return [File]
+      #: () -> File
       def file
         @service.file
       end
 
-      # @return [Boolean]
+      #: () -> bool
       def client_streaming?
         @client_streaming
       end
 
-      # @return [Boolean]
+      #: () -> bool
       def server_streaming?
         @server_streaming
       end
 
-      # @return [Protostar::Google::Protobuf::MethodDescriptorProto]
+      #: () -> Protostar::Google::Protobuf::MethodDescriptorProto
       def to_proto
         Proto::Writer.rpc(self)
       end

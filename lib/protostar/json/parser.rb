@@ -7,8 +7,7 @@ module Protostar
     # Reads proto3 JSON into a message, accepting what google-protobuf's Ruby
     # gem accepts. The stdlib parser builds the raw tree; this walks it
     # against the message's fields.
-    # @api private
-    class Parser
+    class Parser # :nodoc: all
       F = Message::FieldInfo
       SPECIAL = Encoder::SPECIAL
 
@@ -31,18 +30,20 @@ module Protostar
       VALUE = "google.protobuf.Value"
       NULL_VALUE = Encoder::NULL_VALUE
 
-      # @param ignore_unknown_fields [Boolean] skip unknown field names and enum names
-      # @param registry [Types::Registry] where the types inside Any are looked up
+      # - `ignore_unknown_fields`: skip unknown field names and enum names
+      # - `registry`: where the types inside Any are looked up
+      #: (?ignore_unknown_fields: bool, ?registry: Types::Registry) -> void
       def initialize(ignore_unknown_fields: false, registry: nil)
         @ignore_unknown = ignore_unknown_fields
         @registry = registry
         @path = []
       end
 
-      # @param klass [Class] a message class
-      # @param string [String] JSON
-      # @return [Message]
-      # @raise [ParseError]
+      # - `klass`: a message class
+      # - `string`: JSON
+      #
+      # Raises ParseError.
+      #: (Class klass, String string) -> Message
       def decode(klass, string)
         tree = begin
           # the stdlib reads -0 as the Integer 0, losing the sign a double field keeps

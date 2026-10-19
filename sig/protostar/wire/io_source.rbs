@@ -1,0 +1,28 @@
+# Generated from lib/protostar/wire/io_source.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Wire
+    # Presents an IO::Buffer with the String methods Reader uses, so that
+    # a buffer is read in place: numbers with `get_value`, and only string
+    # and bytes values copied out, with `get_string`.
+    class IOSource
+      # unpack1 directives the codec uses, as IO::Buffer data types
+      TYPES: untyped
+
+      attr_reader buffer: IO::Buffer
+
+      attr_reader bytesize: Integer
+
+      # - `buffer`: must not change while it is read
+      def initialize: (IO::Buffer buffer) -> void
+
+      def getbyte: (untyped offset) -> Integer
+
+      # Returns a new binary String.
+      def byteslice: (untyped offset, untyped length) -> String
+
+      # - `format`: one of the directives in TYPES
+      def unpack1: (String format, offset: untyped) -> untyped
+    end
+  end
+end

@@ -1,0 +1,55 @@
+# Generated from lib/protostar/lint/config.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    # The `lint:` section of `.protostar.yml`:
+    #
+    # ```ruby
+    # lint:
+    #   rules: [default]                  # sets, categories or rule ids
+    #   except: [PACKAGE_VERSION_SUFFIX]
+    #   ignore: ["vendor/**"]             # relative to the file's directory
+    #   allow_comment_directives: true
+    # ```
+    class Config
+      FILE_NAME: ::String
+
+      KEYS: untyped
+
+      attr_reader rules: Array[String]
+
+      attr_reader except: Array[String]
+
+      # Globs.
+      attr_reader ignore: Array[String]
+
+      # The directory `ignore` globs are relative to.
+      attr_reader root: String
+
+      # The file read, nil for the defaults.
+      attr_reader file: String?
+
+      # The first `.protostar.yml` next to an input (a directory or a file's
+      # directory), else in the current directory, else the defaults
+      def self.find: (Array[String] inputs, ?cwd: String) -> Config
+
+      # Raises Error when it is not YAML, or the `lint:` section has an unknown key.
+      def self.load: (String path) -> Config
+
+      def initialize: (untyped section, root: untyped, ?file: untyped) -> untyped
+
+      def allow_comment_directives?: () -> bool
+
+      # - `path`: a file found while walking a directory
+      #
+      # Returns whether an `ignore` glob matches it or a directory above it.
+      def ignored?: (String path) -> bool
+
+      private
+
+      def list: (untyped value) -> untyped
+
+      def relative: (untyped path) -> untyped
+    end
+  end
+end

@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/enum_pascal_case.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # ENUM_PASCAL_CASE: An enum name that is not PascalCase
+      class EnumPascalCase < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

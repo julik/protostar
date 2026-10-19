@@ -7,16 +7,14 @@ module Protostar
     # uninterpreted, map entries, groups and the synthetic oneofs of proto3
     # `optional` fields already expanded, as protoc's parser expands them.
     #
-    # Every node records where its parts start in {Node#positions}, keyed by
+    # Every node records where its parts start in Node#positions, keyed by
     # the error locations protoc's DescriptorPool reports against (`:name`,
     # `:number`, `:type`, `:extendee`, `:default_value`, `:option_name`,
     # `:option_value`, `:input_type`, `:output_type`, `:editions`, `:other`),
     # each a 0-based `[line, column]`.
     module AST
-      # @api private
-      class Node
-        # @return [Hash{Symbol => Array(Integer, Integer)}]
-        attr_reader :positions
+      class Node # :nodoc: all
+        attr_reader :positions #: Hash[Symbol, [Integer, Integer]]
         # Linker state: full name and source path
         attr_accessor :full_name, :path
 
@@ -24,7 +22,7 @@ module Protostar
           @positions = {}
         end
 
-        # @return [Array(Integer, Integer), nil]
+        #: (untyped kind) -> [Integer, Integer]?
         def position(kind)
           @positions[kind]
         end
@@ -35,8 +33,8 @@ module Protostar
         attr_accessor :name, :package, :syntax, :edition, :options
         attr_reader :dependency, :public_dependency, :weak_dependency, :option_dependency,
           :message_type, :enum_type, :service, :extension, :import_positions
-        # @return [Array<SourceInfo::Location>] in protoc's order
-        attr_accessor :locations
+        # In protoc's order.
+        attr_accessor :locations #: Array[SourceInfo::Location]
 
         def initialize
           super
@@ -56,10 +54,9 @@ module Protostar
       # The options of one element: the uninterpreted `option` statements and
       # the few options protoc's parser sets itself (`map_entry`)
       class Options
-        # @return [Array<Option>]
-        attr_reader :uninterpreted
-        # @return [Hash] options set directly, e.g. `{map_entry: true}`
-        attr_reader :known
+        attr_reader :uninterpreted #: Array[Option]
+        # Options set directly, e.g. `{map_entry: true}`.
+        attr_reader :known #: Hash[untyped, untyped]
 
         def initialize
           @uninterpreted = []
@@ -82,12 +79,12 @@ module Protostar
 
       # One uninterpreted option: `(my.ext).sub.field = value`
       class Option < Node
-        # @return [Array<Array(String, Boolean)>] name parts and whether each is an extension
-        attr_reader :name
-        # @return [Symbol, nil] which value field is set: :identifier_value,
-        #   :positive_int_value, :negative_int_value, :double_value,
-        #   :string_value or :aggregate_value
-        attr_accessor :value_kind
+        # Name parts and whether each is an extension.
+        attr_reader :name #: Array[[String, bool]]
+        # Which value field is set: :identifier_value,
+        # :positive_int_value, :negative_int_value, :double_value,
+        # :string_value or :aggregate_value.
+        attr_accessor :value_kind #: Symbol?
         attr_accessor :value
 
         def initialize
@@ -103,7 +100,8 @@ module Protostar
           other
         end
 
-        # @return [String] the name as protoc prints it in errors: `(a.b).c`
+        # Returns the name as protoc prints it in errors: `(a.b).c`.
+        #: () -> String
         def display_name
           @name.map { |part, ext| ext ? "(#{part})" : part }.join(".")
         end

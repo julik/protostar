@@ -5,6 +5,7 @@ module Protostar
     # A registry of built files, safe to use from several threads. The pool
     # itself is mutable and not shareable between Ractors; the files it holds are.
     class Pool
+      #: () -> void
       def initialize
         @mutex = Mutex.new
         @files = {}
@@ -16,15 +17,16 @@ module Protostar
       # Registers a built file and everything it defines.
       #
       # An extension whose extendee and number another file already uses is
-      # accepted with a warning, as protoc does; {#find_extension} keeps
+      # accepted with a warning, as protoc does; #find_extension keeps
       # returning the first one.
-      # @param file [File]
-      # @param warn [Boolean] write that warning with `Kernel#warn`; the
+      #
+      # - `warn`: write that warning with `Kernel#warn`; the
       #   compiler passes false and reports it as a diagnostic instead
-      # @return [File]
-      # @raise [Error] when the file name is taken, a symbol or package it
-      #   defines clashes with one already in the pool, or the file itself uses
-      #   an extension number twice
+      #
+      # Raises Error when the file name is taken, a symbol or package it
+      # defines clashes with one already in the pool, or the file itself uses
+      # an extension number twice.
+      #: (File file, ?warn: bool) -> File
       def add(file, warn: true)
         raise Error, "expected a #{File.name}, got #{file.class}" unless file.is_a?(File)
         raise Error, "#{file.name} is not frozen; finish its draft with freeze!" unless file.frozen?
@@ -49,55 +51,58 @@ module Protostar
         file
       end
 
-      # @return [File, nil]
+      #: (String name) -> File?
       def file(name)
         @mutex.synchronize { @files[name] }
       end
 
-      # @return [Boolean] whether a file of that name is registered
+      # Returns whether a file of that name is registered.
+      #: (untyped file_name) -> bool
       def include?(file_name)
         @mutex.synchronize { @files.key?(file_name) }
       end
 
-      # @return [Array<File>] in the order they were added
+      # Returns them in the order they were added.
+      #: () -> Array[File]
       def files
         @mutex.synchronize { @files.values }
       end
 
-      # @param full_name [String] without a leading dot
-      # @return [Descriptor, nil] any symbol: message, field, oneof, enum, enum value, service or method
+      # - `full_name`: without a leading dot
+      #
+      # Returns any symbol: message, field, oneof, enum, enum value, service or method.
+      #: (String full_name) -> Descriptor?
       def find_symbol(full_name)
         @mutex.synchronize { @symbols[full_name] }
       end
 
-      # @return [Message, nil]
+      #: (String full_name) -> Message?
       def find_message(full_name)
         found = find_symbol(full_name)
         found if found.is_a?(Message)
       end
 
-      # @return [Enum, nil]
+      #: (String full_name) -> Enum?
       def find_enum(full_name)
         found = find_symbol(full_name)
         found if found.is_a?(Enum)
       end
 
-      # @return [Service, nil]
+      #: (untyped full_name) -> Service?
       def find_service(full_name)
         found = find_symbol(full_name)
         found if found.is_a?(Service)
       end
 
-      # @param extendee [String, Message] the extended message or its full name
-      # @param number [Integer]
-      # @return [Field, nil]
+      # - `extendee`: the extended message or its full name
+      #: ((String | Message) extendee, Integer number) -> Field?
       def find_extension(extendee, number)
         extendee = extendee.full_name if extendee.is_a?(Message)
         @mutex.synchronize { @extensions[extendee]&.[](number) }
       end
 
-      # @param extendee [String, Message]
-      # @return [Array<Field>] every registered extension of the message, by number
+      # Returns every registered extension of the message, by number.
+      #: ((String | Message) extendee) -> Array[Field]
       def extensions_of(extendee)
         extendee = extendee.full_name if extendee.is_a?(Message)
         @mutex.synchronize { (@extensions[extendee] || {}).values.sort_by(&:number) }
@@ -108,13 +113,13 @@ module Protostar
       end
 
       # Builds and adds a serialized FileDescriptorProto, unless a file of that name is here
-      # @return [File]
+      #: (untyped bytes) -> File
       def add_serialized_file(bytes)
         proto = Proto.types::FileDescriptorProto.decode(bytes)
         file(proto.name) || add(File.from_proto(proto, pool: self))
       end
 
-      # @see Protostar.load_descriptor_set
+      # See Protostar.load_descriptor_set.
       def load_descriptor_set(bytes)
         Protostar.load_descriptor_set(bytes, pool: self)
       end
@@ -161,15 +166,15 @@ module Protostar
   @generated_pool = Schema::Pool.new
 
   class << self
-    # @return [Schema::Pool] the process-wide pool generated `_pb.rb` files build into
-    attr_reader :generated_pool
+    # The process-wide pool generated `_pb.rb` files build into.
+    attr_reader :generated_pool #: Schema::Pool
 
     # Builds every file of a serialized `FileDescriptorSet` into a pool, in
     # order. Custom options are decoded against the extensions the pool (and
     # the file itself) defines; files already in the pool are taken from it.
-    # @param bytes [String] a serialized google.protobuf.FileDescriptorSet
-    # @param pool [Schema::Pool]
-    # @return [Array<Schema::File>]
+    #
+    # - `bytes`: a serialized google.protobuf.FileDescriptorSet
+    #: (String bytes, pool: Schema::Pool) -> Array[Schema::File]
     def load_descriptor_set(bytes, pool:)
       Schema::Proto.each_file(bytes).map { |file_bytes| pool.add_serialized_file(file_bytes) }
     end
