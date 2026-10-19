@@ -12,10 +12,10 @@ module Protostar
   # Person.decode(bytes) == person # => true
   # ```
   #
-  # Values are kept in one Array per message, a slot per field. Singular
-  # fields with presence hold nil when unset; fields without presence hold
-  # their value, the default included. Repeated fields hold an Array and maps
-  # a Hash, both allocated on first access.
+  # Each field is kept in an instance variable of its own, a slot per field
+  # (see Accessors). Singular fields with presence hold nil when unset;
+  # fields without presence hold their value, the default included. Repeated
+  # fields hold an Array and maps a Hash, both allocated on first access.
   class Message
     EMPTY_ARRAY: untyped
 
@@ -178,9 +178,6 @@ module Protostar
     # Deep copy, frozen when the original is (or when asked)
     def clone: (?freeze: bool?) -> self
 
-    # Freezes the message and everything it holds, after which it is Ractor.shareable?
-    def freeze: () -> self
-
     # Merges `other` into this message: singular fields set in `other`
     # replace ours, messages merge recursively, repeated fields append, maps
     # overwrite by key, unknown fields append.
@@ -202,10 +199,6 @@ module Protostar
 
     # The fields `inspect` shows: set, and not at their zero value
     def __shown: () -> Array[[ String, untyped ]]
-
-    def __values: () -> untyped
-
-    def __reset: () -> untyped
 
     # Appends an unknown field; the decoder's way in
     def __add_unknown: (untyped field) -> untyped

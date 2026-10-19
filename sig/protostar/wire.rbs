@@ -41,6 +41,10 @@ module Protostar
     # Returns a frozen binary String.
     def self.varint: (Integer value) -> String
 
+    # Appends a varint to a binary String and returns it. Negative values are
+    # written as their 64-bit two's complement.
+    def self.append_varint: (String buf, Integer value) -> String
+
     # Returns how many bytes `varint` would take; 10 for any negative value.
     def self.varint_size: (untyped value) -> Integer
 

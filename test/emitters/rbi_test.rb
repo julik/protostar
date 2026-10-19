@@ -200,7 +200,8 @@ class RbiTest < Minitest::Test
     cart = registry.find("acme.shop.Cart")
     rbi = Emitters::ProtostarRbi.new.file(files.find { |f| f.name == "acme/shop.proto" })
     defs = rbi.scan(/^ {6}def ([A-Za-z_]+[?=]?)/).flatten - ["initialize"]
-    assert_equal cart.public_instance_methods(false).reject { |m| m.start_with?("__") }.sort, defs.map(&:to_sym).sort
+    own = cart.public_instance_methods(false) - Protostar::Message.public_instance_methods
+    assert_equal own.reject { |m| m.start_with?("__") }.sort, defs.map(&:to_sym).sort
   end
 
   def test_google_rbi_of_a_file

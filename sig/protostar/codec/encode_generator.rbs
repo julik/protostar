@@ -2,17 +2,20 @@
 
 module Protostar
   module Codec
-    # Writes the two encoding passes of one message class as Ruby source and
-    # evals them into the class: `__size(sizes)`, which returns the encoded
-    # size and records it (and every packed run's) in `sizes`, and
-    # `__write(w, buf, sizes)`, which appends the fields to the Writer's
-    # buffer. Fields come in ascending number order, tags are literal bytes,
-    # one-byte varints are appended inline, and enum names map to numbers
-    # through a literal `case`. Maps, packed runs and unknown fields go to
+    # Writes the encoders of one message class as Ruby source and evals them
+    # into the class. Fields come in ascending number order, tags are literal
+    # bytes, one- and two-byte varints are appended inline, and enum names
+    # map to numbers through a literal `case`. Maps and unknown fields go to
     # Sizer and Encoder.
     #
-    # The generic loop over field descriptors this replaces spent most of
-    # its time on method calls into the field table.
+    # `__encode(buf)` makes one pass into a String: a nested message or
+    # packed run gets one byte for its length, written once its bytes are,
+    # and more bytes are spliced in only when it is over 127 bytes long.
+    #
+    # A sink cannot take back what it was given, so Encoder.encode_to
+    # makes two passes: `__size(sizes)` returns the encoded size and records
+    # it (and every packed run's) in `sizes`, and `__write(w, buf, sizes)`
+    # appends the fields to the Writer's buffer, flushing as it fills.
     module EncodeGenerator
       # :nodoc: all
       F: untyped
@@ -24,6 +27,18 @@ module Protostar
       def self?.install: (Class klass, Array[Message::FieldInfo] fields) -> untyped
 
       def self?.source: (untyped fields) -> untyped
+
+      def self?.encode_field: (untyped f) -> untyped
+
+      # What the sizing pass checks of each element of a repeated field
+      def self?.check: (untyped f) -> untyped
+
+      def self?.encode_value: (untyped f, untyped var) -> untyped
+
+      # Writes the length of what was appended after the byte reserved at `at`
+      def self?.patch_length: () -> untyped
+
+      def self?.packed_encode: (untyped f) -> untyped
 
       def self?.info: (untyped f) -> untyped
 
@@ -42,7 +57,7 @@ module Protostar
       def self?.packed_size: (untyped f) -> untyped
 
       # Statements appending packed run `v`'s payload
-      def self?.packed_write: (untyped f) -> untyped
+      def self?.packed_write: (untyped f, ?untyped one_pass) -> untyped
 
       def self?.repeated_size: (untyped f, untyped tag) -> untyped
 
@@ -66,9 +81,13 @@ module Protostar
       # Appending an Integer to a binary String appends that byte
       def self?.append: (untyped bytes) -> untyped
 
-      def self?.write_varint: (untyped expr) -> untyped
+      # `one_pass` code has the String `buf` and no Writer
+      def self?.write_varint: (untyped expr, ?untyped one_pass) -> untyped
 
-      def self?.write_value: (untyped f, untyped var) -> untyped
+      # Appends String `var` as bytes, whatever its encoding
+      def self?.write_raw: (untyped var, untyped one_pass) -> untyped
+
+      def self?.write_value: (untyped f, untyped var, ?untyped one_pass) -> untyped
     end
   end
 end

@@ -57,8 +57,11 @@ module Protostar
 
       attr_reader number: Integer
 
-      # The slot in the message's value array; nil for map keys and values.
+      # The field's slot, in declaration order; nil for map keys and values.
       attr_reader index: Integer?
+
+      # The instance variable holding the slot, `@_<index>`.
+      attr_reader ivar: String?
 
       # One of the kind constants.
       attr_reader kind: Integer

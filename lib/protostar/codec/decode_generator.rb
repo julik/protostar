@@ -66,7 +66,7 @@ module Protostar
       CASE_WIDTH = 16
 
       # Source dispatching on `tag`, with the fallback for tags that have no branch
-      # @param branches [Array<Array(Integer, String)>] by tag
+      #: (Array[[Integer, String]] branches) -> String
       def dispatch(branches)
         return fallback if branches.empty?
         return "case tag\n#{branches.map { |_, src| src }.join}else\n#{fallback}end\n" if branches.size <= CASE_WIDTH
@@ -84,7 +84,8 @@ module Protostar
         RUBY
       end
 
-      # @return [Array<Array(Integer, String)>] the field's tags, each with its `when` branch
+      # The field's tags, each paired with its `when` branch
+      #: (Message::FieldInfo info) -> Array[untyped]
       def branches(info)
         i = info.index
         tag = (info.number << 3) | info.wire_type
@@ -109,7 +110,7 @@ module Protostar
       end
 
       # A message or group, read by the child's loop called from here; the
-      # checks and their offsets are those of {Decoder.nested}
+      # checks and their offsets are those of Decoder.nested
       def message(info)
         i = info.index
         iv = info.ivar
