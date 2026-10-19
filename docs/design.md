@@ -48,8 +48,8 @@ service stubs (byte for byte what grpc-tools writes) and descriptor sets. Next t
 the RBS and RBI are written by default; both read their types from one model
 (`Emitters::FieldTypes`), so they agree on what every reader returns and every writer takes.
 The native `_pb.rb` is `# typed: ignore`: Sorbet cannot follow constants assigned from DSL
-calls, and reads the classes from the RBI. The runtime's own signatures are hand-written,
-`sig/protostar.rbs` and `rbi/protostar.rbi`, and a test keeps their method lists equal.
+calls, and reads the classes from the RBI. The runtime's own signatures are written inline in
+`lib/`; `sig/` and `rbi/protostar.rbi` are generated from them (`rake types:generate`).
 
 ## Message classes and the codec
 

@@ -656,8 +656,9 @@ does:
   cross-check the codec and JSON against the C-extension gem. Without it those tests skip.
 - `rake conformance:build` builds protobuf's conformance runner (CMake and a C++ compiler);
   `rake conformance:run` runs it.
-- `rake test:warnings` fails on any Ruby warning from `lib/`; `rake rbs:validate` checks
-  `sig/`.
+- `rake test:warnings` fails on any Ruby warning from `lib/`. Types are written inline in
+  `lib/`: `rake types:generate` writes `sig/` and `rbi/protostar.rbi` from them,
+  `rake rbs:validate` and `rake steep` check them, and `rake rdoc` builds the API docs.
 - Generated files are committed and checked: `rake bootstrap:check`, `rake examples:check`,
   `rake conformance:check`. After changing an emitter, run the matching `:regenerate`.
 - `test/release/` builds both gems, installs them into an empty GEM_HOME and uses them

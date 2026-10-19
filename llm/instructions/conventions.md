@@ -15,7 +15,10 @@ they disagree.
   a descriptor or a generated class after load is frozen and `Ractor.shareable?`. No
   class-level mutable caches populated lazily at runtime. If a cache is needed, build it
   at definition time and freeze it.
-- Public API gets YARD comments. Implementation comments are rare and explain *why*, never
+- Public API gets an RDoc comment (markdown prose, no YARD tags) and its type as inline RBS
+  (`#:` above the `def`, `#: Type` after an `attr_*`); internal API a trailing `# :nodoc:`.
+  `sig/` and `rbi/protostar.rbi` are generated from those (`rake types:generate`); see
+  CONTRIBUTING.md, "Types and docs". Implementation comments are rare and explain *why*, never
   narrate the next line. No section banners, no "Step 1" scaffolds, no TODO farms.
   Trailing fragments for magic values are fine: `# wire type for length-delimited`.
 - Prefer plain Ruby objects with `attr_reader` over `Struct` or `Data` where object
