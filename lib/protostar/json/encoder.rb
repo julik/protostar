@@ -77,7 +77,7 @@ module Protostar
       # Writes the fields of a message, each preceded by a comma unless it is
       # the first; returns whether nothing was written
       def fields(msg, out, first)
-        values = msg.__values
+        values = msg.__slots
         msg.class.__fields.each do |info|
           v = values[info.index]
           if @emit_defaults
@@ -225,7 +225,7 @@ module Protostar
       end
 
       def get(msg, name)
-        msg.__values[msg.class.__by_name.fetch(name).index]
+        msg.__slot(msg.class.__by_name.fetch(name).index)
       end
 
       def any(msg, out)
@@ -320,7 +320,7 @@ module Protostar
         kind = msg.which_kind
         fail!("Value has no kind set") unless kind
         info = msg.class.__by_name.fetch(kind)
-        v = msg.__values[info.index]
+        v = msg.__slot(info.index)
         case info.name
         when "null_value" then out << "null"
         when "number_value"
@@ -332,7 +332,7 @@ module Protostar
 
       def wrapper(msg, out)
         info = msg.class.__by_name.fetch("value")
-        single(info, msg.__values[info.index] || info.default, out)
+        single(info, msg.__slot(info.index) || info.default, out)
       end
     end
   end

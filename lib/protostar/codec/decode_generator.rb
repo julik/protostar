@@ -31,7 +31,6 @@ module Protostar
           # frozen_string_literal: true
           #{packed.join}
           def __decode_fields(r, buf, pos, limit, depth, end_group, frozen)
-            #{"values = @values" unless fields.empty?}
             while pos < limit
               at = pos
               if (tag = buf.getbyte(pos)) < 0x80
@@ -65,7 +64,7 @@ module Protostar
         tag = (info.number << 3) | info.wire_type
         out = "when #{tag} # #{info.name}\n"
         out << if info.map
-          slow("Protostar::Codec::Decoder.map_entry(self, values, self.class.__fields[#{i}], r, depth, frozen)")
+          slow("Protostar::Codec::Decoder.map_entry(self, self.class.__fields[#{i}], r, depth, frozen)")
         elsif info.message?
           message(info)
         elsif info.kind == F::ENUM
@@ -77,9 +76,9 @@ module Protostar
           packed_tag = (info.number << 3) | Wire::LENGTH_DELIMITED
           out << "when #{packed_tag} # #{info.name}, packed\n"
           out << if VARINT_KINDS.include?(info.kind)
-            "#{varint("n")}#{check_length}pos = __decode_packed#{i}(r, buf, pos, pos + n, (values[#{i}] ||= []))\n"
+            "#{varint("n")}#{check_length}pos = __decode_packed#{i}(r, buf, pos, pos + n, (#{info.ivar} ||= []))\n"
           else
-            slow("Protostar::Codec::Decoder.packed(self, values, self.class.__fields[#{i}], r)")
+            slow("Protostar::Codec::Decoder.packed(self, self.class.__fields[#{i}], r)")
           end
         end
         out
@@ -89,6 +88,7 @@ module Protostar
       # checks and their offsets are those of {Decoder.nested}
       def message(info)
         i = info.index
+        iv = info.ivar
         src = +"raise Protostar::DecodeError.new(\"recursion limit exceeded\", offset: at) if depth <= 0\n"
         if info.kind == F::GROUP
           stop = "limit"
@@ -99,14 +99,13 @@ module Protostar
           group = 0
         end
         src << if info.repeated
-          "sub = self.class.__fields[#{i}].message_class.__empty\n(values[#{i}] ||= []) << sub\n"
+          "sub = self.class.__fields[#{i}].message_class.__empty\n(#{iv} ||= []) << sub\n"
         else
-          siblings = info.siblings ? info.siblings.map { |s| "values[#{s}] = nil\n" }.join : ""
           <<~RUBY
-            if (sub = values[#{i}]).nil?
-              #{siblings}sub = values[#{i}] = self.class.__fields[#{i}].message_class.__empty
+            if (sub = #{iv}).nil?
+              #{siblings(info)}sub = #{iv} = self.class.__fields[#{i}].message_class.__empty
             elsif sub.frozen?
-              sub = values[#{i}] = sub.dup
+              sub = #{iv} = sub.dup
             end
           RUBY
         end
@@ -209,10 +208,13 @@ module Protostar
       end
 
       def store(info, var)
-        i = info.index
-        return "(values[#{i}] ||= []) << #{var}\n" if info.repeated
-        siblings = info.siblings ? info.siblings.map { |s| "values[#{s}] = nil\n" }.join : ""
-        "#{siblings}values[#{i}] = #{var}\n"
+        return "(#{info.ivar} ||= []) << #{var}\n" if info.repeated
+        "#{siblings(info)}#{info.ivar} = #{var}\n"
+      end
+
+      # Clears the other members of the field's oneof
+      def siblings(info)
+        info.siblings ? info.siblings.map { |s| "@_#{s} = nil\n" }.join : ""
       end
     end
   end

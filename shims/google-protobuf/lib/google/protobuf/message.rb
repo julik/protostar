@@ -26,8 +26,10 @@ module Google
           klass.extend(ClassMethods)
           accessors = Module.new
           taken = reserved.dup
-          plan.each { |fd| define_field(accessors, fd, taken) }
+          src = +""
+          plan.each { |fd| define_field(accessors, fd, taken, src) }
           oneofs.each { |o| define_oneof(accessors, o, taken) }
+          accessors.module_eval(src, "(google-protobuf #{descriptor.name})", 1)
           klass.prepend(accessors)
           if (well_known = WellKnown::MIXINS[descriptor.name])
             klass.include(well_known)
@@ -42,9 +44,11 @@ module Google
             .to_h { |m| [m, true] }.freeze
         end
 
-        def define_field(mod, fd, taken)
+        # Readers that only read the field's variable are source, which YJIT
+        # runs faster than a block
+        def define_field(mod, fd, taken, src)
           info = fd.__info
-          i = info.index
+          iv = info.ivar
           name = fd.name
           claim = ->(method) { !taken[method] && (taken[method] = true) }
           if claim.call(name.to_sym)
@@ -53,31 +57,28 @@ module Google
             elsif info.repeated
               mod.define_method(name) { __grepeated(fd) }
             elsif info.presence && !info.message?
-              default = info.default
-              mod.define_method(name) do
-                v = @values[i]
-                v.nil? ? default : v
-              end
+              default = Protostar::Message::Accessors.default_literal(info)
+              src << "def #{name}; v = #{iv}; v.nil? ? #{default} : v; end\n"
             else
-              mod.define_method(name) { @values[i] }
+              src << "def #{name}; #{iv}; end\n"
             end
           end
           mod.define_method(:"#{name}=") { |v| __gset(fd, v) } if claim.call(:"#{name}=")
           mod.define_method(:"clear_#{name}") { __gclear(fd) } if claim.call(:"clear_#{name}")
-          mod.define_method(:"has_#{name}?") { !@values[i].nil? } if info.presence && claim.call(:"has_#{name}?")
+          src << "def has_#{name}?; !#{iv}.nil?; end\n" if info.presence && claim.call(:"has_#{name}?")
           if fd.type == :enum && claim.call(:"#{name}_const")
             if info.repeated
               mod.define_method(:"#{name}_const") { __grepeated(fd).map { |v| fd.subtype.__numbers.fetch(v, v) } }
             else
               mod.define_method(:"#{name}_const") do
-                v = @values[i]
+                v = instance_variable_get(iv)
                 v = info.default if v.nil?
                 fd.subtype.__numbers.fetch(v, v)
               end
             end
           end
           return unless !info.repeated && fd.wrapper?
-          mod.define_method(:"#{name}_as_value") { @values[i]&.value } if claim.call(:"#{name}_as_value")
+          src << "def #{name}_as_value; #{iv}&.value; end\n" if claim.call(:"#{name}_as_value")
           if claim.call(:"#{name}_as_value=")
             mod.define_method(:"#{name}_as_value=") do |v|
               if v.nil?
@@ -96,19 +97,19 @@ module Google
           fields = oneof.map { |fd| [fd.__info.index, fd.name.to_sym] }.freeze
           if !taken[name.to_sym] && (taken[name.to_sym] = true)
             mod.define_method(name) do
-              fields.each { |slot, member| return member unless @values[slot].nil? }
+              fields.each { |slot, member| return member unless __slot(slot).nil? }
               nil
             end
           end
           if !taken[:"clear_#{name}"] && (taken[:"clear_#{name}"] = true)
             mod.define_method(:"clear_#{name}") do
               __check_gfrozen
-              fields.each { |slot, _| @values[slot] = nil }
+              fields.each { |slot, _| __set_slot(slot, nil) }
               nil
             end
           end
           if !taken[:"has_#{name}?"] && (taken[:"has_#{name}?"] = true)
-            mod.define_method(:"has_#{name}?") { fields.any? { |slot, _| !@values[slot].nil? } }
+            mod.define_method(:"has_#{name}?") { fields.any? { |slot, _| !__slot(slot).nil? } }
           end
         end
       end
@@ -245,7 +246,7 @@ module Google
 
         def inspect
           parts = []
-          values = @values
+          values = __slots
           self.class.__gplan.each do |fd|
             info = fd.__info
             v = values[info.index]
@@ -309,7 +310,7 @@ module Google
         end
 
         def __gcopy_from(source) # :nodoc:
-          @values = source.__values.dup
+          __load_slots(source.__slots)
           @unknown = source.unknown_fields.empty? ? nil : source.unknown_fields.dup.freeze
           @__gwrappers = nil
         end
@@ -323,7 +324,7 @@ module Google
         end
 
         def __gdeep_from(source) # :nodoc:
-          @values = source.__values.map { |v| Internal.deep_copy_value(v) }
+          __load_slots(source.__slots.map! { |v| Internal.deep_copy_value(v) })
           @unknown = source.unknown_fields.empty? ? nil : source.unknown_fields.dup.freeze
           @__gwrappers = nil
         end
@@ -337,14 +338,14 @@ module Google
           elsif info.repeated
             __grepeated(fd)
           else
-            v = @values[info.index]
+            v = __slot(info.index)
             (v.nil? && !info.message?) ? info.default : v
           end
         end
 
         def __ghas?(fd) # :nodoc:
           return __gext_has?(fd) if fd.__extension?
-          !@values[fd.__info.index].nil?
+          !__slot(fd.__info.index).nil?
         end
 
         def __gset(fd, value) # :nodoc:
@@ -355,19 +356,19 @@ module Google
           if info.map
             raise TypeError, "Expected Map instance" unless value.is_a?(Map)
             value.__check_field(fd)
-            @values[i] = value.__hash
+            __set_slot(i, value.__hash)
             (@__gwrappers ||= {})[i] = value
           elsif info.repeated
             raise TypeError, "Expected repeated field array" unless value.is_a?(RepeatedField)
             value.__check_field(fd)
-            @values[i] = value.__array
+            __set_slot(i, value.__array)
             (@__gwrappers ||= {})[i] = value
           elsif value.nil? && (info.message? || info.siblings)
-            @values[i] = nil
+            __set_slot(i, nil)
           else
             v = Convert.to_store(value, fd.type, fd.subtype, fd.name)
-            info.siblings&.each { |s| @values[s] = nil }
-            @values[i] = v
+            info.siblings&.each { |s| __set_slot(s, nil) }
+            __set_slot(i, v)
           end
           value
         end
@@ -376,7 +377,7 @@ module Google
           __check_gfrozen
           return __gext_clear(fd) if fd.__extension?
           info = fd.__info
-          @values[info.index] = (info.presence || info.repeated || info.map) ? nil : info.default
+          __set_slot(info.index, (info.presence || info.repeated || info.map) ? nil : info.default)
           nil
         end
 
@@ -397,13 +398,13 @@ module Google
         # message's wrappers are frozen
         def __gcontainer(fd, kind, empty)
           i = fd.__info.index
-          storage = @values[i]
+          storage = __slot(i)
           cache = @__gwrappers
           wrapper = cache&.[](i)
           frozen = frozen?
           return wrapper if wrapper && (storage.nil? ? frozen : wrapper.__storage.equal?(storage))
           if storage.nil?
-            storage = frozen ? empty.freeze : (@values[i] = empty)
+            storage = frozen ? empty.freeze : __set_slot(i, empty)
           end
           wrapper = kind.__for_field(fd, storage)
           wrapper.freeze if frozen
@@ -423,7 +424,7 @@ module Google
           return limit if limit <= 1
           deepest = 0
           nested.each do |info|
-            v = @values[info.index]
+            v = __slot(info.index)
             next if v.nil?
             if info.map || info.repeated
               (info.map ? v.each_value : v).each do |m|
@@ -455,11 +456,12 @@ module Google
 
         # Whether every float field holding a zero holds the same zero as other's
         def __gsame_zeros?(other)
-          theirs = other.__values
+          mine = __slots
+          theirs = other.__slots
           self.class.__fields.each do |info|
             kind = info.map ? info.value.kind : info.kind
             next unless FLOATS.include?(kind)
-            a = @values[info.index]
+            a = mine[info.index]
             b = theirs[info.index]
             pairs = if info.map then (a || {}).map { |k, v| [v, b[k]] }
             elsif info.repeated then (a || []).zip(b || [])
@@ -495,7 +497,7 @@ module Google
             value.each do |k, v|
               hash[Convert.to_store(k, key_fd.type, nil, "")] = Convert.initial(v, value_fd.type, value_fd.subtype, "")
             end
-            @values[i] = hash
+            __set_slot(i, hash)
           elsif info.repeated
             unless value.is_a?(Array)
               raise ArgumentError, "Expected array as initializer value for repeated field '#{fd.name}' (given #{value.class})."
@@ -503,10 +505,10 @@ module Google
             type = fd.type
             sub = fd.subtype
             name = fd.name
-            @values[i] = value.map { |v| Convert.initial(v, type, sub, name) }
+            __set_slot(i, value.map { |v| Convert.initial(v, type, sub, name) })
           elsif value.is_a?(Hash) && info.message?
-            info.siblings&.each { |s| @values[s] = nil }
-            @values[i] = fd.subtype.msgclass.new(value)
+            info.siblings&.each { |s| __set_slot(s, nil) }
+            __set_slot(i, fd.subtype.msgclass.new(value))
           else
             __gset(fd, value)
           end

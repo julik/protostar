@@ -39,7 +39,6 @@ module Protostar
         <<~RUBY
           # frozen_string_literal: true
           def __size(sizes)
-            #{"values = @values" unless fields.empty?}
             total = 0
             #{fields.map { |f| size_field(f) }.join}
             total += Protostar::Codec::Sizer.unknown(@unknown) if @unknown
@@ -47,7 +46,6 @@ module Protostar
           end
 
           def __write(w, buf, sizes)
-            #{"values = @values" unless fields.empty?}
             #{fields.map { |f| write_field(f) }.join}
             Protostar::Codec::Encoder.unknown(w, @unknown) if @unknown
             w.flush_if_full
@@ -61,13 +59,12 @@ module Protostar
 
       # The condition under which a field is written, with its value in `v`
       def present(f)
-        i = f.index
         if f.repeated || f.map
-          "unless (v = values[#{i}]).nil? || v.empty?"
+          "unless (v = #{f.ivar}).nil? || v.empty?"
         elsif f.presence
-          "unless (v = values[#{i}]).nil?"
+          "unless (v = #{f.ivar}).nil?"
         else
-          "v = values[#{i}]\nif #{nonzero(f)}"
+          "v = #{f.ivar}\nif #{nonzero(f)}"
         end
       end
 

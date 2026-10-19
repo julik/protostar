@@ -22,7 +22,7 @@ module WellKnownRandom
 
   def sanitize(msg, random:, registry:, depth: 2)
     msg.class.__fields.each do |info|
-      v = msg.__values[info.index]
+      v = msg.__slot(info.index)
       next if v.nil?
       if null_value?(info) || (info.map && null_value?(info.value))
         value = if info.map then v.transform_values { :NULL_VALUE }
@@ -50,7 +50,7 @@ module WellKnownRandom
   # through google-protobuf may reorder map entries; one entry keeps the order
   def single_entry_maps(msg)
     msg.class.__fields.each do |info|
-      v = msg.__values[info.index]
+      v = msg.__slot(info.index)
       next if v.nil?
       if info.map
         msg.__set(info.index, v.first(1).to_h)

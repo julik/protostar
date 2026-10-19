@@ -57,7 +57,7 @@ module Protostar
 
       def fields(msg, out, depth)
         return if @expand_any && any(msg, out, depth)
-        values = msg.__values
+        values = msg.__slots
         items = []
         msg.class.__fields.each do |info|
           v = values[info.index]
@@ -198,7 +198,7 @@ module Protostar
 
       def any(msg, out, depth)
         return false unless msg.class.descriptor.full_name == ANY
-        values = msg.__values
+        values = msg.__slots
         by_name = msg.class.__by_name
         url = values[by_name.fetch("type_url").index]
         bytes = values[by_name.fetch("value").index]

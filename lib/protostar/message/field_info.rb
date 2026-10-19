@@ -43,8 +43,10 @@ module Protostar
       attr_reader :name #: String
       attr_reader :symbol #: Symbol
       attr_reader :number #: Integer
-      # The slot in the message's value array; nil for map keys and values.
+      # The field's slot, in declaration order; nil for map keys and values.
       attr_reader :index #: Integer?
+      # The instance variable holding the slot, `@_<index>`.
+      attr_reader :ivar #: String?
       # One of the kind constants.
       attr_reader :kind #: Integer
       # Wire type of one unpacked value.
@@ -80,6 +82,7 @@ module Protostar
         @symbol = field.name.to_sym
         @number = field.number
         @index = index
+        @ivar = "@_#{index}".freeze if index
         @kind = KINDS.fetch(field.type)
         @wire_type = field.wire_type
         @map = field.map?

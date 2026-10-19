@@ -176,11 +176,11 @@ module Protostar
 
       def assign(msg, info, values, token)
         if info.map
-          hash = msg.__values[info.index] || {}
+          hash = msg.__slot(info.index) || {}
           values.each { |entry| hash[entry.first] = entry.last }
           store(msg, info, hash, token)
         elsif info.repeated
-          store(msg, info, (msg.__values[info.index] || []) + values, token)
+          store(msg, info, (msg.__slot(info.index) || []) + values, token)
         else
           store(msg, info, values.first, token)
         end
