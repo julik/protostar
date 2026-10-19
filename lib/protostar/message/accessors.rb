@@ -96,11 +96,13 @@ module Protostar
         end
       end
 
-      # `__reset`, `__load_slots`, `__slot`, `__set_slot`, `__slots`,
-      # `__copy_slots` and `__freeze_slots`
+      # `Klass.__empty`, `__reset`, `__load_slots`, `__slot`, `__set_slot`,
+      # `__slots`, `__copy_slots` and `__freeze_slots`
       def slots_source(fields)
         ivars = fields.map(&:ivar)
         src = +"# frozen_string_literal: true\n"
+        # one per class, so YJIT sees one receiver at each call inside
+        src << "def self.__empty\nallocate.__reset\nend\n"
         defaults = fields.map { |f| literal(f.index, (f.presence || f.repeated || f.map) ? nil : f.default) }
         src << "def __reset\n"
         src << "t = self.class.__template\n" if defaults.any? { |d| d.start_with?("t[") }

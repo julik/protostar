@@ -33,7 +33,7 @@ module Protostar
       end
 
       def source(fields)
-        branches = fields.map { |info| branch(info) }.join
+        branches = dispatch(fields.flat_map { |info| branches(info) }.sort_by(&:first))
         packed = fields.select { |info| info.packable && VARINT_KINDS.include?(info.kind) }.map { |info| packed_method(info) }
         <<~RUBY
           # frozen_string_literal: true
@@ -50,15 +50,7 @@ module Protostar
                 tag = r.__seek(pos, limit).read_tag_varint
                 pos = r.pos
               end
-              #{branches.empty? ? "if false" : "case tag"}
               #{branches}
-              else
-                if Protostar::Codec::Decoder.field(self, r.__seek(pos, limit), tag, at, depth, end_group, frozen)
-                  @unknown&.freeze
-                  return r.pos
-                end
-                pos = r.pos
-              end
             end
             raise Protostar::DecodeError.new("missing end of group \#{end_group}", offset: pos) if end_group != 0
             @unknown&.freeze
@@ -67,11 +59,36 @@ module Protostar
         RUBY
       end
 
-      def branch(info)
+      # Tags a `case` takes before it is split. YJIT compiles a `case` on an
+      # Integer as a chain of guards on the values it has seen, at most 20
+      # deep; tags past that leave compiled code. Wider messages first
+      # narrow the tag down with `<` comparisons to a `case` of this many.
+      CASE_WIDTH = 16
+
+      # Source dispatching on `tag`, with the fallback for tags that have no branch
+      # @param branches [Array<Array(Integer, String)>] by tag
+      def dispatch(branches)
+        return fallback if branches.empty?
+        return "case tag\n#{branches.map { |_, src| src }.join}else\n#{fallback}end\n" if branches.size <= CASE_WIDTH
+        mid = (branches.size / CASE_WIDTH / 2.0).ceil * CASE_WIDTH
+        "if tag < #{branches[mid].first}\n#{dispatch(branches[0...mid])}else\n#{dispatch(branches[mid..])}end\n"
+      end
+
+      def fallback
+        <<~RUBY
+          if Protostar::Codec::Decoder.field(self, r.__seek(pos, limit), tag, at, depth, end_group, frozen)
+            @unknown&.freeze
+            return r.pos
+          end
+          pos = r.pos
+        RUBY
+      end
+
+      # @return [Array<Array(Integer, String)>] the field's tags, each with its `when` branch
+      def branches(info)
         i = info.index
         tag = (info.number << 3) | info.wire_type
-        out = "when #{tag} # #{info.name}\n"
-        out << if info.map
+        body = if info.map
           slow("Protostar::Codec::Decoder.map_entry(self, I#{i}, r, depth, frozen)")
         elsif info.message?
           message(info)
@@ -80,16 +97,15 @@ module Protostar
         else
           "#{read(info)}#{store(info, "v")}"
         end
-        if info.packable
-          packed_tag = (info.number << 3) | Wire::LENGTH_DELIMITED
-          out << "when #{packed_tag} # #{info.name}, packed\n"
-          out << if VARINT_KINDS.include?(info.kind)
-            "#{varint("n")}#{check_length}pos = __decode_packed#{i}(r, buf, pos, pos + n, (#{info.ivar} ||= []))\n"
-          else
-            slow("Protostar::Codec::Decoder.packed(self, I#{i}, r)")
-          end
+        out = [[tag, "when #{tag} # #{info.name}\n#{body}"]]
+        return out unless info.packable
+        packed_tag = (info.number << 3) | Wire::LENGTH_DELIMITED
+        body = if VARINT_KINDS.include?(info.kind)
+          "#{varint("n")}#{check_length}pos = __decode_packed#{i}(r, buf, pos, pos + n, (#{info.ivar} ||= []))\n"
+        else
+          slow("Protostar::Codec::Decoder.packed(self, I#{i}, r)")
         end
-        out
+        out << [packed_tag, "when #{packed_tag} # #{info.name}, packed\n#{body}"]
       end
 
       # A message or group, read by the child's loop called from here; the
@@ -107,11 +123,11 @@ module Protostar
           group = 0
         end
         src << if info.repeated
-          "sub = I#{i}.message_class.__empty\n(#{iv} ||= []) << sub\n"
+          "sub = I#{i}.message_class.allocate.__reset\n(#{iv} ||= []) << sub\n"
         else
           <<~RUBY
             if (sub = #{iv}).nil?
-              #{siblings(info)}sub = #{iv} = I#{i}.message_class.__empty
+              #{siblings(info)}sub = #{iv} = I#{i}.message_class.allocate.__reset
             elsif sub.frozen?
               sub = #{iv} = sub.dup
             end
