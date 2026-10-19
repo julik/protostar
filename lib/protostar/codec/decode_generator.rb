@@ -19,9 +19,17 @@ module Protostar
 
       module_function
 
+      # The methods go into a module of their own, included into the class,
+      # whose constants `I<index>` are the fields' Message::FieldInfo objects: a
+      # constant is the cheapest thing a method can name, and these add none
+      # to the message class. (Constants holding the field classes would
+      # give anonymous classes a name.)
       #: (Class klass, Array[Message::FieldInfo] fields) -> untyped
       def install(klass, fields)
-        klass.class_eval(source(fields), "(protostar decoder #{klass.descriptor.full_name})", 1)
+        mod = Module.new
+        fields.each { |info| mod.const_set(:"I#{info.index}", info) }
+        mod.module_eval(source(fields), "(protostar decoder #{klass.descriptor.full_name})", 1)
+        klass.include(mod)
       end
 
       def source(fields)
@@ -64,7 +72,7 @@ module Protostar
         tag = (info.number << 3) | info.wire_type
         out = "when #{tag} # #{info.name}\n"
         out << if info.map
-          slow("Protostar::Codec::Decoder.map_entry(self, self.class.__fields[#{i}], r, depth, frozen)")
+          slow("Protostar::Codec::Decoder.map_entry(self, I#{i}, r, depth, frozen)")
         elsif info.message?
           message(info)
         elsif info.kind == F::ENUM
@@ -78,7 +86,7 @@ module Protostar
           out << if VARINT_KINDS.include?(info.kind)
             "#{varint("n")}#{check_length}pos = __decode_packed#{i}(r, buf, pos, pos + n, (#{info.ivar} ||= []))\n"
           else
-            slow("Protostar::Codec::Decoder.packed(self, self.class.__fields[#{i}], r)")
+            slow("Protostar::Codec::Decoder.packed(self, I#{i}, r)")
           end
         end
         out
@@ -99,11 +107,11 @@ module Protostar
           group = 0
         end
         src << if info.repeated
-          "sub = self.class.__fields[#{i}].message_class.__empty\n(#{iv} ||= []) << sub\n"
+          "sub = I#{i}.message_class.__empty\n(#{iv} ||= []) << sub\n"
         else
           <<~RUBY
             if (sub = #{iv}).nil?
-              #{siblings(info)}sub = #{iv} = self.class.__fields[#{i}].message_class.__empty
+              #{siblings(info)}sub = #{iv} = I#{i}.message_class.__empty
             elsif sub.frozen?
               sub = #{iv} = sub.dup
             end
@@ -197,7 +205,7 @@ module Protostar
       def enum(info)
         src = info.closed_enum ? "start = pos\n#{varint("v")}" : varint("v")
         src << "v -= 0x1_0000_0000 if (v &= 0xFFFF_FFFF) >= 0x8000_0000\n"
-        src << "if (e = self.class.__fields[#{info.index}].enum_names[v])\n"
+        src << "if (e = #{enum_name(info)})\n"
         src << store(info, "e")
         src << if info.closed_enum
           "else\nProtostar::Codec::Decoder.closed_enum_value(self, #{info.number}, buf, start, pos)\n"
@@ -206,6 +214,16 @@ module Protostar
         end
         src << "end\n"
       end
+
+      # An expression for the name of enum number `v`, nil when it has none:
+      # a literal `case`, or a lookup in the field's table for a large enum
+      def enum_name(info)
+        names = info.enum_names
+        return "I#{info.index}.enum_names[v]" if names.size > ENUM_CASE_MAX
+        "case v\n#{names.map { |n, name| "when #{n} then #{name.inspect}\n" }.join}end"
+      end
+
+      ENUM_CASE_MAX = 256
 
       def store(info, var)
         return "(#{info.ivar} ||= []) << #{var}\n" if info.repeated
