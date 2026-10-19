@@ -118,6 +118,27 @@ tapioca 0.20.0's protobuf DSL compiler, run against the shim on a google-format 
 protoc-format `_pb.rb` files still need `--ignore` in `sorbet/config` with either route (4022
 errors otherwise), as tapioca's own docs say; README and migration.md say so.
 
+### Follow-up: messages descend from AbstractMessage
+
+The C gem 4.36.2 has `Timestamp.ancestors` = `[Timestamp, AbstractMessage, MessageExts,
+Object, ...]` with `AbstractMessage` a private constant; tapioca reaches it through
+`const_defined?`/`const_get` and collects `ObjectSpace.each_object(AbstractMessage.singleton_class)`.
+The shim now has the same shape: `AbstractMessage < Protostar::Message`, private, including
+`MessageExts`, and the shim pool's registry is `Registry.new(open_enums: true, base:
+AbstractMessage)` (new `base:` option, default `Protostar::Message`, so native classes are
+unchanged). Map entry classes made on request subclass it too.
+
+- `tapioca dsl --only=Protobuf` in a scratch project (the `shop.proto` above, shim via
+  `protostar/google_protobuf_shim`, no override) creates `shop/order.rbi`,
+  `shop/line_item.rbi`, `shop/status.rbi`, `google/protobuf/timestamp.rbi`,
+  `repeated_field.rbi`, `map.rbi`; "No errors found". `srb tc` with `lib/shop_pb.rb` ignored
+  and a stand-in `google_protobuf.rbi`: no errors; an app file gets the revealed types and
+  catches an unknown method and a wrong setter type.
+- Tests: `pools_test.rb` checks the descendants as tapioca gathers them (shim classes,
+  well-known types and a map entry in; native classes and `Protostar::Message` out);
+  `types_test.rb` checks `base:`. Four new differential probes (const_defined?, superclass
+  names, the ObjectSpace walk, `AbstractMessage.include?(MessageExts)`) match the C gem.
+
 ## Not done, open
 
 - No RBI for gRPC `_services_pb.rb` (optional in the brief).

@@ -154,11 +154,9 @@ RBI instead, in one of two ways:
 - `protostar compile --google_out=lib --rbi_out=sorbet/rbi/protos` writes the RBI from the
   `.proto`, in the shape tapioca's protobuf compiler writes. `Google::Protobuf`'s own RBI
   (`AbstractMessage`, `RepeatedField[T]`, `Map[K, V]`) comes from tapioca as before.
-- `tapioca dsl` with its protobuf compiler, as with the C gem. Against the shim it finds the
-  enums but not the messages: it looks for subclasses of `Google::Protobuf::AbstractMessage`,
-  and the shim's message classes subclass `Protostar::Message`. The descriptors it reads
-  work; pointing its `gather_constants` at the classes that extend
-  `Google::Protobuf::MessageExts::ClassMethods` gives the same RBI as with the C gem.
+- `tapioca dsl` with its protobuf compiler, as with the C gem. It works out of the box: the
+  shim's message classes subclass `Google::Protobuf::AbstractMessage` (private, as in the
+  gem), where tapioca looks for them, and that in turn subclasses `Protostar::Message`.
 
 Use one or the other for a file: both declare the same methods.
 
