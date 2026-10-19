@@ -1,0 +1,8 @@
+---
+title: protostar
+main_page: README.md
+markup: markdown
+exclude:
+- lib/protostar/google/
+- lib/protostar/compiler/include/
+warn_missing_rdoc_ref: true
