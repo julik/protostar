@@ -5,23 +5,20 @@ module Protostar
     # The names visible while one file is linked: its own symbols, drafted
     # as the linker meets them, and everything in the pool. Lookups follow
     # protoc's DescriptorBuilder (FindSymbol and LookupSymbolNoPlaceholder):
-    # the same first-component scoping rule as {Schema::Resolver}, with a
+    # the same first-component scoping rule as Schema::Resolver, with a
     # symbol in another file visible only through a direct import or a chain
     # of `import public`, and with the failure explanations protoc gives.
-    #
-    # @api private
-    class SymbolTable
+    class SymbolTable # :nodoc: all
       # A named thing
       class Symbol
-        # @return [Symbol] :message, :enum, :enum_value, :field, :oneof, :service, :method or :package
-        attr_reader :kind
-        # @return [String]
-        attr_reader :full_name
-        # @return [String] the file defining it
-        attr_reader :file_name
-        # @return [Schema::Descriptor, nil] the descriptor (drafted, for the file being
-        #   linked); nil for a package
-        attr_reader :object
+        # :message, :enum, :enum_value, :field, :oneof, :service, :method or :package.
+        attr_reader :kind #: Symbol
+        attr_reader :full_name #: String
+        # The file defining it.
+        attr_reader :file_name #: String
+        # The descriptor (drafted, for the file being
+        # linked); nil for a package.
+        attr_reader :object #: Schema::Descriptor?
 
         def initialize(kind:, full_name:, file_name:, object:, local: false)
           @kind = kind
@@ -40,7 +37,8 @@ module Protostar
           @kind == :message || @kind == :package || @kind == :enum || @kind == :service
         end
 
-        # @return [Boolean] defined by the file being linked
+        # Returns defined by the file being linked.
+        #: () -> bool
         def local?
           @local
         end
@@ -51,19 +49,18 @@ module Protostar
         Schema::Field => :field, Schema::Oneof => :oneof, Schema::Service => :service, Schema::Method => :method
       }.freeze
 
-      # @return [String, nil] set when the last failed lookup found the name in a file that is not imported
-      attr_reader :undeclared_file, :undeclared_name
-      # @return [String, nil] set when the last failed lookup resolved a compound name to a missing symbol
-      attr_reader :unresolved_name
-      # @return [Array<String>] direct imports no lookup has used yet
-      attr_reader :unused
+      # Set when the last failed lookup found the name in a file that is not imported.
+      attr_reader :undeclared_file, :undeclared_name #: String?
+      # Set when the last failed lookup resolved a compound name to a missing symbol.
+      attr_reader :unresolved_name #: String?
+      # Direct imports no lookup has used yet.
+      attr_reader :unused #: Array[String]
 
-      # @param file_name [String] the file being linked
-      # @param package [String]
-      # @param pool [Schema::Pool]
-      # @param dependencies [Array<Schema::File, nil>] direct imports, nil where missing
-      # @param option_dependencies [Array<Schema::File, nil>] `import option` files
-      # @param unused [Array<Schema::File>] imports to report when never used
+      # - `file_name`: the file being linked
+      # - `dependencies`: direct imports, nil where missing
+      # - `option_dependencies`: `import option` files
+      # - `unused`: imports to report when never used
+      #: (String file_name, String package, Schema::Pool pool, Array[Schema::File?] dependencies, Array[Schema::File?] option_dependencies, Array[Schema::File] unused) -> void
       def initialize(file_name, package, pool, dependencies, option_dependencies, unused)
         @file_name = file_name
         @package = package
@@ -79,12 +76,15 @@ module Protostar
         @local_packages = []
       end
 
-      # @return [Hash{String => Symbol}] the file's own symbols
-      attr_reader :local
+      # The file's own symbols.
+      attr_reader :local #: Hash[String, Symbol]
 
       # Registers a symbol of the file being linked
-      # @param descriptor [Schema::Descriptor] as drafted
-      # @return [Symbol, nil] the existing symbol when the name is taken
+      #
+      # - `descriptor`: as drafted
+      #
+      # Returns the existing symbol when the name is taken.
+      #: (untyped kind, untyped full_name, Schema::Descriptor descriptor) -> Symbol?
       def add(kind, full_name, descriptor)
         existing = find_any(full_name)
         return existing if existing
@@ -94,7 +94,9 @@ module Protostar
       end
 
       # Registers the file's package and its parents, as AddPackage does
-      # @return [Symbol, nil] a non-package symbol already using one of the names
+      #
+      # Returns a non-package symbol already using one of the names.
+      #: (untyped package) -> Symbol?
       def add_package(package)
         existing = find_any(package)
         if existing.nil?
@@ -109,7 +111,7 @@ module Protostar
       end
 
       # Any symbol by full name, ignoring visibility
-      # @return [Symbol, nil]
+      #: (untyped full_name) -> Symbol?
       def find_any(full_name)
         if (sym = @local[full_name])
           return sym
@@ -134,7 +136,7 @@ module Protostar
       end
 
       # FindSymbol: a symbol visible from the file being linked, or nil (and
-      # {#undeclared_file} set) when it lives in a file that is not imported
+      # #undeclared_file set) when it lives in a file that is not imported
       def find(full_name)
         sym = find_not_enforcing_deps(full_name)
         return nil if sym.nil?
@@ -151,10 +153,11 @@ module Protostar
       end
 
       # LookupSymbolNoPlaceholder
-      # @param name [String] as written, maybe with a leading dot
-      # @param relative_to [String] full name of the element doing the lookup
-      # @param types_only [Boolean] skip simple names that are not types
-      # @return [Symbol, nil]
+      #
+      # - `name`: as written, maybe with a leading dot
+      # - `relative_to`: full name of the element doing the lookup
+      # - `types_only`: skip simple names that are not types
+      #: (String name, String relative_to, ?types_only: bool) -> Symbol?
       def lookup(name, relative_to, types_only: false)
         @undeclared_file = nil
         @undeclared_name = nil
@@ -182,8 +185,8 @@ module Protostar
         end
       end
 
-      # AddNotDefinedError's messages for the last failed {#lookup}
-      # @return [Array<String>]
+      # AddNotDefinedError's messages for the last failed #lookup
+      #: (untyped name) -> Array[String]
       def not_defined_messages(name)
         if @undeclared_file.nil? && @unresolved_name.nil?
           return ["\"#{name}\" is not defined."]

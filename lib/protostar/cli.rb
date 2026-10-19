@@ -7,12 +7,16 @@ require "protostar"
 module Protostar
   # `protostar compile`, with protoc's flag names and protoc's messages
   #
-  #   protostar compile -I proto --ruby_out=lib --grpc_out=lib acme/service.proto
+  # ```sh
+  # protostar compile -I proto --ruby_out=lib --grpc_out=lib acme/service.proto
+  # ```
   #
   # `compile` is the default command. Without `-I` every input's own directory
   # is an include path, and one input with no `--*_out` prints its native Ruby:
   #
-  #   protostar proto/acme/person.proto > person_pb.rb
+  # ```sh
+  # protostar proto/acme/person.proto > person_pb.rb
+  # ```
   class CLI
     USAGE = "Usage: protostar [compile] [OPTION] PROTO_FILES\n       protostar lint [OPTION] PROTO_FILES_OR_DIRS\n" \
       "       protostar --version"
@@ -33,17 +37,14 @@ module Protostar
     # Raised to stop with a message on stderr and exit status 1
     class Failure < Protostar::Error; end
 
-    # @param argv [Array<String>]
-    # @param out [IO]
-    # @param err [IO]
-    # @return [Integer] the exit status
+    # Returns the exit status.
+    #: (Array[String] argv, ?out: IO, ?err: IO) -> Integer
     def self.run(argv, out: $stdout, err: $stderr)
       new(out, err).run(argv)
     end
 
     # Whether to colour what goes to `io`: a terminal, and NO_COLOR unset
-    # @api private
-    def self.color?(io)
+    def self.color?(io) # :nodoc:
       io.respond_to?(:tty?) && io.tty? && ENV.fetch("NO_COLOR", "").empty?
     end
 
@@ -52,7 +53,7 @@ module Protostar
       @err = err
     end
 
-    # @return [Integer]
+    #: (untyped argv) -> Integer
     def run(argv)
       argv = argv.dup
       case argv.first

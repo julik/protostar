@@ -3,15 +3,15 @@
 module Protostar
   class Compiler
     module Emitters
-      # Writes `_pb.rbs` signatures for the classes {Ruby} generates:
+      # Writes `_pb.rbs` signatures for the classes Ruby generates:
       # subclasses of `Protostar::Message`, repeated fields as Arrays, maps as
-      # Hashes, writers typed as {Message::Coercion} accepts. Signatures for
+      # Hashes, writers typed as Message::Coercion accepts. Signatures for
       # `Protostar::Message` itself are in the gem's `sig/protostar.rbs`.
-      # {Rbs} writes protoc's signatures for google-protobuf's classes instead.
+      # Rbs writes protoc's signatures for google-protobuf's classes instead.
       class ProtostarRbs
         include NativeNames
 
-        # The mixins {WellKnown::MIXINS} includes, by full name, as RBS names
+        # The mixins WellKnown::MIXINS includes, by full name, as RBS names
         MIXINS = {
           "google.protobuf.Any" => "::Protostar::WellKnown::Any",
           "google.protobuf.Timestamp" => "::Protostar::WellKnown::Timestamp",
@@ -21,21 +21,21 @@ module Protostar
           "google.protobuf.ListValue" => "::Protostar::WellKnown::ListValue"
         }.freeze
 
-        # @param namespaces [Hash{String => String}] Ruby module paths by file name, as {Ruby} takes them
+        # - `namespaces`: Ruby module paths by file name, as Ruby takes them
+        #: (?namespaces: Hash[String, String]) -> void
         def initialize(namespaces: {})
           @namespaces = namespaces
           @reserved = Message::Accessors.reserved
           @types = FieldTypes.new(FieldTypes::RBS) { |d| constant(d) }
         end
 
-        # @param files [Array<Schema::File>]
-        # @return [Hash{String => String}] output path to signatures
+        # Returns a Hash of output path to signatures.
+        #: (Array[Schema::File] files) -> Hash[String, String]
         def emit(files)
           files.to_h { |f| [Naming.require_name(f.name) + ".rbs", file(f)] }
         end
 
-        # @param file [Schema::File]
-        # @return [String]
+        #: (Schema::File file) -> String
         def file(file)
           Naming.check_ruby_package(file)
           @source = file.source_info

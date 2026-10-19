@@ -2,28 +2,34 @@
 
 module Protostar
   module Schema
-    # The one place that knows protoc's shape. {File#to_proto} writes a
+    # The one place that knows protoc's shape. File#to_proto writes a
     # file as the `FileDescriptorProto` message of the bootstrap classes
     # (`Protostar::Google::Protobuf`), as protoc's `FileDescriptor::CopyTo`
-    # would; {File.from_proto} reads one back into a draft. Custom options
+    # would; File.from_proto reads one back into a draft. Custom options
     # exist as extension bytes inside options messages only here: written by
-    # {MessageValue#encode}, read by {MessageValue.decode}.
+    # MessageValue#encode, read by MessageValue.decode.
     module Proto
       # descriptor.proto's classes are autoloaded on first reference, which
       # Ruby 3.2 and 3.3 can only do in the main Ractor
-      # @return [Module] `Protostar::Google::Protobuf`, descriptor.proto's message classes
+      #
+      # Returns `Protostar::Google::Protobuf`, descriptor.proto's message classes.
+      #: () -> Module
       def self.types
         ::Protostar::Google::Protobuf
       end
 
-      # @param name [Symbol, String] a descriptor.proto message, e.g. :FieldOptions
-      # @return [Schema::Message] its descriptor, as the bootstrap defines it
+      # - `name`: a descriptor.proto message, e.g. :FieldOptions
+      #
+      # Returns its descriptor, as the bootstrap defines it.
+      #: ((Symbol | String) name) -> Schema::Message
       def self.schema(name)
         types.const_get(name).descriptor
       end
 
-      # @param bytes [String] a serialized FileDescriptorSet
-      # @return [Array<String>] each serialized FileDescriptorProto
+      # - `bytes`: a serialized FileDescriptorSet
+      #
+      # Returns each serialized FileDescriptorProto.
+      #: (String bytes) -> Array[String]
       def self.each_file(bytes)
         r = Wire::Reader.new(bytes)
         files = []
@@ -39,8 +45,7 @@ module Protostar
       end
 
       # Descriptors as descriptor.proto messages
-      # @api private
-      module Writer
+      module Writer # :nodoc: all
         module_function
 
         def file(file, source_info:, json_names:)
@@ -222,8 +227,7 @@ module Protostar
       end
 
       # A FileDescriptorProto message read into a draft
-      # @api private
-      class Reader
+      class Reader # :nodoc: all
         def initialize(proto, pool)
           @proto = proto
           @pool = pool
@@ -329,23 +333,20 @@ module Protostar
         end
       end
 
-      # descriptor.proto's SymbolVisibility for {Message#visibility} and {Enum#visibility}
-      # @api private
-      def self.visibility(symbol)
+      # descriptor.proto's SymbolVisibility for Message#visibility and Enum#visibility
+      def self.visibility(symbol) # :nodoc:
         (symbol == :local) ? :VISIBILITY_LOCAL : :VISIBILITY_EXPORT
       end
 
-      # @api private
-      def self.visibility_symbol(proto)
+      def self.visibility_symbol(proto) # :nodoc:
         Draft.visibility(proto)
       end
 
-      # Message values to and from wire bytes, driven by {Schema::Message}s:
+      # Message values to and from wire bytes, driven by Schema::Messages:
       # fields in number order with extensions among them, unknown fields
       # last; packed repeated fields per features; MessageSet items for
       # `message_set_wire_format` types; proto3 zero values left out.
-      # @api private
-      module Codec
+      module Codec # :nodoc: all
         module_function
 
         def encode(type, value)

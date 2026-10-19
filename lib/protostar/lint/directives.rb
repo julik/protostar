@@ -4,12 +4,14 @@ module Protostar
   module Lint
     # Comments that switch rules off for part of a file:
     #
-    #   // protostar-lint: disable-next-line FIELD_NOT_REQUIRED
-    #   required string id = 1;
+    # ```ruby
+    # // protostar-lint: disable-next-line FIELD_NOT_REQUIRED
+    # required string id = 1;
     #
-    #   // protostar-lint: disable COMMENT_FIELD, COMMENT_MESSAGE
-    #   ...
-    #   // protostar-lint: enable COMMENT_FIELD, COMMENT_MESSAGE
+    # // protostar-lint: disable COMMENT_FIELD, COMMENT_MESSAGE
+    # ...
+    # // protostar-lint: enable COMMENT_FIELD, COMMENT_MESSAGE
+    # ```
     #
     # A directive names rule ids or codes (a compiler warning's code works
     # too), or none for every rule. `disable` without `enable` runs to the end
@@ -17,7 +19,8 @@ module Protostar
     class Directives
       PATTERN = %r{//\s*protostar-lint:\s*(disable-next-line|disable|enable)\b([^\n]*)}
 
-      # @param text [String] the file's bytes
+      # - `text`: the file's bytes
+      #: (String text) -> void
       def initialize(text)
         @next_line = Hash.new { |h, k| h[k] = [] }
         @ranges = []
@@ -42,8 +45,8 @@ module Protostar
         open.each { |n, start| @ranges << [n, start, lines.size + 1] }
       end
 
-      # @param diagnostic [Compiler::Diagnostic]
-      # @return [Boolean] whether a directive switches it off where it starts
+      # Returns whether a directive switches it off where it starts.
+      #: (Compiler::Diagnostic diagnostic) -> bool
       def suppressed?(diagnostic)
         line = diagnostic.line
         return false unless line

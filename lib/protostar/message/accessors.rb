@@ -6,8 +6,7 @@ module Protostar
     # it into the class. Methods made from source, unlike `define_method`
     # blocks, can be called from any Ractor, and they read their slot by a
     # literal index.
-    # @api private
-    module Accessors
+    module Accessors # :nodoc: all
       module_function
 
       # Methods every message has; a field whose accessor would replace one
@@ -16,10 +15,9 @@ module Protostar
         (Message.public_instance_methods + %i[initialize]).to_h { |m| [m, true] }
       end
 
-      # @param klass [Class]
-      # @param fields [Array<FieldInfo>]
-      # @param oneofs [Array<Array(Symbol, Array<Integer>)>] real oneofs: name and member slots
-      # @param reserved [Hash{Symbol => true}] from {reserved}, computed once for many classes
+      # - `oneofs`: real oneofs: name and member slots
+      # - `reserved`: from `reserved`, computed once for many classes
+      #: (Class klass, Array[FieldInfo] fields, Array[[Symbol, Array[Integer]]] oneofs, ?Hash[Symbol, bool] reserved) -> untyped
       def install(klass, fields, oneofs, reserved = self.reserved)
         taken = reserved.dup
         src = +""

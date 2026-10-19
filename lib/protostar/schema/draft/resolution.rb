@@ -5,8 +5,7 @@ module Protostar
     module Draft
       # Options, features and defaults of a linked file, as protoc's
       # DescriptorBuilder resolves them once options are known
-      # @api private
-      class Resolution
+      class Resolution # :nodoc: all
         OPTIONS = {
           Schema::File => FileOptions, Schema::Message => MessageOptions, Field => FieldOptions,
           Schema::Oneof => OneofOptions, Schema::Enum => EnumOptions, EnumValue => EnumValueOptions,

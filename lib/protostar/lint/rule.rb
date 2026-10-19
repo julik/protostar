@@ -2,49 +2,54 @@
 
 module Protostar
   module Lint
-    # The base of every lint rule. A rule is a class under {Rules} named after
+    # The base of every lint rule. A rule is a class under Rules named after
     # its id (`FIELD_NOT_REQUIRED` is `Rules::FieldNotRequired`) with two
     # constants, `REASON` (one line) and `EXPLANATION` (why, an example, the
-    # fix), and a {#check} that calls {#report} for every problem it finds.
+    # fix), and a #check that calls #report for every problem it finds.
     #
-    #   class Rules::PackageDefined < Rule
-    #     REASON = "A file without a package puts its types in the global namespace."
-    #     EXPLANATION = "..."
+    # ```ruby
+    # class Rules::PackageDefined < Rule
+    #   REASON = "A file without a package puts its types in the global namespace."
+    #   EXPLANATION = "..."
     #
-    #     def check
-    #       report(context.ast, :other, "file has no package") if context.file.package.empty?
-    #     end
+    #   def check
+    #     report(context.ast, :other, "file has no package") if context.file.package.empty?
     #   end
+    # end
+    # ```
     #
-    # Rules read the compiled {Schema::File}, the AST positions and the source
-    # info through {Context}; none parses anything.
+    # Rules read the compiled Schema::File, the AST positions and the source
+    # info through Context; none parses anything.
     class Rule
-      # @return [String] e.g. "FIELD_NOT_REQUIRED"
+      # Returns a name such as "FIELD_NOT_REQUIRED".
+      #: () -> String
       def self.id
         name.split("::").last.gsub(/(?<=[a-z0-9])(?=[A-Z])/, "_").upcase
       end
 
-      # @return [String] e.g. "W0101"
+      # Returns a name such as "W0101".
+      #: () -> String
       def self.code
         RULES.fetch(id)[0]
       end
 
-      # @return [Symbol] the smallest set the rule is in
+      # Returns the smallest set the rule is in.
+      #: () -> Symbol
       def self.tier
         RULES.fetch(id)[1]
       end
 
-      # @return [Symbol]
+      #: () -> Symbol
       def self.category
         RULES.fetch(id)[2]
       end
 
-      # @return [String]
+      #: () -> String
       def self.reason
         const_get(:REASON)
       end
 
-      # @return [String]
+      #: () -> String
       def self.explanation
         const_get(:EXPLANATION)
       end
@@ -53,18 +58,18 @@ module Protostar
       # are not printed twice
       CLAIMS = [].freeze
 
-      # @return [Context]
-      attr_reader :context
-      # @return [Array<Compiler::Diagnostic>] what {#report} collected
-      attr_reader :diagnostics
+      attr_reader :context #: Context
+      # What #report collected.
+      attr_reader :diagnostics #: Array[Compiler::Diagnostic]
 
-      # @param context [Context]
+      #: (Context context) -> void
       def initialize(context)
         @context = context
         @diagnostics = []
       end
 
-      # Finds the rule's problems in {#context}
+      # Finds the rule's problems in #context
+      #: () -> void
       def check
         raise NotImplementedError, "#{self.class} must define #check"
       end
@@ -72,14 +77,15 @@ module Protostar
       private
 
       # Records a problem at a node's recorded position
-      # @param node [Compiler::AST::Node]
-      # @param kind [Symbol] the position kind: :name, :number, :type, ...
-      # @param message [String] the headline, lower case, no full stop
-      # @param label [String, nil] under the span
-      # @param help [String, nil] the concrete fix in words
-      # @param fix [Diagnostics::Fix, nil] when the fix is mechanical and safe
-      # @param related [Array<Array(Compiler::AST::Node, Symbol, String)>] other places
-      # @param span [Diagnostics::Span, nil] instead of the node's position
+      #
+      # - `kind`: the position kind: :name, :number, :type, ...
+      # - `message`: the headline, lower case, no full stop
+      # - `label`: under the span
+      # - `help`: the concrete fix in words
+      # - `fix`: when the fix is mechanical and safe
+      # - `related`: other places
+      # - `span`: instead of the node's position
+      #: (Compiler::AST::Node node, Symbol kind, String message, ?label: String?, ?help: String?, ?fix: Diagnostics::Fix?, ?related: Array[[Compiler::AST::Node, Symbol, String]], ?span: Diagnostics::Span?) -> untyped
       def report(node, kind, message, label: nil, help: nil, fix: nil, related: [], span: nil)
         span ||= @context.span(node, kind, label: label)
         span = span.with_label(label) if span && label && span.label.nil?
@@ -100,8 +106,10 @@ module Protostar
           notes: [note], fix: fix, rule: self.class.id)
       end
 
-      # @param numbers [Array<Integer>] sorted
-      # @return [String] "2, 4 to 6"
+      # - `numbers`: sorted
+      #
+      # Returns "2, 4 to 6".
+      #: (Array[Integer] numbers) -> String
       def numbers_text(numbers)
         numbers.slice_when { |a, b| b != a + 1 }.map { |run| (run.size == 1) ? run[0].to_s : "#{run[0]} to #{run[-1]}" }.join(", ")
       end
@@ -109,7 +117,7 @@ module Protostar
       # A rename of the identifier under a span, offered only when the old
       # name appears once in the file (no reference, option or comment would
       # be left behind) and the new one not at all
-      # @return [Diagnostics::Fix, nil]
+      #: (untyped span, untyped from, untyped to) -> Diagnostics::Fix?
       def rename(span, from, to)
         return nil unless span && @context.renamable?(from, to)
         Diagnostics::Fix.new("rename `#{from}` to `#{to}`",

@@ -1,35 +1,33 @@
 # frozen_string_literal: true
 
 module Protostar
-  # Extended by every enum Module that {Types.define} makes. Such a Module has
+  # Extended by every enum Module that Types.define makes. Such a Module has
   # one constant per value (aliases included) holding its number, and is frozen.
   #
-  #   Color::RED          # => 1
-  #   Color.lookup(1)     # => :RED
-  #   Color.resolve(:RED) # => 1
+  # ```ruby
+  # Color::RED          # => 1
+  # Color.lookup(1)     # => :RED
+  # Color.resolve(:RED) # => 1
+  # ```
   module Enum
-    # @return [Schema::Enum]
-    attr_reader :descriptor
+    attr_reader :descriptor #: Schema::Enum
 
-    # @param number [Integer]
-    # @return [Symbol, nil] the first name declared for the number
+    # Returns the first name declared for the number.
+    #: (Integer number) -> Symbol?
     def lookup(number)
       @__names[number]
     end
 
-    # @param name [Symbol, String]
-    # @return [Integer, nil]
+    #: (Symbol | String name) -> Integer?
     def resolve(name)
       @__numbers[name.is_a?(String) ? name.to_sym : name]
     end
 
-    # @api private
-    def __names
+    def __names # :nodoc:
       @__names
     end
 
-    # @api private
-    def __numbers
+    def __numbers # :nodoc:
       @__numbers
     end
 
@@ -38,10 +36,10 @@ module Protostar
     end
 
     # Builds the enum Module for a descriptor
-    # @param descriptor [Schema::Enum]
-    # @return [Module] frozen
-    # @api private
-    def self.build(descriptor)
+    #
+    # Returns a frozen value.
+    #: (Schema::Enum descriptor) -> Module
+    def self.build(descriptor) # :nodoc:
       mod = Module.new
       mod.extend(self)
       names = {}
@@ -59,10 +57,10 @@ module Protostar
       mod
     end
 
-    # @return [String, nil] the value name as a Ruby constant name: first
-    #   letter upper-cased, nil when that is still not a constant name
-    # @api private
-    def self.constant_name(name)
+    # Returns the value name as a Ruby constant name: first
+    # letter upper-cased, nil when that is still not a constant name.
+    #: (untyped name) -> String?
+    def self.constant_name(name) # :nodoc:
       const = name.sub(/\A[a-z]/, &:upcase)
       const if /\A[A-Z]\w*\z/.match?(const)
     end

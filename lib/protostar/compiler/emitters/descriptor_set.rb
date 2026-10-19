@@ -6,20 +6,23 @@ module Protostar
       # Writes a serialized `google.protobuf.FileDescriptorSet`, as protoc's
       # `--descriptor_set_out` does
       class DescriptorSet
-        # @param include_imports [Boolean] also write every file the given ones import,
+        # - `include_imports`: also write every file the given ones import,
         #   dependencies first (`import option` files included, as protoc does)
-        # @param include_source_info [Boolean] keep `source_code_info`
-        # @param pool [Schema::Pool, nil] where `import option` files and their extensions are found
+        # - `include_source_info`: keep `source_code_info`
+        # - `pool`: where `import option` files and their extensions are found
+        #: (?include_imports: bool, ?include_source_info: bool, ?pool: Schema::Pool?) -> void
         def initialize(include_imports: false, include_source_info: false, pool: nil)
           @include_imports = include_imports
           @include_source_info = include_source_info
           @pool = pool
         end
 
-        # @param files [Array<Schema::File>] the files named on the command line
-        # @param available [Array<Schema::File>] files `import option` names are looked up in
-        #   before the pool, such as everything {Compiler#compile} returned
-        # @return [String] binary
+        # - `files`: the files named on the command line
+        # - `available`: files `import option` names are looked up in
+        #   before the pool, such as everything Compiler#compile returned
+        #
+        # Returns a binary String.
+        #: (Array[Schema::File] files, ?available: Array[Schema::File]) -> String
         def emit(files, available: [])
           out = "".b
           w = Wire::Writer.new(out)

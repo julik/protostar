@@ -10,43 +10,42 @@ module Protostar
       end
 
       module ClassMethods
-        # @param hash [Hash{String => Object}]
-        # @return [Message] a new Struct
-        # @raise [UnexpectedStructType]
+        # Returns a new Struct.
+        # Raises UnexpectedStructType.
+        #: (Hash[String, untyped] hash) -> Google::Protobuf::Struct
         def from_hash(hash)
           struct = new
           hash.each { |key, value| struct[key] = value }
           struct
         end
 
-        # @api private
-        def __value_class
+        def __value_class # :nodoc:
           __by_name.fetch("fields").value.message_class
         end
       end
 
-      # @param key [String]
-      # @return [Object, nil] the value as Ruby, Structs and ListValues
-      #   left as they are; nil for a missing key
+      # Returns the value as Ruby, Structs and ListValues
+      # left as they are; nil for a missing key.
+      #: (String key) -> untyped
       def [](key)
         fields[key]&.to_ruby
       end
 
-      # @param key [String]
-      # @param value [Object]
-      # @raise [UnexpectedStructType] for a key that is not a String or a value Struct cannot hold
+      # Raises UnexpectedStructType for a key that is not a String or a value Struct cannot hold.
+      #: (String key, untyped value) -> untyped
       def []=(key, value)
         raise UnexpectedStructType, "Struct keys must be strings." unless key.is_a?(String)
         (fields[key] ||= self.class.__value_class.new).from_ruby(value)
       end
 
-      # @return [Hash{String => Object}] with nested Structs and ListValues
-      #   converted too
+      # Returns a Hash with nested Structs and ListValues
+      # converted too.
+      #: () -> Hash[String, untyped]
       def to_h
         fields.transform_values { |v| v.to_ruby(true) }
       end
 
-      # @param key [String]
+      #: (String key) -> bool
       def has_key?(key)
         fields.key?(key)
       end

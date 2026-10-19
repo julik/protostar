@@ -6,23 +6,27 @@ module Protostar
     module Naming
       module_function
 
-      # @return [Array<String>] the words of a name in any case: "HTTPServer_v2" is HTTP, Server, v2
+      # Returns the words of a name in any case: "HTTPServer_v2" is HTTP, Server, v2.
+      #: (untyped name) -> Array[String]
       def words(name)
         name.split(/_+/).flat_map { |part| part.scan(/[A-Z]+(?![a-z])|[A-Z]?[a-z]+|[0-9]+[a-z]*|[A-Z]+/) }
           .reject(&:empty?)
       end
 
-      # @return [String] "fooBar" as "foo_bar"
+      # Returns "fooBar" as "foo_bar".
+      #: (untyped name) -> String
       def lower_snake(name)
         joined(name).downcase
       end
 
-      # @return [String] "fooBar" as "FOO_BAR"
+      # Returns "fooBar" as "FOO_BAR".
+      #: (untyped name) -> String
       def upper_snake(name)
         joined(name).upcase
       end
 
-      # @return [String] "foo_bar" as "FooBar"
+      # Returns "foo_bar" as "FooBar".
+      #: (untyped name) -> String
       def pascal(name)
         words(name).map { |w| w[0].upcase + w[1..] }.join
       end

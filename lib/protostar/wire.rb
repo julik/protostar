@@ -2,7 +2,7 @@
 
 module Protostar
   # The protobuf binary wire format: wire types, tags, varints, zigzag, and a
-  # {Reader} and {Writer} over byte strings that the codec and later layers
+  # Reader and Writer over byte strings that the codec and later layers
   # (JSON, streaming builders) share.
   module Wire
     VARINT = 0
@@ -24,25 +24,30 @@ module Protostar
 
     BINARY = Encoding::BINARY
 
-    # @param number [Integer] field number
-    # @param wire_type [Integer]
-    # @return [Integer] the tag value as written on the wire, before varint encoding
+    # - `number`: field number
+    #
+    # Returns the tag value as written on the wire, before varint encoding.
+    #: (Integer number, Integer wire_type) -> Integer
     def self.tag(number, wire_type)
       (number << 3) | wire_type
     end
 
-    # @return [String] a frozen binary String holding the varint-encoded tag
+    # Returns a frozen binary String holding the varint-encoded tag.
+    #: (untyped number, untyped wire_type) -> String
     def self.tag_bytes(number, wire_type)
       varint(tag(number, wire_type))
     end
 
-    # @param value [Integer] negative values are written as their 64-bit two's complement
-    # @return [String] a frozen binary String
+    # - `value`: negative values are written as their 64-bit two's complement
+    #
+    # Returns a frozen binary String.
+    #: (Integer value) -> String
     def self.varint(value)
       Writer.new.write_varint(value).string.freeze
     end
 
-    # @return [Integer] how many bytes {varint} would take; 10 for any negative value
+    # Returns how many bytes `varint` would take; 10 for any negative value.
+    #: (untyped value) -> Integer
     def self.varint_size(value)
       if value < 0 then 10
       elsif value < 0x80 then 1
@@ -58,14 +63,18 @@ module Protostar
       end
     end
 
-    # @param value [Integer] a signed 64-bit (or 32-bit) integer
-    # @return [Integer] the unsigned zigzag form
+    # - `value`: a signed 64-bit (or 32-bit) integer
+    #
+    # Returns the unsigned zigzag form.
+    #: (Integer value) -> Integer
     def self.zigzag(value)
       (value << 1) ^ (value >> 63)
     end
 
-    # @param value [Integer] an unsigned zigzag-encoded integer
-    # @return [Integer] the signed integer it encodes
+    # - `value`: an unsigned zigzag-encoded integer
+    #
+    # Returns the signed integer it encodes.
+    #: (Integer value) -> Integer
     def self.unzigzag(value)
       (value >> 1) ^ -(value & 1)
     end
@@ -73,16 +82,20 @@ module Protostar
     # The four little-endian bytes of a NaN as a float, the way C converts a
     # double NaN to float: sign and the top 23 bits of the payload kept, quiet
     # bit set. `pack("e")` instead writes the same NaN whatever the value.
-    # @param nan [Float] a NaN
-    # @return [String] binary
+    #
+    # - `nan`: a NaN
+    #
+    # Returns a binary String.
+    #: (Float nan) -> String
     def self.float_nan(nan)
       bits = [nan].pack("E").unpack1("Q<")
       [((bits >> 32) & 0x8000_0000) | 0x7FC0_0000 | ((bits >> 29) & 0x7F_FFFF)].pack("V")
     end
 
-    # A run of floats as packed bytes, NaNs written by {float_nan}
-    # @param list [Array<Float, Integer>]
-    # @return [String] binary
+    # A run of floats as packed bytes, NaNs written by `float_nan`
+    #
+    # Returns a binary String.
+    #: ((Array[(Float | Integer)]) list) -> String
     def self.pack_floats(list)
       bytes = list.pack("e*")
       list.each_with_index { |v, i| bytes[4 * i, 4] = float_nan(v) if v.is_a?(Float) && v.nan? }

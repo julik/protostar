@@ -2,7 +2,7 @@
 
 module Protostar
   module Lint
-    # Applies the {Diagnostics::Fix}es lint findings carry, file by file. An
+    # Applies the Diagnostics::Fixes lint findings carry, file by file. An
     # edit that overlaps one already taken is left out (the finding stays
     # unfixed), so the result never depends on two fixes agreeing.
     class Fixer
@@ -10,16 +10,14 @@ module Protostar
 
       # The fixes for one file
       class Change
-        # @return [String] the file name as imported
-        attr_reader :name
-        # @return [String, nil] where it is on disk
-        attr_reader :path
-        # @return [String]
-        attr_reader :before
-        # @return [String]
-        attr_reader :after
-        # @return [Array<Compiler::Diagnostic>] the findings fixed
-        attr_reader :fixed
+        # The file name as imported.
+        attr_reader :name #: String
+        # Where it is on disk.
+        attr_reader :path #: String?
+        attr_reader :before #: String
+        attr_reader :after #: String
+        # The findings fixed.
+        attr_reader :fixed #: Array[Compiler::Diagnostic]
 
         def initialize(name, path, before, after, fixed)
           @name = name
@@ -31,10 +29,11 @@ module Protostar
         end
       end
 
-      # @param diagnostics [Array<Compiler::Diagnostic>]
-      # @param text [#call] the text of a file, by name
-      # @param path [#call] where a file is on disk, by name, or nil
-      # @return [Array<Change>] one per file with a fix
+      # - `text`: the text of a file, by name
+      # - `path`: where a file is on disk, by name, or nil
+      #
+      # Returns one per file with a fix.
+      #: (Array[Compiler::Diagnostic] diagnostics, text: ^(String) -> String?, path: ^(String) -> String?) -> Array[Change]
       def self.plan(diagnostics, text:, path:)
         diagnostics.select(&:fix).group_by(&:file).filter_map do |name, found|
           before = text.call(name)
@@ -61,8 +60,8 @@ module Protostar
       end
       private_class_method :overlap?
 
-      # @param change [Change]
-      # @return [String] a unified diff, as `diff -u` prints it
+      # Returns a unified diff, as `diff -u` prints it.
+      #: (Change change) -> String
       def self.diff(change)
         old_lines = change.before.split(/(?<=\n)/)
         new_lines = change.after.split(/(?<=\n)/)

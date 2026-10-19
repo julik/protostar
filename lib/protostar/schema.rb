@@ -2,8 +2,8 @@
 
 module Protostar
   # The descriptor model: an immutable, Ractor-shareable graph of files,
-  # messages, fields, enums and services. {File.draft} builds one;
-  # {File#to_proto} and {File.from_proto} translate to and from protoc's
+  # messages, fields, enums and services. File.draft builds one;
+  # File#to_proto and File.from_proto translate to and from protoc's
   # `FileDescriptorProto`.
   module Schema
     autoload :DefaultValue, ::File.expand_path("schema/default_value", __dir__)
@@ -18,8 +18,7 @@ module Protostar
 
     # The JSON name protoc derives from a field name: underscores dropped,
     # the letter after each one upper-cased
-    # @param name [String]
-    # @return [String]
+    #: (String name) -> String
     def self.json_name(name)
       out = +""
       upper = false
@@ -38,10 +37,10 @@ module Protostar
 
     # Raised when a type name, extendee or method type cannot be resolved
     class ResolveError < Error
-      # @return [String, nil] the name as written
-      attr_reader :name
-      # @return [String, nil] the scope the lookup started from
-      attr_reader :scope
+      # The name as written.
+      attr_reader :name #: String?
+      # The scope the lookup started from.
+      attr_reader :scope #: String?
 
       def initialize(message, name: nil, scope: nil)
         @name = name

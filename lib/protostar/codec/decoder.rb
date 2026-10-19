@@ -3,8 +3,7 @@
 module Protostar
   module Codec
     # Decodes the binary wire format into message objects, eagerly.
-    # @api private
-    module Decoder
+    module Decoder # :nodoc: all
       RECURSION_LIMIT = 100
 
       F = Message::FieldInfo
@@ -15,7 +14,7 @@ module Protostar
 
       module_function
 
-      # @return [Message]
+      #: (untyped klass, untyped bytes, ?recursion_limit: untyped, ?frozen: untyped) -> Message
       def decode(klass, bytes, recursion_limit: RECURSION_LIMIT, frozen: false)
         r = Wire::Reader.new(bytes)
         msg = klass.__empty
@@ -24,7 +23,7 @@ module Protostar
         msg
       end
 
-      # @return [Message, nil]
+      #: (untyped klass, untyped source, **untyped options) -> Message?
       def decode_delimited(klass, source, **options)
         if source.is_a?(String) || (defined?(IO::Buffer) && source.is_a?(IO::Buffer))
           r = Wire::Reader.new(source)
@@ -59,9 +58,11 @@ module Protostar
       end
 
       # Decodes one field whose tag was just read from offset `at`. The
-      # decoders generated for each class ({DecodeGenerator}) handle a class's
+      # decoders generated for each class (DecodeGenerator) handle a class's
       # own fields inline and come here for everything else.
-      # @return [Boolean] true when the tag ends the group being read
+      #
+      # Returns true when the tag ends the group being read.
+      #: (untyped msg, untyped r, untyped tag, untyped at, untyped depth, untyped end_group, untyped frozen) -> bool
       def field(msg, r, tag, at, depth, end_group, frozen)
         number = tag >> 3
         wt = tag & 7

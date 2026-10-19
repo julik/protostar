@@ -2,15 +2,17 @@
 
 module Protostar
   # `protostar lint`: compiles `.proto` files, reports the compiler's errors
-  # with {Diagnostics::Renderer}, and checks the files that compiled against
+  # with Diagnostics::Renderer, and checks the files that compiled against
   # best-practice rules, the kind `buf lint` checks, under the same names.
   #
-  #   runner = Protostar::Lint::Runner.new(include_paths: ["proto"], rules: Protostar::Lint.select(["default"]))
-  #   result = runner.run(["acme/person.proto"])
-  #   result.diagnostics.each { |d| puts d }
+  # ```ruby
+  # runner = Protostar::Lint::Runner.new(include_paths: ["proto"], rules: Protostar::Lint.select(["default"]))
+  # result = runner.run(["acme/person.proto"])
+  # result.diagnostics.each { |d| puts d }
+  # ```
   #
-  # Each rule is one class under {Lint::Rules}, in a file named after its id,
-  # and one line in {RULES}.
+  # Each rule is one class under Lint::Rules, in a file named after its id,
+  # and one line in RULES.
   module Lint
     autoload :Rule, ::File.expand_path("lint/rule", __dir__)
     autoload :Context, ::File.expand_path("lint/context", __dir__)
@@ -76,19 +78,24 @@ module Protostar
       end
     end
 
-    # @return [Array<Symbol>] the category names a rule list can use
+    # Returns the category names a rule list can use.
+    #: () -> Array[Symbol]
     def self.categories
       RULES.values.map(&:last).uniq
     end
 
-    # @param id [String] a rule id
-    # @return [Class] its {Rule} subclass
+    # - `id`: a rule id
+    #
+    # Returns its Rule subclass.
+    #: (String id) -> singleton(Rule)
     def self.rule_class(id)
       Rules.const_get(id.split("_").map(&:capitalize).join, false)
     end
 
-    # @param id_or_code [String] "FIELD_NOT_REQUIRED" or "W0101"
-    # @return [String, nil] the rule id
+    # - `id_or_code`: "FIELD_NOT_REQUIRED" or "W0101"
+    #
+    # Returns the rule id.
+    #: (String id_or_code) -> String?
     def self.rule_id(id_or_code)
       key = id_or_code.upcase
       return key if RULES.key?(key)
@@ -96,11 +103,14 @@ module Protostar
     end
 
     # The rules a list of set names, category names and rule ids selects, in
-    # {RULES} order
-    # @param names [Array<String>] e.g. ["default", "documentation", "PACKAGE_VERSION_SUFFIX"]
-    # @param except [Array<String>] rule ids or codes to leave out
-    # @return [Array<String>] rule ids
-    # @raise [Error] for a name that is none of these
+    # RULES order
+    #
+    # - `names`: e.g. ["default", "documentation", "PACKAGE_VERSION_SUFFIX"]
+    # - `except`: rule ids or codes to leave out
+    #
+    # Returns rule ids.
+    # Raises Error for a name that is none of these.
+    #: (Array[String] names, ?except: Array[String]) -> Array[String]
     def self.select(names, except: [])
       chosen = names.flat_map do |name|
         key = name.to_s.strip

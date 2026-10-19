@@ -2,23 +2,22 @@
 
 require_relative "protostar/version"
 
-# Protocol buffers in pure Ruby: a `.proto` compiler ({Compiler}), message
+# Protocol buffers in pure Ruby: a `.proto` compiler (Compiler), message
 # classes with a binary codec, views, JSON and the text format, and the
-# {DSL} that generated `_pb.rb` files are written in. README.md has the tour.
+# DSL that generated `_pb.rb` files are written in. README.md has the tour.
 #
 # `require "protostar"` loads the schema, the wire format and the binary
 # codec. The rest is autoloaded on first use: in a program that uses
 # Ractors, touch what a Ractor will need in the main Ractor first, since
 # Ruby 3.2 and 3.3 cannot load files from any other.
 module Protostar
-  # The base of protostar's errors, except {Protostar::TypeError}, which is a
+  # The base of protostar's errors, except Protostar::TypeError, which is a
   # Ruby `TypeError` so that `rescue TypeError` catches it
   class Error < StandardError; end
 
   # Warns in Ruby's `:deprecated` category (shown under `ruby -w` or
   # `-W:deprecated`), naming the first caller outside protostar
-  # @api private
-  def self.deprecated(old, replacement)
+  def self.deprecated(old, replacement) # :nodoc:
     lib = __dir__ + "/"
     site = caller_locations.find { |l| !l.path.start_with?(lib) }
     where = site ? "#{site.path}:#{site.lineno}: " : ""

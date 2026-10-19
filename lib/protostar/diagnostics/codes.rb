@@ -5,23 +5,23 @@ module Protostar
     # Every message the compiler can report, with a stable code: `P` for the
     # lexer and parser, `L` for the linker and option interpreter, `V` for the
     # validator (the checks protoc runs once a file is built). Lint rules have
-    # `W` codes of their own, in {Lint::RULES}.
+    # `W` codes of their own, in Lint::RULES.
     #
     # A message is matched against templates, protoc's wording with `%{name}`
     # where it varies; the captures fill the entry's short title, the label
     # under the span and the `help:` line. `protostar lint --explain CODE`
-    # prints {Entry#explanation}.
+    # prints Entry#explanation.
     module Codes
       # One code
       class Entry
-        # @return [String] e.g. "L0301"
-        attr_reader :code
-        # @return [String] a few words, as `--explain` heads it
-        attr_reader :summary
-        # @return [Array<String>] protoc's messages, `%{name}` where they vary
-        attr_reader :templates
-        # @return [String] what the error means, an example and the fix
-        attr_reader :explanation
+        # E.g. "L0301".
+        attr_reader :code #: String
+        # A few words, as `--explain` heads it.
+        attr_reader :summary #: String
+        # Protoc's messages, `%{name}` where they vary.
+        attr_reader :templates #: Array[String]
+        # What the error means, an example and the fix.
+        attr_reader :explanation #: String
 
         def initialize(code, summary, templates, explanation, title: nil, label: nil, help: nil, note: nil)
           @code = code
@@ -36,7 +36,8 @@ module Protostar
           freeze
         end
 
-        # @return [Array(MatchData, Integer), nil] the best match and its literal length
+        # Returns the best match and its literal length.
+        #: (untyped message) -> [MatchData, Integer]?
         def match(message)
           best = nil
           @patterns.each do |pattern, weight|
@@ -46,22 +47,24 @@ module Protostar
           best
         end
 
-        # @return [String, nil] the short title for a match
+        # Returns the short title for a match.
+        #: (untyped captures) -> String?
         def title(captures)
           fill(@title, captures)
         end
 
-        # @return [String, nil] the label under the primary span
+        # Returns the label under the primary span.
+        #: (untyped captures) -> String?
         def label(captures)
           fill(@label, captures)
         end
 
-        # @return [String, nil]
+        #: (untyped captures) -> String?
         def help(captures)
           fill(@help, captures)
         end
 
-        # @return [String, nil]
+        #: (untyped captures) -> String?
         def note(captures)
           fill(@note, captures)
         end
@@ -78,12 +81,10 @@ module Protostar
         end
       end
 
-      # A {Codes.lookup} result
+      # A Codes.lookup result
       class Match
-        # @return [Entry]
-        attr_reader :entry
-        # @return [Hash{Symbol => String}]
-        attr_reader :captures
+        attr_reader :entry #: Entry
+        attr_reader :captures #: Hash[Symbol, String]
 
         def initialize(entry, captures)
           @entry = entry
@@ -91,13 +92,14 @@ module Protostar
           freeze
         end
 
-        # @return [String]
+        #: () -> String
         def code
           @entry.code
         end
       end
 
-      # @return [Regexp] the template with each `%{name}` as a lazy named group
+      # Returns the template with each `%{name}` as a lazy named group.
+      #: (String template) -> Regexp
       def self.pattern(template)
         source = template.split(/(%\{\w+\})/).map do |part|
           part.start_with?("%{") ? "(?<#{part[2..-2]}>.*?)" : Regexp.escape(part)
@@ -105,8 +107,10 @@ module Protostar
         Regexp.new("\\A#{source}\\z", Regexp::MULTILINE)
       end
 
-      # @param message [String] as the compiler reports it
-      # @return [Match, nil] the entry whose template matches the most literal text
+      # - `message`: as the compiler reports it
+      #
+      # Returns the entry whose template matches the most literal text.
+      #: (String message) -> Match?
       def self.lookup(message)
         best = nil
         ENTRIES.each do |entry|
@@ -118,15 +122,14 @@ module Protostar
         Match.new(best[0], captures)
       end
 
-      # @param code [String]
-      # @return [Entry, nil]
+      #: (String code) -> Entry?
       def self.[](code)
         BY_CODE[code.upcase]
       end
 
-      # @param diagnostic [Compiler::Diagnostic]
-      # @return [Compiler::Diagnostic] with the code, title, label, help and note the
-      #   catalogue has for its message
+      # Returns the diagnostic with the code, title, label, help and note the
+      # catalogue has for its message.
+      #: (Compiler::Diagnostic diagnostic) -> Compiler::Diagnostic
       def self.annotate(diagnostic)
         match = lookup(diagnostic.message)
         return diagnostic unless match

@@ -17,14 +17,13 @@ module Protostar
           "# and the library's behavior differ, the library behavior is authoritative.\n" \
           "# We welcome fixes to change the RBS file to match.\n"
 
-        # @param files [Array<Schema::File>]
-        # @return [Hash{String => String}] output path to signatures
+        # Returns a Hash of output path to signatures.
+        #: (Array[Schema::File] files) -> Hash[String, String]
         def emit(files)
           files.to_h { |f| [Naming.require_name(f.name) + ".rbs", file(f)] }
         end
 
-        # @param file [Schema::File]
-        # @return [String]
+        #: (Schema::File file) -> String
         def file(file)
           Naming.check_ruby_package(file)
           @source = file.source_info

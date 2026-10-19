@@ -6,8 +6,7 @@ module Protostar
     # number order, two-space indents, map entries sorted by key, strings
     # escaped with CEscape, floats in their shortest round-trip form, then
     # extensions and unknown fields.
-    # @api private
-    class Printer
+    class Printer # :nodoc: all
       F = Message::FieldInfo
 
       # CEscape: named escapes, octal for every other byte outside printable ASCII
@@ -28,8 +27,9 @@ module Protostar
       ANY = "google.protobuf.Any"
       FLOAT_MIN_NORMAL = 1.1754943508222875e-38
 
-      # @return [Boolean] whether protoc prints the field by its message type's
-      #   name: a group whose field name is the type name in lower case
+      # Returns whether protoc prints the field by its message type's
+      # name: a group whose field name is the type name in lower case.
+      #: (untyped info) -> bool
       def self.group_like?(info)
         return false unless info.kind == F::GROUP
         type = info.descriptor.message_type
@@ -46,8 +46,7 @@ module Protostar
         @extensions = Extensions.new(registry, pool)
       end
 
-      # @param message [Message]
-      # @return [String]
+      #: (Message message) -> String
       def print(message)
         out = +""
         fields(message, out, 0)
@@ -258,15 +257,15 @@ module Protostar
 
       # Reads bytes as a sequence of fields with no schema, the way protoc's
       # UnknownFieldSet does, to see whether a length-delimited field holds a message
-      # @api private
-      module UnknownSet
+      module UnknownSet # :nodoc: all
         MAX_DEPTH = 100
 
         module_function
 
-        # @return [Array<Array(Integer, Integer, Object)>, nil] number, wire type and
-        #   value (Integer, payload String, or the fields of a group); nil when the
-        #   bytes are not a well-formed sequence of fields
+        # Returns number, wire type and
+        # value (Integer, payload String, or the fields of a group); nil when the
+        # bytes are not a well-formed sequence of fields.
+        #: (untyped bytes) -> Array[[Integer, Integer, untyped]]?
         def parse(bytes)
           r = Wire::Reader.new(bytes)
           list = read(r, nil, MAX_DEPTH)

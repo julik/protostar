@@ -3,10 +3,10 @@
 module Protostar
   class Compiler
     module Emitters
-      # Writes protostar's own `_pb.rb` files: a {Protostar::DSL} block
+      # Writes protostar's own `_pb.rb` files: a Protostar::DSL block
       # describing the file, then constants named as protoc's Ruby generator
       # names them. The files are `typed: ignore` for Sorbet, which gets the
-      # classes from {ProtostarRbi}'s `_pb.rbi`.
+      # classes from ProtostarRbi's `_pb.rbi`.
       class Ruby
         # source_code_info path components (descriptor.proto field numbers)
         FILE_MESSAGE = 4
@@ -21,23 +21,24 @@ module Protostar
         ENUM_VALUE = 2
         SERVICE_METHOD = 2
 
-        # @param namespaces [Hash{String => String}] Ruby module paths ("A::B") by file name, overriding
+        # - `namespaces`: Ruby module paths ("A::B") by file name, overriding
         #   the package-derived modules; the bootstrap puts google.protobuf under Protostar::Google::Protobuf
-        # @param bootstrap_requires [Boolean] require imports of {BOOTSTRAP} files as
+        # - `bootstrap_requires`: require imports of BOOTSTRAP files as
         #   "protostar/google/protobuf/..._pb" rather than by their own names
+        #: (?namespaces: Hash[String, String], ?bootstrap_requires: bool) -> void
         def initialize(namespaces: {}, bootstrap_requires: true)
           @namespaces = namespaces
           @bootstrap_requires = bootstrap_requires
         end
 
-        # @param files [Array<Schema::File>]
-        # @return [Hash{String => String}] output path to source
+        # Returns a Hash of output path to source.
+        #: (Array[Schema::File] files) -> Hash[String, String]
         def emit(files)
           files.to_h { |f| [Naming.require_name(f.name) + ".rb", file(f)] }
         end
 
-        # @param file [Schema::File]
-        # @return [String] the generated source
+        # Returns the generated source.
+        #: (Schema::File file) -> String
         def file(file)
           Naming.check_ruby_package(file)
           @file = file
@@ -56,9 +57,8 @@ module Protostar
           @file = @source = @reachable = nil
         end
 
-        # Only the {Protostar::DSL.file} statement, without requires and constants
-        # @param file [Schema::File]
-        # @return [String]
+        # Only the Protostar::DSL.file statement, without requires and constants
+        #: (Schema::File file) -> String
         def definition(file)
           @file = file
           @source = file.source_info
@@ -69,8 +69,10 @@ module Protostar
           @file = @source = @reachable = nil
         end
 
-        # @param name [String] an imported file name
-        # @return [String] what a generated file requires for it
+        # - `name`: an imported file name
+        #
+        # Returns what a generated file requires for it.
+        #: (String name) -> String
         def require_path(name)
           if @bootstrap_requires && BOOTSTRAP.include?(name)
             "protostar/#{Naming.require_name(name)}"
@@ -369,7 +371,7 @@ module Protostar
 
         # Options as keywords, custom ones under `extensions:`; verbatim
         # under `options:` when that cannot be said with keywords. Each is a
-        # `[prefix, value]` pair, rendered by {#call}.
+        # `[prefix, value]` pair, rendered by #call.
         def option_args(options)
           return [] unless options.declared?
           h = dsl_hash(options)

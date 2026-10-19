@@ -13,12 +13,11 @@ module Protostar
     class Runner
       # What a run found
       class Result
-        # @return [Array<Compiler::Diagnostic>]
-        attr_reader :diagnostics
-        # @return [Array<Context>] the files that compiled
-        attr_reader :contexts
-        # @return [Array<String>] every file asked about
-        attr_reader :names
+        attr_reader :diagnostics #: Array[Compiler::Diagnostic]
+        # The files that compiled.
+        attr_reader :contexts #: Array[Context]
+        # Every file asked about.
+        attr_reader :names #: Array[String]
 
         def initialize(diagnostics, contexts, names)
           @diagnostics = diagnostics.freeze
@@ -27,23 +26,25 @@ module Protostar
           freeze
         end
 
+        #: () -> bool
         def errors?
           @diagnostics.any?(&:error?)
         end
 
+        #: () -> bool
         def warnings?
           @diagnostics.any?(&:warning?)
         end
       end
 
-      # @return [Compiler]
-      attr_reader :compiler
+      attr_reader :compiler #: Compiler
 
-      # @param include_paths [Array<String>] where file names and imports are resolved
-      # @param rules [Array<String>] rule ids to run, from {Lint.select}
-      # @param except [Array<String>] rule ids switched off by name; the compiler
+      # - `include_paths`: where file names and imports are resolved
+      # - `rules`: rule ids to run, from Lint.select
+      # - `except`: rule ids switched off by name; the compiler
       #   warnings they would report are not passed through either
-      # @param directives [Boolean] honour `// protostar-lint:` comments
+      # - `directives`: honour `// protostar-lint:` comments
+      #: (include_paths: Array[String], rules: Array[String], ?except: Array[String], ?directives: bool) -> void
       def initialize(include_paths:, rules:, except: [], directives: true)
         @compiler = Compiler.new(include_paths: include_paths)
         @rules = rules.map { |id| Lint.rule_class(id) }
@@ -52,9 +53,9 @@ module Protostar
         @texts = {}
       end
 
-      # @param names [Array<String>] file names relative to an include path
-      # @param sources [Hash{String => String}] file contents by name, before the include paths
-      # @return [Result]
+      # - `names`: file names relative to an include path
+      # - `sources`: file contents by name, before the include paths
+      #: (Array[String] names, ?sources: Hash[String, String]) -> Result
       def run(names, sources: {})
         @sources = sources
         reported = []
@@ -91,8 +92,8 @@ module Protostar
         Result.new(diagnostics, contexts, names)
       end
 
-      # @param name [String]
-      # @return [String, nil] the file's text, from the sources given or from disk
+      # Returns the file's text, from the sources given or from disk.
+      #: (String name) -> String?
       def text(name)
         return @texts[name] if @texts.key?(name)
         @texts[name] = if @sources&.key?(name)

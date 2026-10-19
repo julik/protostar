@@ -4,7 +4,7 @@ module Protostar
   module Schema
     # A message-typed value in options: an options message itself, or a
     # message inside one (a `FeatureSet`, a custom option of a message type).
-    # Fields are kept by name, extensions by their {Field}, and fields nobody
+    # Fields are kept by name, extensions by their Field, and fields nobody
     # could interpret as their wire bytes.
     #
     # Values are Ruby values: Integers, Floats, Strings (binary for bytes),
@@ -12,14 +12,13 @@ module Protostar
     # does not name), repeated fields as frozen Arrays, messages as
     # MessageValues. Map fields are repeated entry messages.
     class MessageValue
-      # @return [Hash{Field => Object}] extension values by extension descriptor
-      attr_reader :extensions
-      # @return [String] binary, wire-format bytes of fields that could not be interpreted
-      attr_reader :unknown_fields
+      # Extension values by extension descriptor.
+      attr_reader :extensions #: Hash[Field, untyped]
+      # Binary, wire-format bytes of fields that could not be interpreted.
+      attr_reader :unknown_fields #: String
 
-      # @param fields [Hash{Symbol => Object}]
-      # @param extensions [Hash{Field => Object}]
-      # @param unknown_fields [String] binary
+      # - `unknown_fields`: binary
+      #: (?Hash[Symbol, untyped] fields, ?Hash[Field, untyped] extensions, ?String unknown_fields) -> void
       def initialize(fields = Freezer::EMPTY_HASH, extensions = Freezer::EMPTY_HASH, unknown_fields = EMPTY_BYTES)
         @fields = frozen(fields)
         @extensions = frozen(extensions)
@@ -30,23 +29,28 @@ module Protostar
         end
       end
 
-      # @param name [Symbol, String] a field of the message
-      # @return [Object, nil] its value, nil when not set
+      # - `name`: a field of the message
+      #
+      # Returns its value, nil when not set.
+      #: ((Symbol | String) name) -> untyped
       def [](name)
         @fields[name.to_sym]
       end
 
-      # @return [Boolean] whether the field is set
+      # Returns whether the field is set.
+      #: (untyped name) -> bool
       def key?(name)
         @fields.key?(name.to_sym)
       end
       alias_method :set?, :key?
 
-      # @return [Hash{Symbol => Object}] the fields that are set, by name, in the order they were given
-      attr_reader :fields
+      # The fields that are set, by name, in the order they were given.
+      attr_reader :fields #: Hash[Symbol, untyped]
 
-      # @param key [Field, String] an extension descriptor or its full name
-      # @return [Object, nil] the extension's value
+      # - `key`: an extension descriptor or its full name
+      #
+      # Returns the extension's value.
+      #: ((Field | String) key) -> untyped
       def extension(key)
         return @extensions[key] if key.is_a?(Field)
         name = key.to_s.delete_prefix(".")
@@ -57,10 +61,10 @@ module Protostar
       # The same value with every extension, here and in nested values, looked
       # up again by full name; one that is not found stays as it was. A copy
       # of a file in another pool keys its options by that pool's extensions.
-      # @api private
-      # @param extension [#call] full name to extension {Field}
-      # @return [MessageValue]
-      def rekey(extension)
+      #
+      # - `extension`: full name to extension Field
+      #: (untyped) -> MessageValue
+      def rekey(extension) # :nodoc:
         changed = false
         again = lambda do |v|
           case v
@@ -81,15 +85,15 @@ module Protostar
         changed ? self.class.new(fields, extensions, @unknown_fields) : self
       end
 
-      # @return [Boolean] nothing set, not even unknown fields
+      # Returns nothing set, not even unknown fields.
+      #: () -> bool
       def empty?
         @fields.empty? && @extensions.empty? && @unknown_fields.empty?
       end
 
       # Protobuf merge semantics: `other`'s fields win, nested messages merge,
       # repeated fields concatenate
-      # @param other [MessageValue, nil]
-      # @return [MessageValue]
+      #: (MessageValue? other) -> MessageValue
       def merge(other)
         return self if other.nil? || other.empty?
         return other if empty? && other.instance_of?(self.class)
@@ -99,8 +103,7 @@ module Protostar
         self.class.new(fields, extensions, unknown)
       end
 
-      # @api private
-      def self.merge_values(base, overlay)
+      def self.merge_values(base, overlay) # :nodoc:
         return base if overlay.empty?
         return overlay if base.empty?
         base.merge(overlay) do |_key, old, new|
@@ -126,7 +129,7 @@ module Protostar
 
       # A plain Hash for reading: fields by name, extensions under their full
       # name in parentheses, nested messages as Hashes
-      # @return [Hash]
+      #: () -> Hash[untyped, untyped]
       def to_h
         h = @fields.transform_values { |v| MessageValue.plain(v) }
         @extensions.each { |field, v| h[:"(#{field.full_name})"] = MessageValue.plain(v) }
@@ -134,8 +137,7 @@ module Protostar
         h
       end
 
-      # @api private
-      def self.plain(value)
+      def self.plain(value) # :nodoc:
         case value
         when MessageValue then value.to_h
         when Array then value.map { |v| plain(v) }
@@ -166,14 +168,16 @@ module Protostar
     # The declared options of a descriptor: a message of descriptor.proto's
     # `FileOptions`, `FieldOptions` and so on, one subclass each. Every field
     # of that message has a reader (booleans also a `?` form); custom options
-    # are {#extension} values; {#features} is what the descriptor resolves to.
+    # are #extension values; #features is what the descriptor resolves to.
     #
-    #   field.options.deprecated?               # => true
-    #   field.options.packed                    # => nil when not set
-    #   file.options.java_package               # => "com.acme"
-    #   message.options.extension("acme.limits") # => #<Protostar::Schema::MessageValue max: 10>
-    #   field.options[:features]                # => the FeatureSet as declared
-    #   field.options.features                  # => #<Protostar::Schema::Features ...> resolved
+    # ```ruby
+    # field.options.deprecated?               # => true
+    # field.options.packed                    # => nil when not set
+    # file.options.java_package               # => "com.acme"
+    # message.options.extension("acme.limits") # => #<Protostar::Schema::MessageValue max: 10>
+    # field.options[:features]                # => the FeatureSet as declared
+    # field.options.features                  # => #<Protostar::Schema::Features ...> resolved
+    # ```
     #
     # A reader answers what was declared: nil (or an empty Array) when the
     # option was not set, not descriptor.proto's default.
@@ -182,13 +186,13 @@ module Protostar
       FIELDS = Freezer::EMPTY_ARRAY
 
       class << self
-        # @return [String] full name of the options message, e.g. "google.protobuf.FieldOptions"
+        # Returns full name of the options message, e.g. "google.protobuf.FieldOptions".
+        #: () -> String
         def type_name
           self::TYPE_NAME
         end
 
-        # @api private
-        def define(type_name, *names, booleans: [], repeated: [])
+        def define(type_name, *names, booleans: [], repeated: []) # :nodoc:
           klass = Class.new(self)
           klass.const_set(:TYPE_NAME, -"google.protobuf.#{type_name}")
           names.each do |name|
@@ -208,13 +212,14 @@ module Protostar
 
         # Options built from what a draft was given: nil, an Options or
         # MessageValue, or a Hash of field values by name with custom options
-        # under `extensions:` (by full name or {Field}) and wire bytes under
+        # under `extensions:` (by full name or Field) and wire bytes under
         # `unknown_fields:`. Message values may be Hashes in the same spelling.
-        # @api private
-        # @param spec [Hash, MessageValue, nil]
-        # @param extension [#call] full name to extension {Field}
-        # @return [Options, nil] unresolved (no {#features})
-        def build(spec, extension, owner)
+        #
+        # - `extension`: full name to extension Field
+        #
+        # Returns options without resolved #features.
+        #: ((Hash[untyped, untyped] | MessageValue)? spec, untyped, untyped owner) -> Options?
+        def build(spec, extension, owner) # :nodoc:
           case spec
           when nil then nil
           when MessageValue
@@ -228,8 +233,9 @@ module Protostar
         end
       end
 
-      # @param features [Features, nil] resolved features of the descriptor
-      # @param declared [Boolean] whether the descriptor carries an options message, even an empty one
+      # - `features`: resolved features of the descriptor
+      # - `declared`: whether the descriptor carries an options message, even an empty one
+      #: (?untyped fields, ?untyped extensions, ?untyped unknown_fields, ?features: Features?, ?declared: bool) -> void
       def initialize(fields = Freezer::EMPTY_HASH, extensions = Freezer::EMPTY_HASH, unknown_fields = EMPTY_BYTES,
         features: nil, declared: false)
         super(fields, extensions, unknown_fields)
@@ -237,23 +243,24 @@ module Protostar
         @declared = declared
       end
 
-      # @return [Features, nil] the features the descriptor resolves to, nil before resolution
-      attr_reader :features
+      # The features the descriptor resolves to, nil before resolution.
+      attr_reader :features #: Features?
 
-      # @api private
-      # @return [Boolean] whether the descriptor carries an options message (protoc writes `options {}`
-      #   for one declared empty)
-      def declared?
+      # Returns whether the descriptor carries an options message (protoc writes `options {}`
+      # for one declared empty).
+      #: () -> bool
+      def declared? # :nodoc:
         @declared
       end
 
-      # @api private
-      # @return [Options] the same options, bound to resolved features
-      def with_features(features)
+      # Returns the same options, bound to resolved features.
+      #: (untyped features) -> Options
+      def with_features(features) # :nodoc:
         self.class.new(@fields, @extensions, @unknown_fields, features: features, declared: @declared)
       end
 
-      # @return [String] e.g. "google.protobuf.FieldOptions"
+      # Returns a name such as "google.protobuf.FieldOptions".
+      #: () -> String
       def type_name
         self.class.type_name
       end
@@ -268,7 +275,7 @@ module Protostar
       # These options as the descriptor.proto message they are (a
       # `Protostar::Google::Protobuf::FieldOptions`, say), custom options as
       # extension bytes the message keeps as unknown fields
-      # @return [Protostar::Message]
+      #: () -> Protostar::Message
       def to_proto
         klass = Proto.types.const_get(type_name.delete_prefix("google.protobuf."))
         klass.decode(encode(klass.descriptor))
@@ -297,12 +304,11 @@ module Protostar
 
     class MessageValue
       # A value from a Hash: fields by name, `extensions:` by full name or
-      # {Field}, `unknown_fields:` as bytes. A field named `extensions` or
+      # Field, `unknown_fields:` as bytes. A field named `extensions` or
       # `unknown_fields` takes a String key. `__extensions:` and
       # `__unknown_fields:` (as `[number, wire_type, bytes]` triples) are the
       # deprecated spellings.
-      # @api private
-      def self.from_hash(hash, extension, owner)
+      def self.from_hash(hash, extension, owner) # :nodoc:
         fields = {}
         extensions = {}
         unknown = EMPTY_BYTES
@@ -325,8 +331,7 @@ module Protostar
         new(fields.freeze, extensions.freeze, unknown)
       end
 
-      # @api private
-      def self.from_value(value, extension, owner)
+      def self.from_value(value, extension, owner) # :nodoc:
         case value
         when MessageValue then value
         when Hash then from_hash(value, extension, owner)
@@ -335,8 +340,7 @@ module Protostar
         end
       end
 
-      # @api private
-      def self.unknown_bytes(triples)
+      def self.unknown_bytes(triples) # :nodoc:
         out = "".b
         triples.each do |number, wire_type, bytes|
           w = Wire::Writer.new(out)
@@ -348,17 +352,18 @@ module Protostar
       end
 
       # This value in wire format
-      # @param type [Message] the message type it is a value of
-      # @return [String] binary
+      #
+      # - `type`: the message type it is a value of
+      #
+      # Returns a binary String.
+      #: (Message) -> String
       def encode(type)
         Proto::Codec.encode(type, self)
       end
 
-      # @param type [Message]
-      # @param bytes [String]
-      # @param extensions [#call, nil] (extendee full name, number) to an extension {Field};
-      #   fields it does not know stay in {#unknown_fields}
-      # @return [MessageValue]
+      # - `extensions`: (extendee full name, number) to an extension Field;
+      #   fields it does not know stay in #unknown_fields
+      #: (Message, String bytes, ?untyped extensions) -> MessageValue
       def self.decode(type, bytes, extensions = nil)
         Proto::Codec.decode(type, bytes, extensions)
       end

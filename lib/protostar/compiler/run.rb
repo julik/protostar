@@ -2,24 +2,20 @@
 
 module Protostar
   class Compiler
-    # One {Compiler#compile} call: loads the named files and their imports
+    # One Compiler#compile call: loads the named files and their imports
     # depth first, as protoc's importer does (a file is parsed, then its
     # imports are built, then the file itself), and collects diagnostics in
     # protoc's order.
-    #
-    # @api private
-    class Run
-      # @return [Array<Diagnostic>]
-      attr_reader :diagnostics
+    class Run # :nodoc: all
+      attr_reader :diagnostics #: Array[Diagnostic]
 
-      # @param compiler [Compiler]
-      # @param names [Array<String>] the files asked for
-      # @param source_info [Boolean]
-      # @param sources [Hash{String => String}] file contents to use instead of reading include paths
-      # @param protoc_cli [Boolean] behave like protoc's command line (see {Linker#initialize});
+      # - `names`: the files asked for
+      # - `sources`: file contents to use instead of reading include paths
+      # - `protoc_cli`: behave like protoc's command line (see Linker#initialize);
       #   false behaves like a bare DescriptorPool, which loads no imports itself
-      # @param all_direct [Boolean] check every file loaded as if it had been named, imports
+      # - `all_direct`: check every file loaded as if it had been named, imports
       #   included (unused imports, deprecated features), as `protostar lint` wants
+      #: (Compiler compiler, Array[String] names, bool source_info, ?sources: Hash[String, String], ?protoc_cli: bool, ?all_direct: bool) -> void
       def initialize(compiler, names, source_info, sources: {}, protoc_cli: true, all_direct: false)
         @compiler = compiler
         @pool = compiler.pool
@@ -41,12 +37,13 @@ module Protostar
         @failed || @diagnostics.any?(&:error?)
       end
 
-      # @return [Linker, nil] the linker of a file this run built
+      # Returns the linker of a file this run built.
+      #: (untyped name) -> Linker?
       def linker(name)
         @linkers[name]
       end
 
-      # @return [Array<Schema::File>]
+      #: () -> Array[Schema::File]
       def call
         direct = []
         @names.each do |name|
@@ -62,7 +59,9 @@ module Protostar
       end
 
       # Records a diagnostic with a 0-based position (nil for none)
-      # @param spans [Array<Diagnostics::Span>] where the renderer underlines, when known
+      #
+      # - `spans`: where the renderer underlines, when known
+      #: (untyped file, untyped position, untyped message, ?untyped severity, ?spans: Array[Diagnostics::Span]) -> untyped
       def report(file, position, message, severity = :error, spans: [])
         line, column = position
         line = nil if line && line < 0
@@ -115,7 +114,7 @@ module Protostar
         path && ::File.binread(path)
       end
 
-      # @return [Schema::File, nil]
+      #: (untyped name, ?direct: untyped) -> Schema::File?
       def load(name, direct: false)
         return @done[name] if @done.key?(name)
         if direct && !@protoc_cli && @pool.include?(name)

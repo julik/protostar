@@ -2,12 +2,14 @@
 
 module Protostar
   # A pure-Ruby protoc front end: turns `.proto` source into
-  # {Protostar::Schema::File}s whose `to_proto` is what protoc 36.2 puts in a
+  # Protostar::Schema::Files whose `to_proto` is what protoc 36.2 puts in a
   # `FileDescriptorProto`, and rejects what protoc rejects with protoc's
   # `file:line:col: message` diagnostics.
   #
-  #   compiler = Protostar::Compiler.new(include_paths: ["proto"])
-  #   files = compiler.compile(["foo/bar.proto"], source_info: true)
+  # ```ruby
+  # compiler = Protostar::Compiler.new(include_paths: ["proto"])
+  # files = compiler.compile(["foo/bar.proto"], source_info: true)
+  # ```
   class Compiler
     # Where the bundled `google/protobuf/*.proto` imports live
     INCLUDE_DIR = ::File.expand_path("compiler/include", __dir__)
@@ -26,34 +28,32 @@ module Protostar
     autoload :Emitters, ::File.expand_path("compiler/emitters", __dir__)
 
     # One error or warning, with protoc's 1-based line and column (nil when
-    # protoc reports none). {#to_s} and {#format} print it as protoc does; the
-    # rest is for {Diagnostics::Renderer}, which prints it as rustc would.
+    # protoc reports none). #to_s and #format print it as protoc does; the
+    # rest is for Diagnostics::Renderer, which prints it as rustc would.
     class Diagnostic
-      # @return [String] the file name as imported
-      attr_reader :file
-      # @return [Integer, nil]
-      attr_reader :line
-      # @return [Integer, nil]
-      attr_reader :column
-      # @return [String]
-      attr_reader :message
-      # @return [Symbol] :error or :warning
-      attr_reader :severity
-      # @return [String, nil] the file on disk, spelled as protoc prints it: the include
-      #   path as given (canonicalized) joined with {#file}; nil for in-memory and bundled files
-      attr_reader :path
-      # @return [Array<Diagnostics::Span>] the primary span first, then related ones; empty
-      #   when the compiler knows only {#line} and {#column}, or nothing
-      attr_reader :spans
-      # @return [Array<String>] `help:` lines, the concrete fix in words
-      attr_reader :help
-      # @return [Array<String>] `note:` lines
-      attr_reader :notes
-      # @return [Diagnostics::Fix, nil] a mechanical fix `protostar lint --fix` can apply
-      attr_reader :fix
-      # @return [String, nil] the lint rule that found it, e.g. "FIELD_NOT_REQUIRED"
-      attr_reader :rule
+      # The file name as imported.
+      attr_reader :file #: String
+      attr_reader :line #: Integer?
+      attr_reader :column #: Integer?
+      attr_reader :message #: String
+      # :error or :warning.
+      attr_reader :severity #: :error | :warning
+      # The file on disk, spelled as protoc prints it: the include
+      # path as given (canonicalized) joined with #file; nil for in-memory and bundled files.
+      attr_reader :path #: String?
+      # The primary span first, then related ones; empty
+      # when the compiler knows only #line and #column, or nothing.
+      attr_reader :spans #: Array[Diagnostics::Span]
+      # `help:` lines, the concrete fix in words.
+      attr_reader :help #: Array[String]
+      # `note:` lines.
+      attr_reader :notes #: Array[String]
+      # A mechanical fix `protostar lint --fix` can apply.
+      attr_reader :fix #: Diagnostics::Fix?
+      # The lint rule that found it, e.g. "FIELD_NOT_REQUIRED".
+      attr_reader :rule #: String?
 
+      #: (String file, Integer? line, Integer? column, String message, ?(:error | :warning) severity, ?path: String?, ?spans: Array[Diagnostics::Span], ?code: String?, ?title: String?, ?help: Array[String], ?notes: Array[String], ?fix: Diagnostics::Fix?, ?rule: String?) -> void
       def initialize(file, line, column, message, severity = :error, path: nil, spans: [], code: nil, title: nil,
         help: [], notes: [], fix: nil, rule: nil)
         @file = file
@@ -72,47 +72,56 @@ module Protostar
         freeze
       end
 
-      # @return [String, nil] the stable code `protostar lint --explain` knows, e.g. "L0201";
-      #   for the compiler's messages, looked up in {Diagnostics::Codes}
+      # Returns the stable code `protostar lint --explain` knows, e.g. "L0201";
+      # for the compiler's messages, looked up in Diagnostics::Codes.
+      #: () -> String?
       def code
         @code || Diagnostics::Codes.lookup(@message)&.code
       end
 
-      # @return [String] the headline the renderer prints: a short rewording where the
-      #   catalogue has one, else {#message}
+      # Returns the headline the renderer prints: a short rewording where the
+      # catalogue has one, else #message.
+      #: () -> String
       def title
         @title || @message
       end
 
-      # @return [Diagnostic] a copy with what {Diagnostics::Codes} knows about the message
-      #   filled in: code, title, span labels, help and notes
+      # Returns a copy with what Diagnostics::Codes knows about the message
+      # filled in: code, title, span labels, help and notes.
+      #: () -> Diagnostic
       def annotated
         @code ? self : Diagnostics::Codes.annotate(self)
       end
 
-      # @return [Diagnostic] a copy with the given attributes replaced
+      # Returns a copy with the given attributes replaced.
+      #: (**untyped changes) -> Diagnostic
       def with(**changes)
         attrs = {path: @path, spans: @spans, code: @code, title: @title, help: @help, notes: @notes, fix: @fix,
                  rule: @rule}.merge(changes)
         Diagnostic.new(@file, @line, @column, @message, @severity, **attrs)
       end
 
+      #: () -> bool
       def error?
         @severity == :error
       end
 
+      #: () -> bool
       def warning?
         @severity == :warning
       end
 
-      # @return [String] as protoc prints it, with the virtual file name
+      # Returns the diagnostic as protoc prints it, with the virtual file name.
+      #: () -> String
       def to_s
         location = @line ? "#{@file}:#{@line}:#{@column}" : @file
         warning? ? "#{location}: warning: #{@message}" : "#{location}: #{@message}"
       end
 
-      # @param error_format [Symbol] :gcc or :msvs, protoc's `--error_format`
-      # @return [String] as protoc's command line prints it: the path on disk when known
+      # - `error_format`: :gcc or :msvs, protoc's `--error_format`
+      #
+      # Returns the diagnostic as protoc's command line prints it: the path on disk when known.
+      #: (?:gcc | :msvs error_format) -> String
       def format(error_format = :gcc)
         name = @path || @file
         location = if @line.nil?
@@ -141,8 +150,8 @@ module Protostar
 
     # Raised when compilation fails
     class Error < Protostar::Error
-      # @return [Array<Diagnostic>] every error found, in protoc's order
-      attr_reader :diagnostics
+      # Every error found, in protoc's order.
+      attr_reader :diagnostics #: Array[Diagnostic]
 
       def initialize(diagnostics)
         @diagnostics = diagnostics.freeze
@@ -150,16 +159,17 @@ module Protostar
       end
     end
 
-    # @return [Schema::Pool] where compiled files go and imports are looked up
-    attr_reader :pool
-    # @return [Array<String>] directories searched for imports, in order, before the bundled includes
-    attr_reader :include_paths
-    # @return [Array<Diagnostic>] warnings (and errors) of the last {#compile}
-    attr_reader :diagnostics
+    # Where compiled files go and imports are looked up.
+    attr_reader :pool #: Schema::Pool
+    # Directories searched for imports, in order, before the bundled includes.
+    attr_reader :include_paths #: Array[String]
+    # Warnings (and errors) of the last #compile.
+    attr_reader :diagnostics #: Array[Diagnostic]
 
-    # @param include_paths [Array<String>] directories to resolve `.proto` names against, in order
-    # @param pool [Schema::Pool] receives every compiled file; files already in it are reused
-    # @param bundled_includes [Boolean] search the bundled `google/protobuf/*.proto` after `include_paths`
+    # - `include_paths`: directories to resolve `.proto` names against, in order
+    # - `pool`: receives every compiled file; files already in it are reused
+    # - `bundled_includes`: search the bundled `google/protobuf/*.proto` after `include_paths`
+    #: (?include_paths: Array[String], ?pool: Schema::Pool, ?bundled_includes: bool) -> void
     def initialize(include_paths: [], pool: Schema::Pool.new, bundled_includes: true)
       @given_paths = include_paths.map { |p| Compiler.canonical_path(p) }.freeze
       @include_paths = include_paths.map { |p| ::File.expand_path(p) }.freeze
@@ -176,15 +186,17 @@ module Protostar
     # `retention = RETENTION_SOURCE` removed (pass `retain_options: true`
     # for the pool's files as they are).
     #
-    # @param names [Array<String>] file names relative to an include path, e.g. "foo/bar.proto"
-    # @param source_info [Boolean] keep `source_code_info` in the built files
-    # @param retain_options [Boolean] return the pool's files, source-retention options included
-    # @param sources [Hash{String => String}] file contents by name, consulted before the include paths
-    # @param protoc_cli [Boolean] @api private: false checks like a bare DescriptorPool rather than
+    # - `names`: file names relative to an include path, e.g. "foo/bar.proto"
+    # - `source_info`: keep `source_code_info` in the built files
+    # - `retain_options`: return the pool's files, source-retention options included
+    # - `sources`: file contents by name, consulted before the include paths
+    # - `protoc_cli`: @api private: false checks like a bare DescriptorPool rather than
     #   protoc's command line (no imports loaded from disk, no unused import, naming style or other
     #   command-line checks), as protoc's own parser tests do
-    # @return [Array<Schema::File>] the named files and their transitive imports, imports first
-    # @raise [Error] with every diagnostic when a file cannot be compiled
+    #
+    # Returns the named files and their transitive imports, imports first.
+    # Raises Error with every diagnostic when a file cannot be compiled.
+    #: (Array[String] names, ?source_info: bool, ?retain_options: bool, ?sources: Hash[String, String], ?protoc_cli: bool) -> Array[Schema::File]
     def compile(names, source_info: false, retain_options: false, sources: {}, protoc_cli: true)
       run = Run.new(self, names, source_info, sources: sources, protoc_cli: protoc_cli)
       files = run.call
@@ -193,17 +205,20 @@ module Protostar
       retain_options ? files : files.map { |f| output_file(f) }
     end
 
-    # Same as {#compile}, each file as `to_proto.to_h`, for reading
-    # @deprecated Goes away in 0.2.0. Use {#compile} and read the {Schema::File}s, or
-    #   `compile(names).map { |f| f.to_proto.to_h }` for the same Hashes.
-    # @return [Array<Hash>]
+    # **Deprecated:** Goes away in 0.2.0. Use #compile and read the Schema::Files, or
+    # `compile(names).map { |f| f.to_proto.to_h }` for the same Hashes.
+    #
+    # Same as #compile, each file as `to_proto.to_h`, for reading
+    #: (untyped names, ?source_info: untyped, ?retain_options: untyped, ?sources: untyped) -> Array[Hash[untyped, untyped]]
     def compile_to_hashes(names, source_info: false, retain_options: false, sources: {})
       Protostar.deprecated("Compiler#compile_to_hashes", "compile(names).map { |f| f.to_proto.to_h }")
       compile(names, source_info: source_info, retain_options: retain_options, sources: sources).map(&:to_h)
     end
 
-    # @param name [String] a virtual file name
-    # @return [String, nil] the path it resolves to on disk
+    # - `name`: a virtual file name
+    #
+    # Returns the path it resolves to on disk.
+    #: (String name) -> String?
     def resolve(name)
       @include_paths.each do |dir|
         path = ::File.join(dir, name)
@@ -212,9 +227,11 @@ module Protostar
       nil
     end
 
-    # @param name [String] a virtual file name
-    # @return [String, nil] where it is on disk, spelled from the include path as it
-    #   was given, as protoc prints it in diagnostics; nil when not under one
+    # - `name`: a virtual file name
+    #
+    # Returns where it is on disk, spelled from the include path as it
+    # was given, as protoc prints it in diagnostics; nil when not under one.
+    #: (String name) -> String?
     def disk_path(name)
       @given_paths.each_with_index do |given, i|
         next unless ::File.file?(::File.join(@include_paths[i], name))
@@ -225,16 +242,14 @@ module Protostar
 
     # protoc's CanonicalizePath: "." components, empty components and a
     # trailing slash dropped
-    # @api private
-    def self.canonical_path(path)
+    def self.canonical_path(path) # :nodoc:
       parts = path.split("/").reject { |p| p.empty? || p == "." }
       path.start_with?("/") ? "/#{parts.join("/")}" : parts.join("/")
     end
 
     # The options message protoc compiles into itself, from the bundled
     # descriptor.proto, for files that do not import descriptor.proto
-    # @api private
-    def builtin_options_type(name)
+    def builtin_options_type(name) # :nodoc:
       @builtin ||= begin
         builtin = Compiler.new(include_paths: [], pool: Schema::Pool.new)
         builtin.compile(["google/protobuf/descriptor.proto"]).last
@@ -255,14 +270,12 @@ module Protostar
     private :output_file
 
     # protoc's SimpleDtoa: the shortest of %.15g and %.17g that reads back exactly
-    # @api private
-    def self.simple_dtoa(value)
+    def self.simple_dtoa(value) # :nodoc:
       Schema::DefaultValue.simple_dtoa(value)
     end
 
     # protoc's SimpleFtoa over the float nearest to `value`
-    # @api private
-    def self.simple_ftoa(value)
+    def self.simple_ftoa(value) # :nodoc:
       return "inf" if value == Float::INFINITY
       return "-inf" if value == -Float::INFINITY
       return "nan" if value.nan?
@@ -286,8 +299,7 @@ module Protostar
     C_ESCAPES = {10 => "\\n", 13 => "\\r", 9 => "\\t", 34 => "\\\"", 39 => "\\'", 92 => "\\\\"}.freeze
 
     # absl::CEscape: protoc's spelling of bytes defaults
-    # @api private
-    def self.c_escape(bytes)
+    def self.c_escape(bytes) # :nodoc:
       out = +""
       bytes.each_byte do |b|
         out << if (escaped = C_ESCAPES[b])

@@ -6,17 +6,15 @@ module Protostar
     # every message and packed run inside it, recorded in `sizes` (an
     # identity Hash that lives for one encode) so the writer knows each
     # length prefix before it writes the bytes it covers. The per-class
-    # `__size` methods ({EncodeGenerator}) do the work; this module has the
+    # `__size` methods (EncodeGenerator) do the work; this module has the
     # parts they share.
-    # @api private
-    module Sizer
+    module Sizer # :nodoc: all
       F = Message::FieldInfo
 
       module_function
 
-      # @param msg [Message]
-      # @param sizes [Hash] compare_by_identity
-      # @return [Integer]
+      # - `sizes`: compare_by_identity
+      #: (Message msg, Hash[untyped, untyped] sizes) -> Integer
       def message(msg, sizes)
         msg.__size(sizes)
       end
@@ -73,7 +71,7 @@ module Protostar
         k.tag.bytesize + value(k, key, sizes) + v.tag.bytesize + value(v, val, sizes)
       end
 
-      # @param list [Array<UnknownField>]
+      #: (Array[UnknownField] list) -> untyped
       def unknown(list)
         list.sum { |u| Wire.varint_size((u.number << 3) | u.wire_type) + u.bytes.bytesize }
       end
@@ -82,7 +80,7 @@ module Protostar
         invalid(info, value) unless Message::Coercion.storable?(info, value)
       end
 
-      # @raise [EncodeError]
+      # Raises EncodeError.
       def invalid(info, value)
         raise EncodeError, "#{info.descriptor.full_name} holds #{value.inspect[0, 64]}, which it cannot encode"
       end

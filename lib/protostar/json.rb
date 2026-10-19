@@ -3,35 +3,38 @@
 module Protostar
   # The proto3 JSON mapping, as google-protobuf's Ruby gem implements it.
   #
-  #   json = Protostar::JSON.encode(person)                # also person.to_json
-  #   Protostar::JSON.decode(Person, json) == person       # also Person.decode_json(json)
+  # ```ruby
+  # json = Protostar::JSON.encode(person)                # also person.to_json
+  # Protostar::JSON.decode(Person, json) == person       # also Person.decode_json(json)
+  # ```
   #
   # Well-known types take their special forms. The type inside an Any is
-  # looked up by its full name with {Types.find} in the given registry.
+  # looked up by its full name with Types.find in the given registry.
   module JSON
     class << self
-      # @param message [Message]
-      # @option options [Boolean] :preserve_proto_field_names field names as written in the
+      # - `preserve_proto_field_names:` field names as written in the
       #   .proto rather than their lowerCamel json_name; `preserve_proto_fieldnames`,
       #   google-protobuf's spelling, is accepted too
-      # @option options [Boolean] :emit_defaults also write fields without presence that
+      # - `emit_defaults:` also write fields without presence that
       #   hold their default, and empty repeated fields and maps; unset message
       #   fields and oneof members are still left out
-      # @option options [Boolean] :format_enums_as_integers enum numbers instead of names
-      # @option options [Types::Registry] :registry where the types inside Any are found
-      # @return [String] compact UTF-8 JSON
-      # @raise [EncodeError] for contents with no JSON form, like a Timestamp out of range
+      # - `format_enums_as_integers:` enum numbers instead of names
+      # - `registry:` where the types inside Any are found
+      #
+      # Returns compact UTF-8 JSON.
+      # Raises EncodeError for contents with no JSON form, like a Timestamp out of range.
+      #: (Message message, ?preserve_proto_field_names: bool, ?preserve_proto_fieldnames: bool, ?emit_defaults: bool, ?format_enums_as_integers: bool, ?registry: Types::Registry?) -> String
       def encode(message, **options)
         Encoder.new(**options).encode(message)
       end
 
-      # @param klass [Class] a message class
-      # @param json [String]
-      # @option options [Boolean] :ignore_unknown_fields skip names that are not fields
+      # - `klass`: a message class
+      # - `ignore_unknown_fields:` skip names that are not fields
       #   and enum names that are not values, instead of raising
-      # @option options [Types::Registry] :registry where the types inside Any are found
-      # @return [Message]
-      # @raise [ParseError] with the path of the offending field
+      # - `registry:` where the types inside Any are found
+      #
+      # Raises ParseError with the path of the offending field.
+      #: (singleton(Message) klass, String json, ?ignore_unknown_fields: bool, ?registry: Types::Registry?) -> Message
       def decode(klass, json, **options)
         Parser.new(**options).decode(klass, json)
       rescue Protostar::TypeError => e
@@ -41,11 +44,10 @@ module Protostar
       # Lays compact JSON out as the stdlib generator would with `state`
       # (indent, space, newlines, current depth). Tokens are copied as they
       # are, so numbers keep the spelling the encoder gave them.
-      # @param json [String] compact JSON, as {encode} writes it
-      # @param state [::JSON::State]
-      # @return [String]
-      # @api private
-      def layout(json, state)
+      #
+      # - `json`: compact JSON, as `encode` writes it
+      #: (String json, untyped state) -> String
+      def layout(json, state) # :nodoc:
         indent = state.indent
         object_nl = state.object_nl
         array_nl = state.array_nl

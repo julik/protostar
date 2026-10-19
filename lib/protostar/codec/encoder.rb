@@ -4,16 +4,16 @@ module Protostar
   module Codec
     # The second encoding pass writes fields in ascending number order, then
     # unknown fields verbatim, using the sizes the first pass recorded. The
-    # per-class `__write` methods ({EncodeGenerator}) do the work; this
+    # per-class `__write` methods (EncodeGenerator) do the work; this
     # module has the entry points and the parts they share.
-    # @api private
-    module Encoder
+    module Encoder # :nodoc: all
       F = Message::FieldInfo
       BINARY = Encoding::BINARY
 
       module_function
 
-      # @return [String] binary
+      # Returns a binary String.
+      #: (untyped msg) -> String
       def encode(msg)
         sizes = {}.compare_by_identity
         size = msg.__size(sizes)
@@ -30,7 +30,7 @@ module Protostar
         w.flush
       end
 
-      # @return [String, IO]
+      #: (untyped msg, untyped io) -> (String | IO)
       def encode_delimited(msg, io)
         sizes = {}.compare_by_identity
         size = msg.__size(sizes)
@@ -42,8 +42,9 @@ module Protostar
         io
       end
 
-      # @return [Integer] the number of an enum value as stored (Symbol or Integer)
-      # @raise [EncodeError] for a name the enum does not have or an Integer out of int32 range
+      # Returns the number of an enum value as stored (Symbol or Integer).
+      # Raises EncodeError for a name the enum does not have or an Integer out of int32 range.
+      #: (untyped info, untyped v) -> Integer
       def enum_number(info, v)
         if v.is_a?(Integer)
           return v if Message::Coercion::ENUM_RANGE.cover?(v)
@@ -109,7 +110,7 @@ module Protostar
         end
       end
 
-      # @param list [Array<UnknownField>]
+      #: (untyped w, Array[UnknownField] list) -> untyped
       def unknown(w, list)
         list.each do |u|
           w.write_varint((u.number << 3) | u.wire_type)

@@ -6,8 +6,7 @@ module Protostar
     # class, resolved once when the class is defined: the slot it is stored
     # in, its kind as a small Integer to dispatch on, precomputed tag bytes,
     # the classes and enum tables it refers to. Frozen and shareable.
-    # @api private
-    class FieldInfo
+    class FieldInfo # :nodoc: all
       # Kinds are FieldDescriptorProto.Type numbers
       DOUBLE = 1
       FLOAT = 2
@@ -40,47 +39,41 @@ module Protostar
         SFIXED32 => [4, "l<"], SFIXED64 => [8, "q<"]
       }.transform_values(&:freeze).freeze
 
-      # @return [Schema::Field]
-      attr_reader :descriptor
-      # @return [String]
-      attr_reader :name
-      # @return [Symbol]
-      attr_reader :symbol
-      # @return [Integer]
-      attr_reader :number
-      # @return [Integer, nil] the slot in the message's value array; nil for map keys and values
-      attr_reader :index
-      # @return [Integer] one of the kind constants
-      attr_reader :kind
-      # @return [Integer] wire type of one unpacked value
-      attr_reader :wire_type
-      # @return [Boolean]
-      attr_reader :repeated, :packed, :packable, :presence, :map, :closed_enum, :utf8_validation, :required
-      # @return [Array<Integer>, nil] slots of the other members of the field's real oneof
-      attr_reader :siblings
-      # @return [Class, nil] for message and group fields
-      attr_reader :message_class
-      # @return [Module, nil] for enum fields
-      attr_reader :enum_module
-      # @return [Hash{Integer => Symbol}, nil] enum number to its first name
-      attr_reader :enum_names
-      # @return [Hash{Symbol => Integer}, nil] every enum name, aliases included, to its number
-      attr_reader :enum_numbers
-      # @return [Object] the value an unset field reads as
-      attr_reader :default
-      # @return [String] the tag of one unpacked value, varint-encoded
-      attr_reader :tag
-      # @return [String, nil] the length-delimited tag, for packable fields
-      attr_reader :packed_tag
-      # @return [String, nil] the end-group tag, for groups
-      attr_reader :end_tag
-      # @return [FieldInfo, nil] for map fields
-      attr_reader :key, :value
+      attr_reader :descriptor #: Schema::Field
+      attr_reader :name #: String
+      attr_reader :symbol #: Symbol
+      attr_reader :number #: Integer
+      # The slot in the message's value array; nil for map keys and values.
+      attr_reader :index #: Integer?
+      # One of the kind constants.
+      attr_reader :kind #: Integer
+      # Wire type of one unpacked value.
+      attr_reader :wire_type #: Integer
+      attr_reader :repeated, :packed, :packable, :presence, :map, :closed_enum, :utf8_validation, :required #: bool
+      # Slots of the other members of the field's real oneof.
+      attr_reader :siblings #: Array[Integer]?
+      # For message and group fields.
+      attr_reader :message_class #: Class?
+      # For enum fields.
+      attr_reader :enum_module #: Module?
+      # Enum number to its first name.
+      attr_reader :enum_names #: Hash[Integer, Symbol]?
+      # Every enum name, aliases included, to its number.
+      attr_reader :enum_numbers #: Hash[Symbol, Integer]?
+      # The value an unset field reads as.
+      attr_reader :default #: untyped
+      # The tag of one unpacked value, varint-encoded.
+      attr_reader :tag #: String
+      # The length-delimited tag, for packable fields.
+      attr_reader :packed_tag #: String?
+      # The end-group tag, for groups.
+      attr_reader :end_tag #: String?
+      # For map fields.
+      attr_reader :key, :value #: FieldInfo?
 
-      # @param field [Schema::Field]
-      # @param index [Integer, nil]
-      # @param classes [#call] resolves a Schema::Message or Schema::Enum to its Class or Module
-      # @param open_enums [Boolean] treat a closed enum as open
+      # - `classes`: resolves a Schema::Message or Schema::Enum to its Class or Module
+      # - `open_enums`: treat a closed enum as open
+      #: (Schema::Field field, Integer? index, untyped classes, ?siblings: untyped, ?open_enums: bool) -> void
       def initialize(field, index, classes, siblings: nil, open_enums: false)
         @descriptor = field
         @name = field.name
@@ -119,14 +112,16 @@ module Protostar
         @default = @enum_names[@enum_numbers.fetch(@default)] if @enum_names && @default
       end
 
-      # @return [Boolean] whether the field is a message or group
+      # Returns whether the field is a message or group.
+      #: () -> bool
       def message?
         @kind == MESSAGE || @kind == GROUP
       end
 
-      # @return [Boolean] whether a singular value equals the type's zero
-      #   value, so that a field without presence is left out on encode.
-      #   Negative zero is not a default, as in protoc.
+      # Returns whether a singular value equals the type's zero
+      # value, so that a field without presence is left out on encode.
+      # Negative zero is not a default, as in protoc.
+      #: (untyped value) -> bool
       def zero?(value)
         case @kind
         when DOUBLE, FLOAT then value == 0 && (1.0 / value) > 0

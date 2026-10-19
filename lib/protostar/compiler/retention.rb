@@ -8,19 +8,18 @@ module Protostar
     # locations under anything removed. protoc does this when it writes a
     # descriptor set or embeds descriptors in generated code; its pool keeps
     # the options for validating later files.
-    #
-    # @api private
-    module Retention
+    module Retention # :nodoc: all
       # descriptor.proto field numbers of each descriptor's `options`
       OPTIONS_FIELD = {
         Schema::File => 8, Schema::Message => 7, Schema::Field => 8, Schema::Oneof => 2, Schema::Enum => 3,
         Schema::EnumValue => 3, Schema::Service => 3, Schema::Method => 4, Schema::ExtensionRange => 3
       }.freeze
 
-      # @param file [Schema::File]
-      # @param pool [Schema::Pool] holds the stripped copies of the file's imports
-      # @param options_type [#call] options message full name to its {Schema::Message}
-      # @return [Schema::File] the stripped copy, not added to the pool
+      # - `pool`: holds the stripped copies of the file's imports
+      # - `options_type`: options message full name to its Schema::Message
+      #
+      # Returns the stripped copy, not added to the pool.
+      #: (Schema::File file, Schema::Pool pool, untyped options_type) -> Schema::File
       def self.strip(file, pool, options_type)
         stripped = []
         kept = {}.compare_by_identity

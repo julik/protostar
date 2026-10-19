@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
 module Protostar
-  # Raised for malformed wire input. {#offset} is the byte position in the
+  # Raised for malformed wire input. #offset is the byte position in the
   # decoded buffer where the problem was found.
   class DecodeError < Error
-    # @return [Integer, nil]
-    attr_reader :offset
+    attr_reader :offset #: Integer?
 
+    #: (String message, ?offset: Integer?) -> void
     def initialize(message, offset: nil)
       @offset = offset
       super(offset ? "#{message} at byte #{offset}" : message)

@@ -8,8 +8,7 @@ module Protostar
     # identifiers, integers (decimal, hex, octal), floats (an `f` suffix
     # allowed), quoted strings, and single-character symbols. `#` starts a
     # comment that runs to the end of the line.
-    # @api private
-    class Tokenizer
+    class Tokenizer # :nodoc: all
       # One token: `type` is :identifier, :integer, :float, :string, :symbol
       # or :eof, `text` its source text, `pos` its byte offset
       class Token
@@ -42,12 +41,14 @@ module Protostar
         @peeked = nil
       end
 
-      # @return [Token] the next token without consuming it
+      # Returns the next token without consuming it.
+      #: () -> Token
       def peek
         @peeked ||= scan
       end
 
-      # @return [Token] the next token, consumed
+      # Returns the next token, consumed.
+      #: () -> Token
       def next
         t = peek
         @peeked = nil
@@ -57,7 +58,9 @@ module Protostar
       # What protoc's tokenizer reads in URL mode between `[` and `]`: runs of
       # URL characters, joined, with whitespace and comments between them
       # dropped. Call it right after consuming the `[`.
-      # @return [Array(String, Integer)] the text and where it starts
+      #
+      # Returns the text and where it starts.
+      #: () -> [String, Integer]
       def url_chars
         raise ArgumentError, "a token was peeked past the [" if @peeked
         @scanner.skip(SKIP)
@@ -70,7 +73,8 @@ module Protostar
         [text, pos]
       end
 
-      # @return [Array(Integer, Integer)] 1-based line and column of a byte position
+      # Returns 1-based line and column of a byte position.
+      #: (untyped pos) -> [Integer, Integer]
       def line_col(pos)
         before = @text.byteslice(0, pos)
         line = before.count("\n") + 1
@@ -78,7 +82,7 @@ module Protostar
         [line, before.length - (last ? last + 1 : 0) + 1]
       end
 
-      # @raise [ParseError]
+      # Raises ParseError.
       def fail!(message, pos)
         raise ParseError.new(message, *line_col(pos))
       end

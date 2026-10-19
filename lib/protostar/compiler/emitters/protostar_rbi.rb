@@ -3,10 +3,10 @@
 module Protostar
   class Compiler
     module Emitters
-      # Writes `_pb.rbi` files for Sorbet describing the classes {Ruby}
-      # generates, with the same types {ProtostarRbs} gives them. The runtime
+      # Writes `_pb.rbi` files for Sorbet describing the classes Ruby
+      # generates, with the same types ProtostarRbs gives them. The runtime
       # API (`Protostar::Message` and the rest) is in the gem's
-      # `rbi/protostar.rbi`. {Rbi} describes google-protobuf's classes instead.
+      # `rbi/protostar.rbi`. Rbi describes google-protobuf's classes instead.
       class ProtostarRbi
         include NativeNames
 
@@ -15,21 +15,21 @@ module Protostar
         # Constant names Ruby parses as keywords, set from outside the module
         KEYWORD_CONSTANTS = %w[BEGIN END].freeze
 
-        # @param namespaces [Hash{String => String}] Ruby module paths by file name, as {Ruby} takes them
+        # - `namespaces`: Ruby module paths by file name, as Ruby takes them
+        #: (?namespaces: Hash[String, String]) -> void
         def initialize(namespaces: {})
           @namespaces = namespaces
           @reserved = Message::Accessors.reserved
           @types = FieldTypes.new(FieldTypes::Sorbet) { |d| constant(d) }
         end
 
-        # @param files [Array<Schema::File>]
-        # @return [Hash{String => String}] output path to the RBI
+        # Returns a Hash of output path to the RBI.
+        #: (Array[Schema::File] files) -> Hash[String, String]
         def emit(files)
           files.to_h { |f| [Naming.require_name(f.name) + ".rbi", file(f)] }
         end
 
-        # @param file [Schema::File]
-        # @return [String]
+        #: (Schema::File file) -> String
         def file(file)
           Naming.check_ruby_package(file)
           @source = file.source_info

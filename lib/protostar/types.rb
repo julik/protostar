@@ -4,9 +4,11 @@ module Protostar
   # Defines message classes and enum modules from descriptors, and keeps a
   # registry of them by full name.
   #
-  #   types = Protostar::Types.define(schema_file)
-  #   Person = types.fetch("acme.Person")
-  #   Protostar::Types.find("acme.Person") # => Person
+  # ```ruby
+  # types = Protostar::Types.define(schema_file)
+  # Person = types.fetch("acme.Person")
+  # Protostar::Types.find("acme.Person") # => Person
+  # ```
   #
   # The registry is a process-wide object guarded by a Mutex and is meant to be
   # used from the main Ractor. The classes and modules it hands out can be used
@@ -14,10 +16,11 @@ module Protostar
   module Types
     # A set of defined types, by full name, and the files they came from
     class Registry
-      # @param open_enums [Boolean] treat every enum as open: numbers without a
+      # - `open_enums`: treat every enum as open: numbers without a
       #   name are kept in the field on decode and accepted on assignment, as
       #   google-protobuf's Ruby gem does, instead of going to unknown fields
-      # @param base [Class] what message classes subclass: {Message} or a subclass of it
+      # - `base`: what message classes subclass: Message or a subclass of it
+      #: (?open_enums: bool, ?base: singleton(Message)) -> void
       def initialize(open_enums: false, base: Message)
         raise ArgumentError, "base must be Protostar::Message or a subclass of it" unless base.is_a?(Class) && base <= Message
         @open_enums = open_enums
@@ -27,26 +30,28 @@ module Protostar
         @files = {}
       end
 
-      # @param full_name [String] without a leading dot
-      # @return [Class, Module, nil]
+      # - `full_name`: without a leading dot
+      #: (String full_name) -> (singleton(Message) | Module)?
       def find(full_name)
         @mutex.synchronize { @types[full_name] }
       end
 
-      # @param file_name [String]
-      # @return [Hash{String => Class, Module}, nil] what {#define} returned for the file
+      # Returns what #define returned for the file.
+      #: (String file_name) -> Hash[String, singleton(Message) | Module]?
       def file(file_name)
         @mutex.synchronize { @files[file_name]&.last }
       end
 
       # Defines every message and enum of a file. The file's dependencies must
-      # have been defined first. Defining the same {Schema::File} again returns
+      # have been defined first. Defining the same Schema::File again returns
       # the types made the first time.
-      # @param file [Schema::File]
-      # @param name [Module, nil] a namespace: when given, top-level types
+      #
+      # - `name`: a namespace: when given, top-level types
       #   become its constants and nested types constants of their parent class
-      # @return [Hash{String => Class, Module}] frozen, full name to class or module
-      # @raise [Error] for an undefined dependency or a name already defined from another file
+      #
+      # Returns a frozen Hash of full name to class or module.
+      # Raises Error for an undefined dependency or a name already defined from another file.
+      #: (untyped file, ?name: Module?) -> Hash[String, singleton(Message) | Module]
       def define(file, name: nil)
         @mutex.synchronize do
           if (defined = @files[file.name])
@@ -69,21 +74,22 @@ module Protostar
     @registry = Registry.new
 
     class << self
-      # @return [Registry] the process-wide registry
-      attr_reader :registry
+      # The process-wide registry.
+      attr_reader :registry #: Registry
 
-      # @see Registry#define
+      # See Registry#define.
+      #: (untyped file, ?name: Module?, ?registry: Registry) -> Hash[String, singleton(Message) | Module]
       def define(file, name: nil, registry: @registry)
         registry.define(file, name: name)
       end
 
-      # @see Registry#find
+      # See Registry#find.
+      #: (String full_name, ?registry: Registry) -> (singleton(Message) | Module)?
       def find(full_name, registry: @registry)
         registry.find(full_name)
       end
 
-      # @api private
-      def assign_constants(file, types, namespace)
+      def assign_constants(file, types, namespace) # :nodoc:
         place = lambda do |descriptor, owner|
           const = Enum.constant_name(descriptor.name)
           type = types[descriptor.full_name]
@@ -99,8 +105,7 @@ module Protostar
     end
 
     # Makes the classes and modules of one file
-    # @api private
-    class Definer
+    class Definer # :nodoc: all
       def initialize(file, known, open_enums: false, base: Message)
         @file = file
         @base = base

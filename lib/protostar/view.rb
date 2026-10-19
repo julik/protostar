@@ -7,30 +7,31 @@ module Protostar
   # messages are views over slices of the same buffer, so reading one
   # field of a large message copies nothing but that field's value.
   #
-  #   view = Person.view(bytes)          # a String or an IO::Buffer
-  #   view.name                          # => "Ada"
-  #   view.friends[2].name               # a nested view, same buffer
-  #   view.encode.equal?(bytes)          # => true
-  #   view.to_message                    # the mutable message, decoded eagerly
+  # ```ruby
+  # view = Person.view(bytes)          # a String or an IO::Buffer
+  # view.name                          # => "Ada"
+  # view.friends[2].name               # a nested view, same buffer
+  # view.encode.equal?(bytes)          # => true
+  # view.to_message                    # the mutable message, decoded eagerly
+  # ```
   #
   # Every message class has a view class, `Person.view_class`, with the
   # same readers as the message: scalars, enums, `has_`, `which_`,
-  # repeated fields as {Repeated}, maps as {Map}. Views are frozen; writers
+  # repeated fields as Repeated, maps as Map. Views are frozen; writers
   # raise FrozenError. A view reads the buffer it was given for as long as
   # it lives, so that buffer must not change underneath it.
   #
-  # Malformed input raises {DecodeError} when the view is made, for the top
+  # Malformed input raises DecodeError when the view is made, for the top
   # level; a nested message is checked when it is first read, and a string
   # with invalid UTF-8 when the string is read.
   class View
     class << self
-      # @return [Class] the message class this view class reads
-      attr_reader :message_class
+      # The message class this view class reads.
+      attr_reader :message_class #: singleton(Message)
 
-      # @api private
-      attr_reader :__fields, :__by_name, :__readers, :__unknown_slot
+      attr_reader :__fields, :__by_name, :__readers, :__unknown_slot # :nodoc:
 
-      # @return [Schema::Message]
+      #: () -> Schema::Message
       def descriptor
         @message_class.descriptor
       end
@@ -39,8 +40,7 @@ module Protostar
         name || "#<Class #{@message_class ? "#{@message_class.descriptor.full_name}::View" : "Protostar::View"}>"
       end
 
-      # @api private
-      def __define(message_class, fields)
+      def __define(message_class, fields) # :nodoc:
         @message_class = message_class
         @__fields = message_class.__fields
         @__by_name = message_class.__by_name
@@ -49,13 +49,11 @@ module Protostar
         self
       end
 
-      # @api private
-      def __new(buf, offset, length, segments, depth)
+      def __new(buf, offset, length, segments, depth) # :nodoc:
         new(buf, offset, length, segments, depth)
       end
 
-      # @api private
-      def __open(bytes, offset, length, depth)
+      def __open(bytes, offset, length, depth) # :nodoc:
         raise NotImplementedError, "#{self} is abstract; views come from message classes" unless @message_class
         buf = if bytes.is_a?(String)
           bytes
@@ -75,35 +73,36 @@ module Protostar
       private :new
     end
 
-    # @return [Schema::Message]
+    #: () -> Schema::Message
     def descriptor
       self.class.descriptor
     end
 
-    # @param name [String, Symbol]
-    # @return [Object] what the field's reader returns
-    # @raise [ArgumentError] when there is no such field
+    # Returns what the field's reader returns.
+    # Raises ArgumentError when there is no such field.
+    #: (String | Symbol name) -> untyped
     def [](name)
       info = self.class.__by_name[name] || raise(ArgumentError, "#{descriptor.full_name} has no field #{name.inspect}")
       __send__(self.class.__readers[info.index])
     end
 
-    # @raise [FrozenError] always
+    # Raises FrozenError always.
     def []=(_name, _value)
       __frozen!
     end
 
-    # @raise [FrozenError] always
+    # Raises FrozenError always.
     def merge!(_other)
       __frozen!
     end
 
-    # @raise [FrozenError] always
+    # Raises FrozenError always.
     def clear!
       __frozen!
     end
 
-    # @return [Array<UnknownField>] frozen, in the order they occur
+    # Returns them frozen, in the order they occur.
+    #: () -> Array[UnknownField]
     def unknown_fields
       ix = @ix
       u = self.class.__unknown_slot
@@ -122,8 +121,9 @@ module Protostar
       ix[u + 1] = list.freeze
     end
 
-    # @return [String] the bytes this view reads: the very String it was
-    #   made from when it covers all of it, otherwise a copy of its part
+    # Returns the bytes this view reads: the very String it was
+    # made from when it covers all of it, otherwise a copy of its part.
+    #: () -> String
     def encode
       buf = @buf
       if @segs.nil?
@@ -136,9 +136,10 @@ module Protostar
     end
     alias_method :to_proto, :encode
 
-    # Decodes the view's bytes into a message, as {Message.decode} would
-    # @param frozen [Boolean] return a deep-frozen, Ractor-shareable message
-    # @return [Message]
+    # Decodes the view's bytes into a message, as Message.decode would
+    #
+    # - `frozen`: return a deep-frozen, Ractor-shareable message
+    #: (?frozen: bool) -> Message
     def to_message(frozen: false)
       msg = self.class.message_class.__empty
       buf = @buf
@@ -151,13 +152,13 @@ module Protostar
       msg
     end
 
-    # @return [Hash] what {Message#to_h} gives for the same bytes
+    # Returns what Message#to_h gives for the same bytes.
+    #: () -> Hash[Symbol, untyped]
     def to_h
       __to_h
     end
 
-    # @api private
-    def __to_h
+    def __to_h # :nodoc:
       h = {}
       ix = @ix
       readers = self.class.__readers
@@ -180,7 +181,8 @@ module Protostar
     end
 
     # Equal to a message of the view's class, or a view of it, with the
-    # same field values (unknown fields aside), as {Message#==} compares
+    # same field values (unknown fields aside), as Message#== compares
+    #: (untyped other) -> bool
     def ==(other)
       return true if equal?(other)
       case other
@@ -191,13 +193,14 @@ module Protostar
     end
     alias_method :eql?, :==
 
+    #: () -> Integer
     def hash
       to_message.hash
     end
 
     # Reads every field, nested views and containers included, and freezes
     # what was read. A view over a frozen String is then Ractor-shareable.
-    # @return [self]
+    #: () -> self
     def freeze_index
       ix = @ix
       return self if ix.frozen?
@@ -214,6 +217,7 @@ module Protostar
       self
     end
 
+    #: () -> String
     def inspect
       parts = __shown.map { |name, v| "#{name}: #{v.inspect}" }
       name = "view #{descriptor.full_name}"
@@ -221,14 +225,15 @@ module Protostar
     end
     alias_method :to_s, :inspect
 
-    # For `pp`, laid out as {Message#pretty_print} lays out messages
+    # For `pp`, laid out as Message#pretty_print lays out messages
+    #: (untyped q) -> void
     def pretty_print(q)
       Message.__pretty_print(q, "view #{descriptor.full_name}", __shown)
     end
 
-    # @return [Array<Array(String, Object)>] the fields `inspect` shows
-    # @api private
-    def __shown
+    # Returns the fields `inspect` shows.
+    #: () -> Array[[String, untyped]]
+    def __shown # :nodoc:
       shown = []
       ix = @ix
       readers = self.class.__readers
@@ -242,10 +247,10 @@ module Protostar
       shown
     end
 
-    # @return [Array<Array(Integer, Integer)>] offset and length of each
-    #   piece of the buffer this view reads, in order
-    # @api private
-    def __segments
+    # Returns offset and length of each
+    # piece of the buffer this view reads, in order.
+    #: () -> Array[[Integer, Integer]]
+    def __segments # :nodoc:
       list = []
       __each_segment { |offset, length| list << [offset, length] }
       list

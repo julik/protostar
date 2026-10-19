@@ -2,7 +2,7 @@
 
 module Protostar
   module Schema
-    # The construction stage of {Schema}: mutable handles that create
+    # The construction stage of Schema: mutable handles that create
     # descriptors, then link, resolve and freeze them. Map entries, the
     # synthetic oneofs of proto3 `optional` fields, group fields and json
     # names are made here and nowhere else.
@@ -14,8 +14,7 @@ module Protostar
 
       # protoc's name for the entry message of a map field: the field name in
       # CamelCase plus "Entry"
-      # @param field_name [String]
-      # @return [String]
+      #: (String field_name) -> String
       def self.map_entry_name(field_name)
         out = +""
         cap_next = true
@@ -35,9 +34,10 @@ module Protostar
       # The names protoc's parser gives the synthetic oneofs of proto3
       # `optional` fields: `_` and the field name, with `X` prepended until
       # nothing in the message has that name
-      # @param field_names [Array<String>] the fields needing one, in order
-      # @param taken [Array<String>] every field and oneof name of the message
-      # @return [Array<String>]
+      #
+      # - `field_names`: the fields needing one, in order
+      # - `taken`: every field and oneof name of the message
+      #: (Array[String] field_names, Array[String] taken) -> Array[String]
       def self.synthetic_oneof_names(field_names, taken)
         names = taken.to_h { |n| [n, true] }
         field_names.map do |field_name|
@@ -49,14 +49,13 @@ module Protostar
       end
 
       # The field a `group Name = n { ... }` declares: the group's name in lower case
-      # @return [String]
+      #: (untyped group_name) -> String
       def self.group_field_name(group_name)
         group_name.to_s.downcase(:ascii)
       end
 
       # protoc's spelling of a default value
-      # @api private
-      def self.default_text(value)
+      def self.default_text(value) # :nodoc:
         case value
         when nil, String then value
         when Symbol then value.to_s
@@ -71,14 +70,12 @@ module Protostar
       }.freeze
 
       # :local or :export from either spelling; nil when unset
-      # @api private
-      def self.visibility(value)
+      def self.visibility(value) # :nodoc:
         VISIBILITIES.fetch(value) { raise Error, "unknown visibility #{value.inspect}" }
       end
 
       # Inclusive bounds of an Integer or a Range
-      # @api private
-      def self.bounds(item)
+      def self.bounds(item) # :nodoc:
         case item
         when Integer then [item, item]
         when ::Range
@@ -90,15 +87,12 @@ module Protostar
 
       # What files and messages share: nested messages, enums and extensions
       class Scope
-        # @api private
-        attr_reader :file_draft
+        attr_reader :file_draft # :nodoc:
 
         # A message type
-        # @param name [String]
-        # @param visibility [Symbol, nil] :local or :export (edition 2024)
-        # @param options [Hash, nil]
-        # @yieldparam m [Message]
-        # @return [Message]
+        #
+        # - `visibility`: :local or :export (edition 2024)
+        #: (String name, ?visibility: Symbol?, ?options: Hash[untyped, untyped]?) ?{ (Message m) -> untyped } -> Message
         def message(name, visibility: nil, options: nil, &block)
           name = name.to_s
           descriptor = Schema::Message.new(name: name, full_name: qualify(name), file: @file_draft.descriptor,
@@ -111,8 +105,7 @@ module Protostar
         end
 
         # An enum type
-        # @yieldparam e [Enum]
-        # @return [Enum]
+        #: (untyped name, ?visibility: untyped, ?options: untyped) ?{ (Enum e) -> untyped } -> Enum
         def enum(name, visibility: nil, options: nil, &block)
           name = name.to_s
           descriptor = Schema::Enum.new(name: name, full_name: qualify(name), file: @file_draft.descriptor,
@@ -125,15 +118,16 @@ module Protostar
         end
 
         # Extensions of another message, declared in this scope
-        # @param extendee [String] the extended message, as written
-        # @yieldparam e [Extend]
+        #
+        # - `extendee`: the extended message, as written
+        #: (String extendee) ?{ (Extend e) -> untyped } -> untyped
         def extend(extendee, &block)
           block.call(Extend.new(self, extendee.to_s))
           self
         end
 
-        # One extension field; the arguments of {Message#field} plus the extendee
-        # @return [Schema::Field]
+        # One extension field; the arguments of Message#field plus the extendee
+        #: (untyped name, untyped number, untyped, ?untyped type_name, extendee: untyped, ?label: untyped, ?default: untyped, ?json_name: untyped, ?optional: untyped, ?options: untyped) -> Schema::Field
         def extension(name, number, type, type_name = nil, extendee:, label: :optional, default: nil, json_name: nil,
           optional: false, options: nil)
           field = @file_draft.new_field(self, name, number, type, type_name, @extensions.size, extendee.to_s, label,
@@ -142,8 +136,7 @@ module Protostar
           field
         end
 
-        # @api private
-        def qualify(name)
+        def qualify(name) # :nodoc:
           scope = scope_name
           -(scope.empty? ? name : "#{scope}.#{name}")
         end
@@ -155,11 +148,10 @@ module Protostar
 
       # A file under construction
       class File < Scope
-        # @return [Schema::File] the file being built; frozen after {#freeze!}
-        attr_reader :descriptor
+        # The file being built; frozen after #freeze!.
+        attr_reader :descriptor #: Schema::File
 
-        # @api private
-        def initialize(name, package:, syntax:, edition:, dependencies:, public_dependencies:, weak_dependencies:,
+        def initialize(name, package:, syntax:, edition:, dependencies:, public_dependencies:, weak_dependencies:, # :nodoc:
           option_dependencies:, options:)
           @file_draft = self
           @messages = []
@@ -180,14 +172,13 @@ module Protostar
           @options[@descriptor] = options
         end
 
-        # @return [String]
+        #: () -> String
         def scope_name
           @descriptor.package
         end
 
         # A service
-        # @yieldparam s [Service]
-        # @return [Service]
+        #: (untyped name, ?options: untyped) ?{ (Service s) -> untyped } -> Service
         def service(name, options: nil, &block)
           name = name.to_s
           descriptor = Schema::Service.new(name: name, full_name: qualify(name), file: @descriptor,
@@ -200,25 +191,26 @@ module Protostar
           draft
         end
 
-        # @param info [SourceInfo, Array<SourceInfo::Location>, nil]
+        #: ((SourceInfo | Array[SourceInfo::Location])? info) -> untyped
         def source_info=(info)
           info = SourceInfo.new(info) if info.is_a?(Array)
           @descriptor.__link(source_info: info)
         end
 
         # Sets (or replaces) the options of a descriptor of this file
-        # @param descriptor [Descriptor]
-        # @param options [Hash, nil]
+        #: (Descriptor descriptor, Hash[untyped, untyped]? options) -> untyped
         def set_options(descriptor, options)
           @options[descriptor] = options
         end
 
         # Finds dependencies in the pool, completes every message's lookup
         # tables and resolves every type name, extendee and method type. Runs
-        # once; {#resolve} calls it when it has not run.
-        # @param pool [Pool] where the dependencies are
-        # @return [self]
-        # @raise [Error, ResolveError]
+        # once; #resolve calls it when it has not run.
+        #
+        # - `pool`: where the dependencies are
+        #
+        # Raises Error, ResolveError.
+        #: (Pool pool) -> self
         def link(pool)
           return self if @linked
           unless @duplicates.empty?
@@ -240,8 +232,7 @@ module Protostar
 
         # Links (when not done yet), then builds options, resolves features and
         # parses defaults. May run again after options change.
-        # @param pool [Pool]
-        # @return [self]
+        #: (Pool pool) -> self
         def resolve(pool)
           link(pool)
           Resolution.new(@descriptor, @fields, @options, pool).call
@@ -250,7 +241,7 @@ module Protostar
         end
 
         # Freezes the whole graph and makes it Ractor-shareable
-        # @return [Schema::File]
+        #: () -> Schema::File
         def freeze!
           raise Error, "#{@descriptor.name}: resolve the draft before freezing it" unless @resolved
           Freezer.deep_freeze(@descriptor)
@@ -258,36 +249,31 @@ module Protostar
         end
 
         # Completes every message's, enum's and service's lookup tables once
-        # nothing more will be added. {#link} does it; a caller that resolves
+        # nothing more will be added. #link does it; a caller that resolves
         # names itself (the compiler) calls it first.
-        # @api private
-        def __seal
+        def __seal # :nodoc:
           seal
           self
         end
 
         # Sets what a field's type name resolved to, for a caller that
-        # resolves names itself; {#link} then leaves the field alone
-        # @api private
-        def __resolve_type(field, target)
+        # resolves names itself; #link then leaves the field alone
+        def __resolve_type(field, target) # :nodoc:
           type = field.declared_type || (target.is_a?(Schema::Message) ? :message : :enum)
           kind = target.is_a?(Schema::Message) ? :message_type : :enum_type
           field.__link(kind => target, :type_name => target.full_name, :declared_type => type, :type => type)
         end
 
-        # @api private
-        def __resolve_extendee(field, target)
+        def __resolve_extendee(field, target) # :nodoc:
           field.__link(extendee: target)
         end
 
-        # @api private
-        def __resolve_rpc(method, input: nil, output: nil)
+        def __resolve_rpc(method, input: nil, output: nil) # :nodoc:
           method.__link(input_type: input) if input
           method.__link(output_type: output) if output
         end
 
-        # @api private
-        def register(descriptor)
+        def register(descriptor) # :nodoc:
           symbols = @descriptor.symbols
           if (existing = symbols[descriptor.full_name])
             @duplicates << [existing, descriptor]
@@ -296,8 +282,7 @@ module Protostar
           end
         end
 
-        # @api private
-        def new_field(scope, name, number, type, type_name, index, extendee, label, default, json_name, optional, options,
+        def new_field(scope, name, number, type, type_name, index, extendee, label, default, json_name, optional, options, # :nodoc:
           oneof)
           name = name.to_s
           raise Error, "#{@descriptor.name}: field #{name} needs an integer number" unless number.is_a?(Integer)
@@ -331,8 +316,7 @@ module Protostar
           field
         end
 
-        # @api private
-        def new_method(method, options)
+        def new_method(method, options) # :nodoc:
           @options[method] = options
           @methods << method
           register(method)
@@ -464,13 +448,11 @@ module Protostar
         end
       end
 
-      # A message under construction: the block argument of {Scope#message}
+      # A message under construction: the block argument of Scope#message
       class Message < Scope
-        # @return [Schema::Message]
-        attr_reader :descriptor
+        attr_reader :descriptor #: Schema::Message
 
-        # @api private
-        def initialize(file_draft, descriptor, visibility, options)
+        def initialize(file_draft, descriptor, visibility, options) # :nodoc:
           @file_draft = file_draft
           @descriptor = descriptor
           @visibility = visibility
@@ -487,25 +469,23 @@ module Protostar
           file_draft.set_options(descriptor, options)
         end
 
-        # @return [String]
+        #: () -> String
         def scope_name
           @descriptor.full_name
         end
 
         # A field
-        # @param name [String, Symbol]
-        # @param number [Integer]
-        # @param type [Symbol, String] :int32, :string, ... :message, :enum or :group (then
+        #
+        # - `type`: :int32, :string, ... :message, :enum or :group (then
         #   give `type_name`), or a type name whose kind is found when linking
-        # @param type_name [String, nil] the message or enum type as written, e.g. ".acme.Person"
-        # @param label [Symbol] :optional, :required or :repeated
-        # @param default [String, Object, nil] the default; text is taken as protoc stores it
-        # @param json_name [String, nil] when not the one derived from the name
-        # @param optional [Boolean] a proto3 `optional` field; its synthetic oneof is made here
+        # - `type_name`: the message or enum type as written, e.g. ".acme.Person"
+        # - `label`: :optional, :required or :repeated
+        # - `default`: the default; text is taken as protoc stores it
+        # - `json_name`: when not the one derived from the name
+        # - `optional`: a proto3 `optional` field; its synthetic oneof is made here
         #   unless `oneof:` names one
-        # @param oneof [String, Symbol, Schema::Oneof, nil] the oneof the field belongs to
-        # @param options [Hash, nil]
-        # @return [Schema::Field]
+        # - `oneof`: the oneof the field belongs to
+        #: ((String | Symbol) name, Integer number, (Symbol | String), ?String? type_name, ?label: Symbol, ?default: untyped, ?json_name: String?, ?optional: bool, ?oneof: (String | Symbol | Schema::Oneof)?, ?options: Hash[untyped, untyped]?) -> Schema::Field
         def field(name, number, type, type_name = nil, label: :optional, default: nil, json_name: nil, optional: false,
           oneof: nil, options: nil)
           field = @file_draft.new_field(self, name, number, type, type_name, @fields.size, nil, label, default,
@@ -515,11 +495,12 @@ module Protostar
         end
 
         # A `map<K, V>` field and the entry message protoc synthesizes for it
-        # @param key [Symbol] the key type
-        # @param value [Symbol, String] a scalar type, or the value's message or enum type name
-        # @param value_type_name [String, nil] the type name when `value` is :message or :enum
-        # @param options [Hash, nil] the field's options; its `features` go to the key and value too
-        # @return [Schema::Field]
+        #
+        # - `key`: the key type
+        # - `value`: a scalar type, or the value's message or enum type name
+        # - `value_type_name`: the type name when `value` is :message or :enum
+        # - `options`: the field's options; its `features` go to the key and value too
+        #: (untyped name, untyped number, key: Symbol, value: (Symbol | String), ?value_type_name: String?, ?json_name: untyped, ?options: Hash[untyped, untyped]?) -> Schema::Field
         def map(name, number, key:, value:, value_type_name: nil, json_name: nil, options: nil)
           name = name.to_s
           if value.is_a?(String)
@@ -536,9 +517,9 @@ module Protostar
         end
 
         # A proto2 group: a nested message and a field of type group named after it
-        # @param message_options [Hash, nil] the nested message's options
-        # @yieldparam g [Message]
-        # @return [Schema::Field]
+        #
+        # - `message_options`: the nested message's options
+        #: (untyped name, untyped number, ?label: untyped, ?json_name: untyped, ?oneof: untyped, ?options: untyped, ?message_options: Hash[untyped, untyped]?) ?{ (Message g) -> untyped } -> Schema::Field
         def group(name, number, label: :optional, json_name: nil, oneof: nil, options: nil, message_options: nil,
           &block)
           nested = message(name.to_s, options: message_options, &block)
@@ -548,8 +529,7 @@ module Protostar
 
         # A oneof. Fields given in the block belong to it; fields elsewhere may
         # name it with `oneof:`. Declaring it again only sets its options.
-        # @yieldparam o [Oneof]
-        # @return [Schema::Oneof]
+        #: (untyped name, ?options: untyped) ?{ (Oneof o) -> untyped } -> Schema::Oneof
         def oneof(name, options: nil, &block)
           oneof = declare_oneof(name.to_s)
           @file_draft.set_options(oneof, options) if options
@@ -558,8 +538,7 @@ module Protostar
         end
 
         # One extension range, inclusive
-        # @param range [Range, Integer]
-        # @return [Schema::ExtensionRange]
+        #: ((Range[untyped] | Integer) range, ?options: untyped) -> Schema::ExtensionRange
         def extension_range(range, options: nil)
           first, last = Draft.bounds(range)
           descriptor = Schema::ExtensionRange.new(containing_message: @descriptor, index: @ranges.size,
@@ -570,7 +549,7 @@ module Protostar
         end
 
         # Extension ranges, inclusive, sharing options
-        # @param ranges [Array<Range, Integer>]
+        #: (*(Range[untyped] | Integer) ranges, ?options: untyped) -> untyped
         def extensions(*ranges, options: nil)
           ranges.each { |r| extension_range(r, options: options) }
           self
@@ -589,8 +568,7 @@ module Protostar
           self
         end
 
-        # @api private
-        def __oneof_member(field, oneof)
+        def __oneof_member(field, oneof) # :nodoc:
           if oneof.nil?
             @synthetic << field
             return
@@ -600,8 +578,7 @@ module Protostar
           field.__link(oneof: oneof)
         end
 
-        # @api private
-        def __seal(options)
+        def __seal(options) # :nodoc:
           unless @synthetic.empty?
             taken = @fields.map(&:name) + @oneofs.map(&:name)
             names = Draft.synthetic_oneof_names(@synthetic.map(&:name), taken)
@@ -643,51 +620,47 @@ module Protostar
         end
       end
 
-      # The block argument of {Message#oneof}
+      # The block argument of Message#oneof
       class Oneof
-        # @api private
-        def initialize(message, oneof)
+        def initialize(message, oneof) # :nodoc:
           @message = message
           @oneof = oneof
         end
 
-        # A member field; the arguments of {Message#field}
+        # A member field; the arguments of Message#field
         def field(name, number, type, type_name = nil, **kwargs)
           @message.field(name, number, type, type_name, oneof: @oneof, **kwargs)
         end
 
-        # A member group; the arguments of {Message#group}
+        # A member group; the arguments of Message#group
         def group(name, number, **kwargs, &block)
           @message.group(name, number, oneof: @oneof, **kwargs, &block)
         end
       end
 
-      # The block argument of {Scope#extend}
+      # The block argument of Scope#extend
       class Extend
-        # @api private
-        def initialize(scope, extendee)
+        def initialize(scope, extendee) # :nodoc:
           @scope = scope
           @extendee = extendee
         end
 
-        # An extension field; the arguments of {Message#field}
-        # @return [Schema::Field]
+        # An extension field; the arguments of Message#field
+        #: (untyped name, untyped number, untyped, ?untyped type_name, **untyped kwargs) -> Schema::Field
         def field(name, number, type, type_name = nil, **kwargs)
           @scope.extension(name, number, type, type_name, extendee: @extendee, **kwargs)
         end
       end
 
-      # An enum under construction: the block argument of {Scope#enum}
+      # An enum under construction: the block argument of Scope#enum
       class Enum
         def inspect
           "#<#{self.class.name} #{@descriptor.full_name}>"
         end
 
-        # @return [Schema::Enum]
-        attr_reader :descriptor
+        attr_reader :descriptor #: Schema::Enum
 
-        # @api private
-        def initialize(file_draft, descriptor, scope, visibility, options)
+        def initialize(file_draft, descriptor, scope, visibility, options) # :nodoc:
           @file_draft = file_draft
           @descriptor = descriptor
           @scope = scope
@@ -699,7 +672,7 @@ module Protostar
         end
 
         # A value. Its full name is a sibling of the enum's, as in C++.
-        # @return [Schema::EnumValue]
+        #: (untyped name, untyped number, ?options: untyped) -> Schema::EnumValue
         def value(name, number, options: nil)
           name = name.to_s
           raise Error, "#{@descriptor.full_name}: value #{name} needs an integer number" unless number.is_a?(Integer)
@@ -724,8 +697,7 @@ module Protostar
           self
         end
 
-        # @api private
-        def __seal(_options)
+        def __seal(_options) # :nodoc:
           @descriptor.__link(
             reserved_ranges: @reserved_ranges.empty? ? Freezer::EMPTY_ARRAY : @reserved_ranges.dup.freeze,
             reserved_names: @reserved_names.empty? ? Freezer::EMPTY_ARRAY : @reserved_names.dup.freeze,
@@ -735,26 +707,22 @@ module Protostar
         end
       end
 
-      # A service under construction: the block argument of {File#service}
+      # A service under construction: the block argument of File#service
       class Service
         def inspect
           "#<#{self.class.name} #{@descriptor.full_name}>"
         end
 
-        # @return [Schema::Service]
-        attr_reader :descriptor
+        attr_reader :descriptor #: Schema::Service
 
-        # @api private
-        def initialize(file_draft, descriptor)
+        def initialize(file_draft, descriptor) # :nodoc:
           @file_draft = file_draft
           @descriptor = descriptor
           @rpcs = []
         end
 
-        # @param name [String, Symbol]
-        # @param input_type [String] as written, e.g. ".acme.Request"
-        # @param output_type [String]
-        # @return [Schema::Method]
+        # - `input_type`: as written, e.g. ".acme.Request"
+        #: ((String | Symbol) name, String input_type, String output_type, ?client_streaming: untyped, ?server_streaming: untyped, ?options: untyped) -> Schema::Method
         def rpc(name, input_type, output_type, client_streaming: false, server_streaming: false, options: nil)
           name = name.to_s
           method = Schema::Method.new(name: -name, full_name: -"#{@descriptor.full_name}.#{name}",
@@ -766,8 +734,7 @@ module Protostar
           method
         end
 
-        # @api private
-        def __seal
+        def __seal # :nodoc:
           @descriptor.__rpcs(@rpcs.empty? ? Freezer::EMPTY_ARRAY : @rpcs.dup.freeze)
         end
       end

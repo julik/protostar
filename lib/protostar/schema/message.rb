@@ -4,41 +4,32 @@ module Protostar
   module Schema
     # A message type
     class Message < Descriptor
-      # @return [File]
-      attr_reader :file
-      # @return [Message, nil] the enclosing message for a nested type
-      attr_reader :containing_message
-      # @return [Array<Field>] declaration order, oneof members included, extensions excluded
-      attr_reader :fields
-      # @return [Hash{Integer => Field}]
-      attr_reader :fields_by_number
-      # @return [Hash{String => Field}]
-      attr_reader :fields_by_name
-      # @return [Hash{String => Field}]
-      attr_reader :fields_by_json_name
-      # @return [Array<Oneof>] all oneofs, synthetic ones included
-      attr_reader :oneofs
-      # @return [Array<Oneof>] oneofs that are not synthetic (proto3 `optional`)
-      attr_reader :real_oneofs
-      # @return [Array<Message>]
-      attr_reader :nested_messages
-      # @return [Array<Enum>]
-      attr_reader :nested_enums
-      # @return [Array<Field>] extensions declared inside this message
-      attr_reader :extensions
-      # @return [Array<ExtensionRange>]
-      attr_reader :extension_range_descriptors
-      # @return [Array<Range>] inclusive extension number ranges
-      attr_reader :extension_ranges
-      # @return [Array<Range>] inclusive reserved number ranges
-      attr_reader :reserved_ranges
-      # @return [Array<String>]
-      attr_reader :reserved_names
-      # @return [Symbol, nil] declared `visibility`: :local or :export (edition 2024), nil when not declared
-      attr_reader :visibility
+      attr_reader :file #: File
+      # The enclosing message for a nested type.
+      attr_reader :containing_message #: Message?
+      # Declaration order, oneof members included, extensions excluded.
+      attr_reader :fields #: Array[Field]
+      attr_reader :fields_by_number #: Hash[Integer, Field]
+      attr_reader :fields_by_name #: Hash[String, Field]
+      attr_reader :fields_by_json_name #: Hash[String, Field]
+      # All oneofs, synthetic ones included.
+      attr_reader :oneofs #: Array[Oneof]
+      # Oneofs that are not synthetic (proto3 `optional`).
+      attr_reader :real_oneofs #: Array[Oneof]
+      attr_reader :nested_messages #: Array[Message]
+      attr_reader :nested_enums #: Array[Enum]
+      # Extensions declared inside this message.
+      attr_reader :extensions #: Array[Field]
+      attr_reader :extension_range_descriptors #: Array[ExtensionRange]
+      # Inclusive extension number ranges.
+      attr_reader :extension_ranges #: Array[Range[untyped]]
+      # Inclusive reserved number ranges.
+      attr_reader :reserved_ranges #: Array[Range[untyped]]
+      attr_reader :reserved_names #: Array[String]
+      # Declared `visibility`: :local or :export (edition 2024), nil when not declared.
+      attr_reader :visibility #: Symbol?
 
-      # @api private
-      def initialize(name:, full_name:, file:, containing_message:, index:)
+      def initialize(name:, full_name:, file:, containing_message:, index:) # :nodoc:
         @name = name
         @full_name = full_name
         @file = file
@@ -49,8 +40,7 @@ module Protostar
         @visibility = nil
       end
 
-      # @api private
-      def __members(fields:, oneofs:, nested_messages:, nested_enums:, extensions:, extension_range_descriptors:)
+      def __members(fields:, oneofs:, nested_messages:, nested_enums:, extensions:, extension_range_descriptors:) # :nodoc:
         @fields = fields
         @oneofs = oneofs
         @real_oneofs = oneofs.reject(&:synthetic?).freeze
@@ -73,29 +63,31 @@ module Protostar
         self
       end
 
-      # @param key [Integer, String, Symbol] a field number or name
-      # @return [Field, nil]
+      # - `key`: a field number or name
+      #: (Integer | String | Symbol key) -> Field?
       def field(key)
         key.is_a?(Integer) ? @fields_by_number[key] : @fields_by_name[key.to_s]
       end
 
-      # @return [Boolean] whether the number falls in an extension range
+      # Returns whether the number falls in an extension range.
+      #: (untyped number) -> bool
       def extension_number?(number)
         @extension_ranges.any? { |r| r.cover?(number) }
       end
 
-      # @return [Boolean] a synthesized `map<K, V>` entry type
+      # Returns a synthesized `map<K, V>` entry type.
+      #: () -> bool
       def map_entry?
         options.map_entry?
       end
 
-      # @return [Boolean]
+      #: () -> bool
       def message_set_wire_format?
         options.message_set_wire_format?
       end
 
-      # @param default_json_names [Boolean] see {File#to_proto}
-      # @return [Protostar::Google::Protobuf::DescriptorProto]
+      # - `default_json_names`: see File#to_proto
+      #: (?default_json_names: bool) -> Protostar::Google::Protobuf::DescriptorProto
       def to_proto(default_json_names: true)
         Proto::Writer.message(self, default_json_names)
       end

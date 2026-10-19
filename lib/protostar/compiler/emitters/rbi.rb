@@ -28,14 +28,13 @@ module Protostar
           @types = FieldTypes.new(FieldTypes::Sorbet, google: true) { |d| constant(d) }
         end
 
-        # @param files [Array<Schema::File>]
-        # @return [Hash{String => String}] output path to the RBI
+        # Returns a Hash of output path to the RBI.
+        #: (Array[Schema::File] files) -> Hash[String, String]
         def emit(files)
           files.to_h { |f| [Naming.require_name(f.name) + ".rbi", file(f)] }
         end
 
-        # @param file [Schema::File]
-        # @return [String]
+        #: (Schema::File file) -> String
         def file(file)
           Naming.check_ruby_package(file)
           @source = file.source_info

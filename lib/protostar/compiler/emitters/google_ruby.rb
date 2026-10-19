@@ -7,21 +7,21 @@ module Protostar
       # (ruby_generator.cc): the serialized descriptor added to
       # google-protobuf's generated pool, and constants looked up from it.
       class GoogleRuby
-        # @param pool [Schema::Pool, nil] where extensions used in options but defined in
+        # - `pool`: where extensions used in options but defined in
         #   `import option` files are found
+        #: (?pool: Schema::Pool?) -> void
         def initialize(pool: nil)
           @pool = pool
         end
 
-        # @param files [Array<Schema::File>]
-        # @return [Hash{String => String}] output path to source
+        # Returns a Hash of output path to source.
+        #: (Array[Schema::File] files) -> Hash[String, String]
         def emit(files)
           files.to_h { |f| [Naming.require_name(f.name) + ".rb", file(f)] }
         end
 
-        # @param file [Schema::File]
-        # @return [String]
-        # @raise [Emitters::Error] for a `ruby_package` protoc refuses
+        # Raises Emitters::Error for a `ruby_package` protoc refuses.
+        #: (Schema::File file) -> String
         def file(file)
           Naming.check_ruby_package(file)
           p = Printer.new
@@ -52,7 +52,9 @@ module Protostar
         # without source info and with `json_name` only where the .proto set
         # one. Whether it was set is not kept, so a `json_name` equal to the
         # derived one is taken as not set.
-        # @return [String] binary
+        #
+        # Returns a binary String.
+        #: (untyped file) -> String
         def self.serialized(file)
           file.serialize(source_info: false, default_json_names: false)
         end

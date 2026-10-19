@@ -7,8 +7,7 @@ module Protostar
     # the same shapes): Integers in range, Floats, true/false, frozen UTF-8 or
     # binary Strings, enum Symbols (or Integers for numbers without a name),
     # messages of the field's class.
-    # @api private
-    module Coercion
+    module Coercion # :nodoc: all
       RANGES = {
         FieldInfo::INT32 => -0x8000_0000..0x7FFF_FFFF,
         FieldInfo::SINT32 => -0x8000_0000..0x7FFF_FFFF,
@@ -31,9 +30,9 @@ module Protostar
 
       module_function
 
-      # @param info [FieldInfo]
-      # @return [Object] what gets stored for a non-nil value assigned to the field
-      # @raise [Protostar::TypeError]
+      # Returns what gets stored for a non-nil value assigned to the field.
+      # Raises Protostar::TypeError.
+      #: (FieldInfo info, untyped value) -> untyped
       def field(info, value)
         if info.map
           raise_type(info, value, "a Hash") unless value.is_a?(Hash)

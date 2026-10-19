@@ -2,23 +2,25 @@
 
 module Protostar
   # The runtime of generated `_pb.rb` files, also meant to be written by hand.
-  # A block describes one `.proto` file through {Schema::File.draft}; the
-  # file is resolved and frozen into {Protostar.generated_pool}, and its
+  # A block describes one `.proto` file through Schema::File.draft; the
+  # file is resolved and frozen into Protostar.generated_pool, and its
   # message classes and enum modules are defined.
   #
-  #   Protostar::DSL.file("acme/person.proto", package: "acme", syntax: :proto3) do |f|
-  #     f.message "Person" do |m|
-  #       m.field :name, 1, :string
-  #       m.field :friends, 2, :message, ".acme.Person", label: :repeated
-  #       m.oneof :contact do |o|
-  #         o.field :email, 3, :string
-  #       end
-  #       m.map :attrs, 4, :string, :string
+  # ```ruby
+  # Protostar::DSL.file("acme/person.proto", package: "acme", syntax: :proto3) do |f|
+  #   f.message "Person" do |m|
+  #     m.field :name, 1, :string
+  #     m.field :friends, 2, :message, ".acme.Person", label: :repeated
+  #     m.oneof :contact do |o|
+  #       o.field :email, 3, :string
   #     end
+  #     m.map :attrs, 4, :string, :string
   #   end
-  #   module Acme
-  #     Person = Protostar::DSL.message("acme.Person")
-  #   end
+  # end
+  # module Acme
+  #   Person = Protostar::DSL.message("acme.Person")
+  # end
+  # ```
   #
   # Every descriptor-level call takes the options of its descriptor as extra
   # keywords: `deprecated: true`, `packed: false`, `features: {...}`, with
@@ -45,20 +47,17 @@ module Protostar
       # Describes, builds and defines one `.proto` file. Loading a file the pool
       # already has is a no-op that returns the file there.
       #
-      # @param name [String] the file name as imported, e.g. "acme/person.proto"
-      # @param package [String, nil]
-      # @param syntax [Symbol, String, nil] :proto2, :proto3 or :editions; omitted for proto2 as protoc does
-      # @param edition [Symbol, Integer, nil] e.g. :EDITION_2023 or 2023; implies `syntax: :editions`
-      # @param dependencies [Array<String>] imported file names, which must be loaded already
-      # @param public_dependencies [Array<String, Integer>] names (or indexes) of `import public` files
-      # @param weak_dependencies [Array<String, Integer>]
-      # @param option_dependencies [Array<String>] `import option` file names
-      # @param options [Hash, nil] the FileOptions verbatim
-      # @param pool [Schema::Pool] where the file is built and added
-      # @param registry [Types::Registry, nil] where classes are defined; nil builds the file only
-      # @param file_options [Hash] FileOptions fields as keywords, custom ones under `extensions:`
-      # @yieldparam f [FileBuilder]
-      # @return [Schema::File]
+      # - `name`: the file name as imported, e.g. "acme/person.proto"
+      # - `syntax`: :proto2, :proto3 or :editions; omitted for proto2 as protoc does
+      # - `edition`: e.g. :EDITION_2023 or 2023; implies `syntax: :editions`
+      # - `dependencies`: imported file names, which must be loaded already
+      # - `public_dependencies`: names (or indexes) of `import public` files
+      # - `option_dependencies`: `import option` file names
+      # - `options`: the FileOptions verbatim
+      # - `pool`: where the file is built and added
+      # - `registry`: where classes are defined; nil builds the file only
+      # - `file_options`: FileOptions fields as keywords, custom ones under `extensions:`
+      #: (String name, ?package: String?, ?syntax: (Symbol | String)?, ?edition: (Symbol | Integer)?, ?dependencies: Array[String], ?public_dependencies: Array[(String | Integer)], ?weak_dependencies: Array[(String | Integer)], ?option_dependencies: Array[String], ?options: Hash[untyped, untyped]?, ?pool: Schema::Pool, ?registry: Types::Registry?, **untyped file_options) ?{ (FileBuilder f) -> untyped } -> Schema::File
       def file(name, package: nil, syntax: nil, edition: nil, dependencies: nil, public_dependencies: nil,
         weak_dependencies: nil, option_dependencies: nil, options: nil, pool: Protostar.generated_pool,
         registry: Types.registry, **file_options, &block)
@@ -79,17 +78,19 @@ module Protostar
         built
       end
 
-      # @param full_name [String] e.g. "acme.Person"
-      # @return [Class] the message class defined for it
-      # @raise [Error] when no file defined it
+      # - `full_name`: e.g. "acme.Person"
+      #
+      # Returns the message class defined for it.
+      # Raises Error when no file defined it.
+      #: (String full_name, ?registry: untyped) -> Class
       def message(full_name, registry: Types.registry)
         found = registry.find(full_name)
         raise Error, "no message #{full_name} has been defined" unless found.is_a?(Class)
         found
       end
 
-      # @param full_name [String]
-      # @return [Module] the enum module defined for it
+      # Returns the enum module defined for it.
+      #: (String full_name, ?registry: untyped) -> Module
       def enum(full_name, registry: Types.registry)
         found = registry.find(full_name)
         raise Error, "no enum #{full_name} has been defined" unless found.is_a?(Module) && !found.is_a?(Class)
@@ -98,8 +99,9 @@ module Protostar
 
       # A Module standing for a service, which gRPC stubs reopen to add
       # `Service` and `Stub`
-      # @param full_name [String]
-      # @return [Module] answering `descriptor` with the {Schema::Service}
+      #
+      # Returns answering `descriptor` with the Schema::Service.
+      #: (String full_name, ?pool: untyped) -> Module
       def service(full_name, pool: Protostar.generated_pool)
         descriptor = pool.find_service(full_name) || raise(Error, "no service #{full_name} has been defined")
         mod = Module.new
@@ -109,8 +111,7 @@ module Protostar
       end
 
       # Options given as keywords merged into a verbatim options Hash
-      # @api private
-      def options(verbatim, keywords)
+      def options(verbatim, keywords) # :nodoc:
         return verbatim if keywords.empty?
         out = verbatim ? verbatim.dup : {}
         keywords.each do |key, value|
@@ -124,8 +125,7 @@ module Protostar
       end
 
       # :local or :export; the deprecated protoc spellings are read with a warning
-      # @api private
-      def visibility(value)
+      def visibility(value) # :nodoc:
         replacement = OLD_VISIBILITIES[value]
         return value unless replacement
         Protostar.deprecated("visibility: #{value.inspect}", "visibility: #{replacement.inspect}")
@@ -133,15 +133,13 @@ module Protostar
       end
 
       # protoc's name for the entry message of a map field
-      # @param field_name [String]
-      # @return [String]
+      #: (String field_name) -> String
       def map_entry_name(field_name)
         Schema::Draft.map_entry_name(field_name)
       end
 
       # A field type as the draft spells it: a short type Symbol, or a type name
-      # @api private
-      def type(type)
+      def type(type) # :nodoc:
         return type if type.is_a?(String)
         type = type.to_sym
         type = Schema::Field::TYPES.fetch(type, type)
@@ -149,8 +147,7 @@ module Protostar
         type
       end
 
-      # @api private
-      def label(label)
+      def label(label) # :nodoc:
         return :optional if label.nil?
         label = label.to_sym
         label = Schema::Field::LABELS.fetch(label, label)
@@ -171,24 +168,22 @@ module Protostar
       end
     end
 
-    # Extended by the Modules {DSL.service} returns
+    # Extended by the Modules DSL.service returns
     module ServiceModule
-      # @return [Schema::Service]
-      attr_reader :descriptor
+      attr_reader :descriptor #: Schema::Service
     end
 
     # Common to every scope that holds messages, enums and extensions
-    # @api private
-    class Scope
+    class Scope # :nodoc: all
       def initialize(draft)
         @draft = draft
       end
 
       # A nested (or top-level) message
-      # @param name [String]
-      # @param visibility [Symbol, nil] :local or :export (edition 2024)
-      # @param options [Hash, nil] MessageOptions verbatim
-      # @yieldparam m [MessageBuilder]
+      #
+      # - `visibility`: :local or :export (edition 2024)
+      # - `options`: MessageOptions verbatim
+      #: (String name, ?visibility: Symbol?, ?options: Hash[untyped, untyped]?, **untyped message_options) ?{ (MessageBuilder m) -> untyped } -> untyped
       def message(name, visibility: nil, options: nil, **message_options, &block)
         visibility = DSL.visibility(visibility)
         @draft.message(name, visibility: visibility, options: DSL.options(options, message_options)) do |m|
@@ -197,7 +192,7 @@ module Protostar
       end
 
       # An enum
-      # @yieldparam e [EnumBuilder]
+      #: (untyped name, ?visibility: untyped, ?options: untyped, **untyped enum_options) ?{ (EnumBuilder e) -> untyped } -> untyped
       def enum(name, visibility: nil, options: nil, **enum_options, &block)
         visibility = DSL.visibility(visibility)
         @draft.enum(name, visibility: visibility, options: DSL.options(options, enum_options)) do |e|
@@ -206,18 +201,18 @@ module Protostar
       end
 
       # Extensions of another message declared in this scope
-      # @param extendee [String] the extended message, e.g. ".acme.Base"
-      # @yieldparam e [ExtendBuilder]
+      #
+      # - `extendee`: the extended message, e.g. ".acme.Base"
+      #: (String extendee) ?{ (ExtendBuilder e) -> untyped } -> untyped
       def extend(extendee, &block)
         block.call(ExtendBuilder.new(@draft, extendee.to_s))
         self
       end
     end
 
-    # The block argument of {DSL.file}
+    # The block argument of DSL.file
     class FileBuilder < Scope
-      # @param name [String]
-      # @yieldparam s [ServiceBuilder]
+      #: (String name, ?options: untyped, **untyped service_options) ?{ (ServiceBuilder s) -> untyped } -> untyped
       def service(name, options: nil, **service_options, &block)
         @draft.service(name, options: DSL.options(options, service_options)) do |s|
           block&.call(ServiceBuilder.new(s))
@@ -225,20 +220,20 @@ module Protostar
       end
     end
 
-    # The block argument of {Scope#message}
+    # The block argument of Scope#message
     class MessageBuilder < Scope
       # A field
-      # @param name [Symbol, String]
-      # @param number [Integer]
-      # @param type [Symbol, String] :int32, :string, :message, :enum, :group, ...; a String is taken as
+      #
+      # - `type`: :int32, :string, :message, :enum, :group, ...; a String is taken as
       #   the type name of a message or enum, its kind looked up when the file is built
-      # @param type_name [String, nil] the message or enum type, e.g. ".acme.Person"
-      # @param label [Symbol, nil] :optional (the default), :required or :repeated
-      # @param default [Object, nil] the default as protoc stores it: text, C-escaped for bytes
-      # @param json_name [String, nil] when not the one derived from the name
-      # @param proto3_optional [Boolean] a proto3 `optional` field; its synthetic oneof is made for it
-      # @param oneof [Symbol, String, nil] the oneof the field belongs to
-      # @param options [Hash, nil] FieldOptions verbatim
+      # - `type_name`: the message or enum type, e.g. ".acme.Person"
+      # - `label`: :optional (the default), :required or :repeated
+      # - `default`: the default as protoc stores it: text, C-escaped for bytes
+      # - `json_name`: when not the one derived from the name
+      # - `proto3_optional`: a proto3 `optional` field; its synthetic oneof is made for it
+      # - `oneof`: the oneof the field belongs to
+      # - `options`: FieldOptions verbatim
+      #: ((Symbol | String) name, Integer number, (Symbol | String), ?String? type_name, ?label: Symbol?, ?default: untyped, ?json_name: String?, ?proto3_optional: bool, ?oneof: (Symbol | String)?, ?options: Hash[untyped, untyped]?, **untyped field_options) -> untyped
       def field(name, number, type, type_name = nil, label: nil, default: nil, json_name: nil, proto3_optional: nil,
         oneof: nil, options: nil, **field_options)
         @draft.field(name, number, DSL.type(type), type_name, label: DSL.label(label), default: default,
@@ -247,9 +242,10 @@ module Protostar
       end
 
       # A `map<K, V>` field and its synthesized entry message
-      # @param key_type [Symbol]
-      # @param value_type [Symbol, String] a scalar type, :message or :enum (then give `value_type_name`),
+      #
+      # - `value_type`: a scalar type, :message or :enum (then give `value_type_name`),
       #   or the value's type name
+      #: (untyped name, untyped number, Symbol key_type, (Symbol | String) value_type, ?untyped value_type_name, ?json_name: untyped, ?options: untyped, **untyped field_options) -> untyped
       def map(name, number, key_type, value_type, value_type_name = nil, json_name: nil, options: nil, **field_options)
         value = value_type.is_a?(String) ? value_type : DSL.type(value_type)
         @draft.map(name, number, key: DSL.type(key_type), value: value, value_type_name: value_type_name,
@@ -258,7 +254,7 @@ module Protostar
 
       # A proto2 group: a field of type group and its nested message, named as
       # in `group Name = number { ... }`
-      # @yieldparam g [MessageBuilder]
+      #: (untyped name, untyped number, ?label: untyped, ?json_name: untyped, ?oneof: untyped, ?options: untyped, ?message_options: untyped, **untyped field_options) ?{ (MessageBuilder g) -> untyped } -> untyped
       def group(name, number, label: nil, json_name: nil, oneof: nil, options: nil, message_options: nil,
         **field_options, &block)
         @draft.group(name, number, label: DSL.label(label), json_name: json_name, oneof: oneof,
@@ -269,14 +265,14 @@ module Protostar
 
       # A oneof. Fields given in the block belong to it; fields elsewhere may
       # name it with `oneof:`.
-      # @yieldparam o [OneofBuilder]
+      #: (untyped name, ?options: untyped, **untyped oneof_options) ?{ (OneofBuilder o) -> untyped } -> untyped
       def oneof(name, options: nil, **oneof_options, &block)
         @draft.oneof(name.to_s, options: DSL.options(options, oneof_options))
         block&.call(OneofBuilder.new(self, name))
       end
 
       # Extension ranges, inclusive
-      # @param ranges [Array<Range, Integer>]
+      #: (*(Range[untyped] | Integer) ranges, ?options: untyped, **untyped range_options) -> untyped
       def extensions(*ranges, options: nil, **range_options)
         @draft.extensions(*ranges, options: DSL.options(options, range_options))
         self
@@ -289,34 +285,32 @@ module Protostar
       end
     end
 
-    # The block argument of {MessageBuilder#oneof}
+    # The block argument of MessageBuilder#oneof
     class OneofBuilder
-      # @api private
-      def initialize(message, name)
+      def initialize(message, name) # :nodoc:
         @message = message
         @name = name
       end
 
-      # A member field; same arguments as {MessageBuilder#field}
+      # A member field; same arguments as MessageBuilder#field
       def field(name, number, type, type_name = nil, **kwargs)
         @message.field(name, number, type, type_name, oneof: @name, **kwargs)
       end
 
-      # A member group; same arguments as {MessageBuilder#group}
+      # A member group; same arguments as MessageBuilder#group
       def group(name, number, **kwargs, &block)
         @message.group(name, number, oneof: @name, **kwargs, &block)
       end
     end
 
-    # The block argument of {Scope#extend}
+    # The block argument of Scope#extend
     class ExtendBuilder
-      # @api private
-      def initialize(draft, extendee)
+      def initialize(draft, extendee) # :nodoc:
         @draft = draft
         @extendee = extendee
       end
 
-      # An extension field; same arguments as {MessageBuilder#field}
+      # An extension field; same arguments as MessageBuilder#field
       def field(name, number, type, type_name = nil, label: nil, default: nil, json_name: nil, proto3_optional: nil,
         options: nil, **field_options)
         @draft.extension(name, number, DSL.type(type), type_name, extendee: @extendee, label: DSL.label(label),
@@ -325,15 +319,13 @@ module Protostar
       end
     end
 
-    # The block argument of {Scope#enum}
+    # The block argument of Scope#enum
     class EnumBuilder
-      # @api private
-      def initialize(draft)
+      def initialize(draft) # :nodoc:
         @draft = draft
       end
 
-      # @param name [Symbol, String]
-      # @param number [Integer]
+      #: ((Symbol | String) name, Integer number, ?options: untyped, **untyped value_options) -> untyped
       def value(name, number, options: nil, **value_options)
         @draft.value(name, number, options: DSL.options(options, value_options))
         self
@@ -346,16 +338,14 @@ module Protostar
       end
     end
 
-    # The block argument of {FileBuilder#service}
+    # The block argument of FileBuilder#service
     class ServiceBuilder
-      # @api private
-      def initialize(draft)
+      def initialize(draft) # :nodoc:
         @draft = draft
       end
 
-      # @param name [Symbol, String]
-      # @param input_type [String] e.g. ".acme.Request"
-      # @param output_type [String]
+      # - `input_type`: e.g. ".acme.Request"
+      #: ((Symbol | String) name, String input_type, String output_type, ?client_streaming: untyped, ?server_streaming: untyped, ?options: untyped, **untyped method_options) -> untyped
       def rpc(name, input_type, output_type, client_streaming: false, server_streaming: false, options: nil,
         **method_options)
         @draft.rpc(name, input_type, output_type, client_streaming: client_streaming,

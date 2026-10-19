@@ -8,11 +8,12 @@ module Protostar
     # or GitHub Actions workflow commands, which annotate the lines of a pull
     # request.
     module Formats
-      # @param diagnostic [Compiler::Diagnostic]
-      # @param source [Source, nil] the file's text, to find where spans end
-      # @return [Hash] code, severity, message, file, path, line, column, spans,
-      #   help, notes, fix and rule; the message is the short title, `protoc` the
-      #   compiler's own wording when that differs
+      # - `source`: the file's text, to find where spans end
+      #
+      # Returns code, severity, message, file, path, line, column, spans,
+      # help, notes, fix and rule; the message is the short title, `protoc` the
+      # compiler's own wording when that differs.
+      #: (Compiler::Diagnostic diagnostic, ?source: Source?) -> Hash[Symbol, untyped]
       def self.record(diagnostic, source: nil)
         d = diagnostic.annotated
         spans = d.spans
@@ -25,12 +26,14 @@ module Protostar
         out
       end
 
-      # @return [String] one line of JSON
+      # Returns one line of JSON.
+      #: (Compiler::Diagnostic diagnostic, ?source: Source?) -> String
       def self.json(diagnostic, source: nil)
         ::JSON.generate(record(diagnostic, source: source))
       end
 
-      # @return [String] an `::error` or `::warning` workflow command
+      # Returns an `::error` or `::warning` workflow command.
+      #: (Compiler::Diagnostic diagnostic, ?source: Source?) -> String
       def self.github(diagnostic, source: nil)
         d = diagnostic.annotated
         props = {"file" => d.path || d.file}

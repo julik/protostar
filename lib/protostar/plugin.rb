@@ -10,7 +10,9 @@ module Protostar
   # google-protobuf Ruby), `rbs`, `rbi` and `grpc`. `ruby` brings its RBS and
   # RBI along unless the parameter also says `no-rbs` or `no-rbi`.
   #
-  #   protoc --plugin=protoc-gen-protostar --protostar_out=ruby,grpc:lib acme/service.proto
+  # ```sh
+  # protoc --plugin=protoc-gen-protostar --protostar_out=ruby,grpc:lib acme/service.proto
+  # ```
   module Plugin
     Compiler = Protostar::Compiler
     Emitters = Compiler::Emitters
@@ -32,8 +34,10 @@ module Protostar
       0
     end
 
-    # @param bytes [String] a serialized CodeGeneratorRequest
-    # @return [String] a serialized CodeGeneratorResponse
+    # - `bytes`: a serialized CodeGeneratorRequest
+    #
+    # Returns a serialized CodeGeneratorResponse.
+    #: (String bytes) -> String
     def respond(bytes)
       response = Response.new(
         supported_features: Feature::FEATURE_PROTO3_OPTIONAL | Feature::FEATURE_SUPPORTS_EDITIONS,
@@ -51,8 +55,8 @@ module Protostar
       response.encode
     end
 
-    # @param request [Request]
-    # @return [Hash{String => String}] file name to content
+    # Returns file name to content.
+    #: (Protostar::Google::Protobuf::Compiler::CodeGeneratorRequest request) -> Hash[String, String]
     def generate(request)
       parameters = request.parameter.split(",").map(&:strip).reject(&:empty?)
       unknown = parameters - OUTPUTS - DECLINE

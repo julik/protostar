@@ -5,24 +5,22 @@ module Protostar
     # protoc's tokenizer (`io/tokenizer.cc`), byte for byte: the same token
     # boundaries, the same 0-based lines and columns (tabs advance to the next
     # multiple of 8), the same error messages and the same comment attachment
-    # in {#next_with_comments}.
-    #
-    # @api private
-    class Lexer
+    # in #next_with_comments.
+    class Lexer # :nodoc: all
       # A token. The lexer reuses its current token as it advances, as
-      # protoc's Tokenizer does, and copies it into {Lexer#previous}.
+      # protoc's Tokenizer does, and copies it into Lexer#previous.
       class Token
-        # @return [Symbol] :start, :identifier, :integer, :float, :string, :symbol, :end,
-        #   and :whitespace or :newline when asked for
-        attr_accessor :type
-        # @return [String] the source text, quotes and escapes included for strings
-        attr_accessor :text
-        # @return [Integer] 0-based
-        attr_accessor :line
-        # @return [Integer] 0-based, a tab advancing to the next multiple of 8
-        attr_accessor :column
-        # @return [Integer] 0-based column just after the token
-        attr_accessor :end_column
+        # :start, :identifier, :integer, :float, :string, :symbol, :end,
+        # and :whitespace or :newline when asked for.
+        attr_accessor :type #: Symbol
+        # The source text, quotes and escapes included for strings.
+        attr_accessor :text #: String
+        # 0-based.
+        attr_accessor :line #: Integer
+        # 0-based, a tab advancing to the next multiple of 8.
+        attr_accessor :column #: Integer
+        # 0-based column just after the token.
+        attr_accessor :end_column #: Integer
 
         def initialize(type:, text:, line:, column:, end_column:)
           @type = type
@@ -32,7 +30,8 @@ module Protostar
           @end_column = end_column
         end
 
-        # @return [Array] type, text, line, column and end column
+        # Returns the type, text, line, column and end column.
+        #: () -> Array[untyped]
         def to_a
           [@type, @text, @line, @column, @end_column]
         end
@@ -60,12 +59,12 @@ module Protostar
         "\\" => 92, "?" => 63, "'" => 39, "\"" => 34
       }.freeze
 
-      # @return [Token]
-      attr_reader :current, :previous
+      attr_reader :current, :previous #: Token
       attr_accessor :report_whitespace, :report_newlines
 
-      # @param source [String] the file's bytes
-      # @param errors [#call] receives (line, column, message) for every error
+      # - `source`: the file's bytes
+      # - `errors`: receives (line, column, message) for every error
+      #: (String source, untyped errors) -> void
       def initialize(source, errors)
         @src = source.b
         @size = @src.bytesize
@@ -84,7 +83,9 @@ module Protostar
       end
 
       # Advances to the next token, skipping whitespace and comments
-      # @return [Boolean] false at the end of input
+      #
+      # Returns false at the end of input.
+      #: () -> bool
       def next
         @previous = @current.dup
         until @read_error
@@ -153,12 +154,13 @@ module Protostar
         false
       end
 
-      # Like {#next}, but collects the comments around the token boundary the
+      # Like #next, but collects the comments around the token boundary the
       # way protoc attaches them to declarations
-      # @param prev_trailing [String, nil] receives the previous token's trailing comment
-      # @param detached [Array<String>, nil] receives detached comments
-      # @param next_leading [String, nil] receives the next token's leading comment
-      # @return [Boolean]
+      #
+      # - `prev_trailing`: receives the previous token's trailing comment
+      # - `detached`: receives detached comments
+      # - `next_leading`: receives the next token's leading comment
+      #: (String? prev_trailing, Array[String]? detached, String? next_leading) -> bool
       def next_with_comments(prev_trailing, detached, next_leading)
         collector = CommentCollector.new(prev_trailing, detached, next_leading)
         prev_line = @line
@@ -228,7 +230,9 @@ module Protostar
       end
 
       # protoc's Tokenizer::ParseInteger: decimal, 0x hex or leading-zero octal
-      # @return [Integer, nil] nil when malformed or above `max`
+      #
+      # Returns nil when malformed or above `max`.
+      #: (untyped text, untyped max) -> Integer?
       def self.parse_integer(text, max)
         base = 10
         digits = text
@@ -249,7 +253,7 @@ module Protostar
       end
 
       # protoc's Tokenizer::ParseFloat over text the tokenizer accepted as a number
-      # @return [Float]
+      #: (untyped text) -> Float
       def self.parse_float(text)
         m = text.match(/\A(\d*)(?:\.(\d*))?(?:[eE]([-+]?\d+))?/)
         int = m[1].empty? ? "0" : m[1]
@@ -264,8 +268,11 @@ module Protostar
       end
 
       # protoc's Tokenizer::ParseStringAppend: the bytes a string token denotes
-      # @param text [String] token text including the quotes
-      # @return [String] binary
+      #
+      # - `text`: token text including the quotes
+      #
+      # Returns a binary String.
+      #: (String text, ?untyped) -> String
       def self.parse_string(text, out = "".b)
         bytes = text.b
         quote = bytes.getbyte(0)
@@ -343,7 +350,8 @@ module Protostar
         end
       end
 
-      # @return [Boolean] whether `text` is a valid identifier
+      # Returns whether `text` is a valid identifier.
+      #: (untyped text) -> bool
       def self.identifier?(text)
         text.match?(/\A[A-Za-z_][A-Za-z0-9_]*\z/)
       end

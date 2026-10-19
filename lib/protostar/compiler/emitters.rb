@@ -2,7 +2,7 @@
 
 module Protostar
   class Compiler
-    # Code generators. Each takes built {Schema::File}s and returns a Hash of
+    # Code generators. Each takes built Schema::Files and returns a Hash of
     # output path to contents.
     module Emitters
       # Raised when a file cannot be emitted, with protoc's generator message
@@ -76,9 +76,9 @@ module Protostar
 
         # The modules a file's constants live in, outermost first: protoc's
         # GeneratePackageModules
-        # @param file [Schema::File]
-        # @param namespace [String, nil] overrides the package and `ruby_package`
-        # @return [Array<String>]
+        #
+        # - `namespace`: overrides the package and `ruby_package`
+        #: (Schema::File file, ?String? namespace) -> Array[String]
         def module_path(file, namespace = nil)
           return namespace.split("::") if namespace
           convert = true
@@ -103,7 +103,8 @@ module Protostar
         end
 
         # protoc's check on `ruby_package`
-        # @raise [Emitters::Error]
+        #
+        # Raises Emitters::Error.
         def check_ruby_package(file)
           file.options.ruby_package&.each_char do |c|
             next unless BANNED_RUBY_PACKAGE.include?(c)
@@ -113,7 +114,7 @@ module Protostar
         end
 
         # The constant path of a message or enum relative to its file's module
-        # @param descriptor [Schema::Message, Schema::Enum]
+        #: ((Schema::Message | Schema::Enum) descriptor) -> untyped
         def relative_constant(descriptor)
           names = []
           d = descriptor
@@ -131,8 +132,7 @@ module Protostar
 
       # Constant paths and comments for the signature emitters of protostar's
       # own classes, which put the bootstrap under `Protostar::`
-      # @api private
-      module NativeNames
+      module NativeNames # :nodoc: all
         private
 
         def module_path(file)
@@ -205,10 +205,11 @@ module Protostar
 
         module_function
 
-        # @param value [Object]
-        # @param indent [Integer] the indentation of the line the literal is on
-        # @param start [Integer] the column the literal starts on
-        # @return [String] on one line when it fits, otherwise one element per line
+        # - `indent`: the indentation of the line the literal is on
+        # - `start`: the column the literal starts on
+        #
+        # Returns on one line when it fits, otherwise one element per line.
+        #: (untyped value, ?Integer indent, ?Integer start) -> String
         def call(value, indent = 0, start = indent)
           flat = flat(value)
           return flat if start + flat.size <= WIDTH || !(value.is_a?(Hash) || value.is_a?(Array)) || value.empty?

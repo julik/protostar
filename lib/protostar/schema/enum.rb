@@ -4,25 +4,20 @@ module Protostar
   module Schema
     # An enum type
     class Enum < Descriptor
-      # @return [File]
-      attr_reader :file
-      # @return [Message, nil]
-      attr_reader :containing_message
-      # @return [Array<EnumValue>] declaration order
-      attr_reader :values
-      # @return [Hash{Integer => EnumValue}] the first declared value wins for aliases
-      attr_reader :values_by_number
-      # @return [Hash{String => EnumValue}]
-      attr_reader :values_by_name
-      # @return [Array<Range>] inclusive
-      attr_reader :reserved_ranges
-      # @return [Array<String>]
-      attr_reader :reserved_names
-      # @return [Symbol, nil] declared `visibility`: :local or :export (edition 2024), nil when not declared
-      attr_reader :visibility
+      attr_reader :file #: File
+      attr_reader :containing_message #: Message?
+      # Declaration order.
+      attr_reader :values #: Array[EnumValue]
+      # The first declared value wins for aliases.
+      attr_reader :values_by_number #: Hash[Integer, EnumValue]
+      attr_reader :values_by_name #: Hash[String, EnumValue]
+      # Inclusive.
+      attr_reader :reserved_ranges #: Array[Range[untyped]]
+      attr_reader :reserved_names #: Array[String]
+      # Declared `visibility`: :local or :export (edition 2024), nil when not declared.
+      attr_reader :visibility #: Symbol?
 
-      # @api private
-      def initialize(name:, full_name:, file:, containing_message:, index:)
+      def initialize(name:, full_name:, file:, containing_message:, index:) # :nodoc:
         @name = name
         @full_name = full_name
         @file = file
@@ -33,8 +28,7 @@ module Protostar
         @visibility = nil
       end
 
-      # @api private
-      def __values(values)
+      def __values(values) # :nodoc:
         @values = values
         @values_by_number = {}
         @values_by_name = {}
@@ -47,44 +41,42 @@ module Protostar
         self
       end
 
-      # @param key [Integer, String, Symbol] a value number or name
-      # @return [EnumValue, nil]
+      # - `key`: a value number or name
+      #: (Integer | String | Symbol key) -> EnumValue?
       def value(key)
         key.is_a?(Integer) ? @values_by_number[key] : @values_by_name[key.to_s]
       end
 
-      # @return [Boolean]
+      #: () -> bool
       def allow_alias?
         options.allow_alias?
       end
 
-      # @return [Boolean] unknown numbers go to unknown fields (proto2, editions
-      #   `enum_type = CLOSED`) instead of being kept in the field (proto3, `OPEN`)
+      # Whether unknown numbers go to unknown fields (proto2, editions
+      # `enum_type = CLOSED`) instead of being kept in the field (proto3, `OPEN`).
+      #: () -> bool
       def closed?
         @features.enum_type == :CLOSED
       end
 
-      # @return [Boolean]
+      #: () -> bool
       def open?
         !closed?
       end
 
-      # @return [Protostar::Google::Protobuf::EnumDescriptorProto]
+      #: () -> Protostar::Google::Protobuf::EnumDescriptorProto
       def to_proto
         Proto::Writer.enum(self)
       end
     end
 
-    # A value of an enum. Its {#full_name} lives in the enum's enclosing scope,
+    # A value of an enum. Its #full_name lives in the enum's enclosing scope,
     # as in protoc: value `FOO` of `pkg.Color` is `pkg.FOO`.
     class EnumValue < Descriptor
-      # @return [Integer]
-      attr_reader :number
-      # @return [Enum]
-      attr_reader :enum
+      attr_reader :number #: Integer
+      attr_reader :enum #: Enum
 
-      # @api private
-      def initialize(name:, full_name:, number:, enum:, index:)
+      def initialize(name:, full_name:, number:, enum:, index:) # :nodoc:
         @name = name
         @full_name = full_name
         @number = number
@@ -92,12 +84,12 @@ module Protostar
         @index = index
       end
 
-      # @return [File]
+      #: () -> File
       def file
         @enum.file
       end
 
-      # @return [Protostar::Google::Protobuf::EnumValueDescriptorProto]
+      #: () -> Protostar::Google::Protobuf::EnumValueDescriptorProto
       def to_proto
         Proto::Writer.enum_value(self)
       end

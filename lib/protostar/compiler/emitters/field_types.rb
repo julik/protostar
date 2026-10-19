@@ -4,15 +4,15 @@ module Protostar
   class Compiler
     module Emitters
       # What field readers return and writers take, shared by the RBS and RBI
-      # emitters. The model decides the types; a dialect ({RBS} or {Sorbet})
+      # emitters. The model decides the types; a dialect (RBS or Sorbet)
       # spells them.
       #
-      # For protostar's classes the types are what {Message::Coercion} accepts
+      # For protostar's classes the types are what Message::Coercion accepts
       # and what readers return. For google-protobuf's they are what the gem's
       # accessors take, as protoc's RBS has them.
       class FieldTypes
         INTEGERS = %i[fixed32 fixed64 int32 int64 sfixed32 sfixed64 sint32 sint64 uint32 uint64].freeze
-        # Ruby values {Message::Coercion} turns into these messages, for protostar's classes
+        # Ruby values Message::Coercion turns into these messages, for protostar's classes
         COERCED = {
           "google.protobuf.Timestamp" => :time,
           "google.protobuf.Duration" => :numeric
@@ -81,16 +81,18 @@ module Protostar
           def generic(name, *types) = "#{name}[#{types.join(", ")}]"
         end
 
-        # @param dialect [Module] {RBS} or {Sorbet}
-        # @param google [Boolean] google-protobuf's classes rather than protostar's
-        # @param constant [#call] the constant path of a {Schema::Message} or {Schema::Enum}
+        # - `dialect`: RBS or Sorbet
+        # - `google`: google-protobuf's classes rather than protostar's
+        # - `constant`: the constant path of a Schema::Message or Schema::Enum
+        #: (Module dialect, ?google: bool) ?{ (?) -> untyped } -> void
         def initialize(dialect, google: false, &constant)
           @d = dialect
           @google = google
           @constant = constant
         end
 
-        # @return [String] what the reader returns for one value
+        # Returns what the reader returns for one value.
+        #: (untyped field) -> String
         def read_one(field)
           case field.type
           when :double, :float then @d.atom(:float)
@@ -102,7 +104,8 @@ module Protostar
           end
         end
 
-        # @return [String] what the writer takes for one value
+        # Returns what the writer takes for one value.
+        #: (untyped field) -> String
         def write_one(field)
           return google_write_one(field) if @google
           case field.type
@@ -112,7 +115,8 @@ module Protostar
           end
         end
 
-        # @return [String] the reader's type
+        # Returns the reader's type.
+        #: (untyped field) -> String
         def read_type(field)
           if field.map?
             k = read_one(field.map_key)
@@ -127,7 +131,8 @@ module Protostar
           end
         end
 
-        # @return [String] the writer's type
+        # Returns the writer's type.
+        #: (untyped field) -> String
         def write_type(field)
           if @google
             return read_type(field) if field.map? || field.repeated?
@@ -136,7 +141,8 @@ module Protostar
           @d.nilable(container(field) { |f| write_one(f) })
         end
 
-        # @return [String] what `new` takes for the field
+        # Returns what `new` takes for the field.
+        #: (untyped field) -> String
         def init_type(field)
           return write_type(field) unless @google
           if message?(field) && !field.repeated?
@@ -146,7 +152,7 @@ module Protostar
           @d.nilable(container(field) { |f| write_one(f) })
         end
 
-        # @return [Boolean]
+        #: (untyped field) -> bool
         def message?(field)
           field.type == :message || field.type == :group
         end

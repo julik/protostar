@@ -3,8 +3,7 @@
 module Protostar
   module Schema
     # Parses `FieldDescriptorProto.default_value` text into Ruby values
-    # @api private
-    module DefaultValue
+    module DefaultValue # :nodoc: all
       INTEGER_TYPES = %i[int32 int64 uint32 uint64 sint32 sint64 fixed32 fixed64 sfixed32 sfixed64].freeze
       SIMPLE_ESCAPES = {
         "a" => 7, "b" => 8, "f" => 12, "n" => 10, "r" => 13, "t" => 9, "v" => 11,
@@ -12,8 +11,7 @@ module Protostar
       }.freeze
 
       # protoc's SimpleDtoa: the shortest of %.15g and %.17g that reads back exactly
-      # @param value [Float]
-      # @return [String]
+      #: (Float value) -> String
       def self.simple_dtoa(value)
         return "inf" if value == Float::INFINITY
         return "-inf" if value == -Float::INFINITY
@@ -24,10 +22,10 @@ module Protostar
         text
       end
 
-      # @param text [String] as protoc writes it
-      # @param type [Symbol] the field's short type
-      # @param enum [Enum, nil] the field's enum type
-      # @return [Object]
+      # - `text`: as protoc writes it
+      # - `type`: the field's short type
+      # - `enum`: the field's enum type
+      #: (String text, Symbol, Enum? enum) -> untyped
       def self.parse(text, type, enum)
         case type
         when *INTEGER_TYPES then parse_integer(text)
