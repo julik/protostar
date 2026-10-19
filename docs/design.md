@@ -7,7 +7,7 @@ later. This page is the map. [compiler-internals.md](compiler-internals.md) and
 [schema-api.md](schema-api.md) go deeper into two of its parts.
 
 ```
-.proto text ──▶ Compiler ──▶ Schema::File ──▶ emitters ──▶ _pb.rb, _pb.rbs, _services_pb.rb, .binpb
+.proto text ──▶ Compiler ──▶ Schema::File ──▶ emitters ──▶ _pb.rb, _pb.rbs, _pb.rbi, _services_pb.rb, .binpb
                                   ▲   │
      DSL (generated _pb.rb) ──────┤   └──▶ Types.define ──▶ message classes ──▶ codec, views, JSON, text, Builder
      FileDescriptorProto bytes ───┘                                   ▲
@@ -43,8 +43,13 @@ well-known types resolve without a protoc install. `protostar compile` takes pro
 flags; `protoc-gen-protostar` is the same thing as a protoc plugin.
 
 The emitters write native Ruby (`--ruby_out`, the DSL), protoc's own google-protobuf Ruby
-(`--google_out`, byte for byte what protoc 36.2 writes), RBS for either, gRPC service stubs
-(byte for byte what grpc-tools writes) and descriptor sets.
+(`--google_out`, byte for byte what protoc 36.2 writes), RBS and Sorbet RBI for either, gRPC
+service stubs (byte for byte what grpc-tools writes) and descriptor sets. Next to native Ruby
+the RBS and RBI are written by default; both read their types from one model
+(`Emitters::FieldTypes`), so they agree on what every reader returns and every writer takes.
+The native `_pb.rb` is `# typed: ignore`: Sorbet cannot follow constants assigned from DSL
+calls, and reads the classes from the RBI. The runtime's own signatures are hand-written,
+`sig/protostar.rbs` and `rbi/protostar.rbi`, and a test keeps their method lists equal.
 
 ## Message classes and the codec
 

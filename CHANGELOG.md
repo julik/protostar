@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Sorbet RBI: `--rbi_out=DIR` and the plugin's `rbi` output write a `_pb.rbi` per `.proto`, for protostar's classes next to `--ruby_out` and for google-protobuf's otherwise (in the shape tapioca's protobuf compiler writes). The gem ships `rbi/protostar.rbi` for the runtime API and RBI for the well-known types, which `tapioca gem` picks up.
+- `--ruby_out` writes the `_pb.rbs` and `_pb.rbi` next to each `_pb.rb` by default; `--no-rbs` and `--no-rbi` (plugin: `no-rbs`, `no-rbi`) turn them off, `--rbs_out` and `--rbi_out` put them elsewhere. `--google_out` writes only what protoc writes, as before, and one file to stdout is still only Ruby.
+- Generated `_pb.rb` files start with `# typed: ignore`, so Sorbet takes the classes from the RBI and needs no configuration. Regenerate committed files to pick up the line.
+- `sig/protostar.rbs` describes the descriptors (`Protostar::Schema::File`, `Message`, `Field`, `Enum`, `Pool` and the rest); `descriptor` returns them instead of `untyped`.
+
 ## 0.1.0.beta1
 
 The first release, as a prerelease. The `google-protobuf` shim (4.36.2.1) ships inside it, and
