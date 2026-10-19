@@ -2,10 +2,11 @@
 
 module Protostar
   module Codec
-    # The second encoding pass writes fields in ascending number order, then
-    # unknown fields verbatim, using the sizes the first pass recorded. The
-    # per-class `__write` methods (EncodeGenerator) do the work; this
-    # module has the entry points and the parts they share.
+    # Encodes messages: in one pass into a String, or in two (sizes first)
+    # into a sink. Fields go in ascending number order, then unknown fields
+    # verbatim. The per-class `__encode` and `__write` methods
+    # (EncodeGenerator) do the work; this module has the entry points and
+    # the parts they share.
     module Encoder # :nodoc: all
       F = Message::FieldInfo
       BINARY = Encoding::BINARY
@@ -18,8 +19,7 @@ module Protostar
       # Returns a binary String.
       #: (untyped msg) -> String
       def encode(msg)
-        buf = String.new(encoding: BINARY)
-        msg.__encode(Wire::Writer.new(buf), buf)
+        msg.__encode("".b)
       end
 
       def encode_to(msg, io)
@@ -33,8 +33,7 @@ module Protostar
       #: (untyped msg, untyped io) -> (String | IO)
       def encode_delimited(msg, io)
         unless io
-          buf = String.new(encoding: BINARY) << 0
-          msg.__encode(Wire::Writer.new(buf), buf)
+          buf = msg.__encode("".b << 0)
           n = buf.bytesize - 1
           (n < 0x80) ? buf.setbyte(0, n) : patch_length(buf, 0, n)
           return buf
@@ -62,7 +61,8 @@ module Protostar
 
       # Every entry of a map field, in insertion order, key then value, for
       # the one-pass encoder; checks what Sizer.entry checks
-      def map_into(info, hash, w, buf)
+      def map_into(info, hash, buf)
+        w = Wire::Writer.new(buf)
         key_info = info.key
         value_info = info.value
         tag = info.tag
@@ -78,11 +78,11 @@ module Protostar
           if value_info.kind == F::MESSAGE
             inner = buf.bytesize
             buf << 0
-            val.__encode(w, buf)
+            val.__encode(buf)
             n = buf.bytesize - inner - 1
             (n < 0x80) ? buf.setbyte(inner, n) : patch_length(buf, inner, n)
           elsif value_info.kind == F::GROUP
-            val.__encode(w, buf)
+            val.__encode(buf)
             w.write_raw(value_info.end_tag)
           else
             value(value_info, val, w, nil)
@@ -157,6 +157,14 @@ module Protostar
           value(key_info, key, w, sizes)
           w.write_raw(value_info.tag)
           value(value_info, val, w, sizes)
+        end
+      end
+
+      # `buf` is binary, so `<<` appends the bytes as they are
+      #: (String buf, Array[UnknownField] list) -> untyped
+      def unknown_into(buf, list)
+        list.each do |u|
+          Wire.append_varint(buf, (u.number << 3) | u.wire_type) << u.bytes
         end
       end
 

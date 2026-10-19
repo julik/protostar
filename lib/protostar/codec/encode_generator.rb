@@ -8,7 +8,7 @@ module Protostar
     # map to numbers through a literal `case`. Maps and unknown fields go to
     # Sizer and Encoder.
     #
-    # `__encode(w, buf)` makes one pass into a String: a nested message or
+    # `__encode(buf)` makes one pass into a String: a nested message or
     # packed run gets one byte for its length, written once its bytes are,
     # and more bytes are spliced in only when it is over 127 bytes long.
     #
@@ -54,9 +54,9 @@ module Protostar
             w.flush_if_full
           end
 
-          def __encode(w, buf)
+          def __encode(buf)
             #{fields.map { |f| encode_field(f) }.join}
-            Protostar::Codec::Encoder.unknown(w, @unknown) if @unknown
+            Protostar::Codec::Encoder.unknown_into(buf, @unknown) if @unknown
             buf
           end
         RUBY
@@ -64,7 +64,7 @@ module Protostar
 
       def encode_field(f)
         body = if f.map
-          "Protostar::Codec::Encoder.map_into(#{info(f)}, v, w, buf)\n"
+          "Protostar::Codec::Encoder.map_into(#{info(f)}, v, buf)\n"
         elsif f.packed
           packed_encode(f)
         elsif f.repeated
@@ -84,9 +84,9 @@ module Protostar
 
       def encode_value(f, var)
         case f.kind
-        when F::MESSAGE then "at = buf.bytesize\nbuf << 0\n#{var}.__encode(w, buf)\n#{patch_length}"
-        when F::GROUP then "#{var}.__encode(w, buf)\n#{append(tag_bytes(f, Wire::END_GROUP))}"
-        else write_value(f, var)
+        when F::MESSAGE then "at = buf.bytesize\nbuf << 0\n#{var}.__encode(buf)\n#{patch_length}"
+        when F::GROUP then "#{var}.__encode(buf)\n#{append(tag_bytes(f, Wire::END_GROUP))}"
+        else write_value(f, var, true)
         end
       end
 
@@ -101,10 +101,10 @@ module Protostar
         case f.kind
         when *VARINT_KINDS, F::SINT32, F::SINT64, F::ENUM
           src << "at = buf.bytesize\nbuf << 0\n"
-          src << each_element("#{check(f)}#{write_value(f, "e")}") << patch_length
+          src << each_element("#{check(f)}#{write_value(f, "e", true)}") << patch_length
         else
           width = (f.kind == F::BOOL) ? 1 : F::FIXED.fetch(f.kind).first
-          each_element(check(f)) << src << write_varint("#{width} * v.size") << packed_write(f)
+          each_element(check(f)) << src << write_varint("#{width} * v.size", true) << packed_write(f, true)
         end
       end
 
@@ -170,9 +170,9 @@ module Protostar
       end
 
       # Statements appending packed run `v`'s payload
-      def packed_write(f)
+      def packed_write(f, one_pass = false)
         case f.kind
-        when *VARINT_KINDS, F::SINT32, F::SINT64, F::ENUM then each_element(write_value(f, "e"))
+        when *VARINT_KINDS, F::SINT32, F::SINT64, F::ENUM then each_element(write_value(f, "e", one_pass))
         when F::BOOL then each_element("buf << (e ? 1 : 0)\n")
         when F::FLOAT then "buf << Protostar::Wire.pack_floats(v)\n"
         else "v.pack(#{"#{F::FIXED.fetch(f.kind).last}*".inspect}, buffer: buf)\n"
@@ -251,17 +251,26 @@ module Protostar
         "buf#{bytes.map { |b| " << #{b}" }.join}\n"
       end
 
-      def write_varint(expr)
-        "if (x = #{expr}) < 0x80 && x >= 0\nbuf << x\nelsif x < 0x4000 && x >= 0\nbuf << ((x & 0x7F) | 0x80) << (x >> 7)\nelse\nw.write_varint(x)\nend\n"
+      # `one_pass` code has the String `buf` and no Writer
+      def write_varint(expr, one_pass = false)
+        long = one_pass ? "Protostar::Wire.append_varint(buf, x)" : "w.write_varint(x)"
+        "if (x = #{expr}) < 0x80 && x >= 0\nbuf << x\nelsif x < 0x4000 && x >= 0\nbuf << ((x & 0x7F) | 0x80) << (x >> 7)\nelse\n#{long}\nend\n"
       end
 
-      def write_value(f, var)
+      # Appends String `var` as bytes, whatever its encoding
+      def write_raw(var, one_pass)
+        return "w.write_raw(#{var})\n" unless one_pass
+        # `<<` would raise or re-tag the buffer for a non-ASCII UTF-8 value
+        String.method_defined?(:append_as_bytes) ? "buf.append_as_bytes(#{var})\n" : "[#{var}].pack(\"a*\", buffer: buf)\n"
+      end
+
+      def write_value(f, var, one_pass = false)
         case f.kind
-        when *VARINT_KINDS then write_varint(var)
-        when F::SINT32, F::SINT64 then write_varint("(#{var} << 1) ^ (#{var} >> 63)")
+        when *VARINT_KINDS then write_varint(var, one_pass)
+        when F::SINT32, F::SINT64 then write_varint("(#{var} << 1) ^ (#{var} >> 63)", one_pass)
         when F::BOOL then "buf << (#{var} ? 1 : 0)\n"
-        when F::ENUM then write_varint(enum_number(f, var))
-        when F::STRING, F::BYTES then "#{write_varint("#{var}.bytesize")}w.write_raw(#{var})\n"
+        when F::ENUM then write_varint(enum_number(f, var), one_pass)
+        when F::STRING, F::BYTES then "#{write_varint("#{var}.bytesize", one_pass)}#{write_raw(var, one_pass)}"
         when F::MESSAGE then "#{write_varint("sizes[#{var}]")}#{var}.__write(w, buf, sizes)\n"
         when F::GROUP then "#{var}.__write(w, buf, sizes)\n#{append(tag_bytes(f, Wire::END_GROUP))}"
         when F::FLOAT
