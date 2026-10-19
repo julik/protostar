@@ -1,0 +1,33 @@
+# Generated from lib/protostar/compiler/retention.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    # protoc's StripSourceRetentionOptions (`compiler/retention.cc`): a copy
+    # of a file without the options declared `retention = RETENTION_SOURCE`,
+    # without options messages left empty by that, and without the source
+    # locations under anything removed. protoc does this when it writes a
+    # descriptor set or embeds descriptors in generated code; its pool keeps
+    # the options for validating later files.
+    module Retention
+      # descriptor.proto field numbers of each descriptor's `options`
+      OPTIONS_FIELD: untyped
+
+      # - `pool`: holds the stripped copies of the file's imports
+      # - `options_type`: options message full name to its Schema::Message
+      #
+      # Returns the stripped copy, not added to the pool.
+      def self.strip: (Schema::File file, Schema::Pool pool, untyped options_type) -> Schema::File
+
+      def self.strip_value: (untyped value, untyped type, untyped path, untyped stripped) -> untyped
+
+      DROP: untyped
+
+      def self.strip_field: (untyped field, untyped value, untyped path, untyped stripped) -> untyped
+
+      # Each descriptor's path in its FileDescriptorProto, as source locations spell it
+      def self.source_paths: (untyped file) -> untyped
+
+      def self.enum_paths: (untyped paths, untyped enum, untyped path) -> untyped
+    end
+  end
+end

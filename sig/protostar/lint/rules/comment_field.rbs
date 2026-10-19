@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/comment_field.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # COMMENT_FIELD: A field without a comment
+      class CommentField < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

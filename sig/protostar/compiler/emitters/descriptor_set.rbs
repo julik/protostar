@@ -1,0 +1,29 @@
+# Generated from lib/protostar/compiler/emitters/descriptor_set.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    module Emitters
+      # Writes a serialized `google.protobuf.FileDescriptorSet`, as protoc's
+      # `--descriptor_set_out` does
+      class DescriptorSet
+        # - `include_imports`: also write every file the given ones import,
+        #   dependencies first (`import option` files included, as protoc does)
+        # - `include_source_info`: keep `source_code_info`
+        # - `pool`: where `import option` files and their extensions are found
+        def initialize: (?include_imports: bool, ?include_source_info: bool, ?pool: Schema::Pool?) -> void
+
+        # - `files`: the files named on the command line
+        # - `available`: files `import option` names are looked up in
+        #   before the pool, such as everything Compiler#compile returned
+        #
+        # Returns a binary String.
+        def emit: (Array[Schema::File] files, ?available: Array[Schema::File]) -> String
+
+        private
+
+        # protoc's GetTransitiveDependencies: depth first, each file after its imports
+        def ordered: (untyped files) -> untyped
+      end
+    end
+  end
+end

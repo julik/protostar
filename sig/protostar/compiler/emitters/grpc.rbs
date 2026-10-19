@@ -1,0 +1,49 @@
+# Generated from lib/protostar/compiler/emitters/grpc.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    module Emitters
+      # Writes the `_services_pb.rb` stubs grpc-tools' Ruby plugin writes
+      # (grpc's src/compiler/ruby_generator.cc). Comments come from source
+      # info, so compile with it.
+      class Grpc
+        # Returns a Hash of output path to source, for files with services only.
+        def emit: (Array[Schema::File] files) -> Hash[String, String]
+
+        # - `name`: "foo/bar.proto"
+        #
+        # Returns "foo/bar_services_pb.rb".
+        # Raises Emitters::Error for a name protoc's plugin refuses.
+        def self.output_name: (String name) -> String
+
+        # Returns empty when the file declares no services.
+        def file: (Schema::File file) -> String
+
+        private
+
+        def service: (untyped p, untyped service, untyped path) -> untyped
+
+        # The package in dotted form, `ruby_package`'s `::` turned into dots
+        def ruby_package: (untyped file) -> untyped
+
+        # std::getline splitting: no trailing empty piece
+        def split: (untyped text) -> untyped
+
+        def modularize: (untyped name) -> untyped
+
+        # grpc's RubyTypeOf: the message's Ruby constant path as grpc spells it
+        def type_of: (untyped message) -> untyped
+
+        def lines: (untyped text) -> untyped
+
+        # GetPrefixedComments: detached and leading comments, or trailing ones
+        def comments: (untyped path, untyped leading) -> untyped
+
+        def prefixed: (untyped out) -> untyped
+
+        # The comments above the syntax line, printed raw: a `$` comes out doubled
+        def file_comments: (untyped file) -> untyped
+      end
+    end
+  end
+end

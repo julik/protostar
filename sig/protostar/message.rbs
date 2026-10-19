@@ -1,0 +1,252 @@
+# Generated from lib/protostar/message.rb by script/types.rb. Do not edit.
+
+module Protostar
+  # The base class of every message class. Subclasses are made by
+  # Types.define from a Schema::Message; they get one reader and writer
+  # per field, `has_` and `clear_` for fields with presence, and `which_` for
+  # each oneof.
+  #
+  # ```ruby
+  # person = Person.new(name: "Ada", ids: [1, 2])
+  # bytes = person.encode
+  # Person.decode(bytes) == person # => true
+  # ```
+  #
+  # Values are kept in one Array per message, a slot per field. Singular
+  # fields with presence hold nil when unset; fields without presence hold
+  # their value, the default included. Repeated fields hold an Array and maps
+  # a Hash, both allocated on first access.
+  class Message
+    EMPTY_ARRAY: untyped
+
+    EMPTY_HASH: untyped
+
+    attr_reader self.descriptor: Schema::Message
+
+    # The class's fields by descriptor, name or number.
+    attr_reader self.reflection: Reflection
+
+    attr_reader self.__fields: untyped
+
+    attr_reader self.__by_number: untyped
+
+    attr_reader self.__by_name: untyped
+
+    attr_reader self.__template: untyped
+
+    attr_reader self.__oneofs: untyped
+
+    attr_reader self.__required: untyped
+
+    # - `bytes`: never mutated
+    # - `recursion_limit`: how deep messages may nest
+    # - `frozen`: return a deep-frozen, Ractor-shareable message
+    #
+    # Raises DecodeError.
+    def self.decode: (String | IO::Buffer bytes, ?recursion_limit: Integer, ?frozen: bool) -> instance
+
+    # Reads one message prefixed by its varint length
+    #
+    # - `source`: a String is read
+    #   from its start; an IO from its current position, leaving it after the message
+    #
+    # Returns nil when an IO is at its end.
+    # Raises DecodeError.
+    def self.decode_delimited: (String | IO::Buffer | IO source, ?recursion_limit: Integer, ?frozen: bool) -> instance?
+
+    # - `message`: an instance of this class
+    #
+    # Returns a binary String.
+    def self.encode: (instance message) -> String
+
+    # - `options`: see JSON.decode
+    #
+    # Raises JSON::ParseError.
+    def self.decode_json: (String json, ?ignore_unknown_fields: bool, ?registry: Types::Registry?) -> instance
+
+    # - `message`: an instance of this class
+    # - `options`: see JSON.encode
+    def self.encode_json: (instance message, **untyped options) -> String
+
+    attr_reader self.__view_class: untyped
+
+    # Returns the View subclass whose instances read this class's messages.
+    def self.view_class: () -> singleton(View)
+
+    # A read-only view of an encoded message that decodes fields only when read
+    #
+    # - `bytes`: not copied; must not change while the view is used
+    # - `offset`: where the message starts in `bytes`
+    # - `length`: its length, by default up to the end of `bytes`
+    # - `recursion_limit`: how deep messages may nest
+    #
+    # Raises DecodeError when the top level of the message is malformed.
+    def self.view: (String | IO::Buffer bytes, ?offset: Integer, ?length: Integer?, ?recursion_limit: Integer) -> View
+
+    # A message made with a Builder block, or with `new` when there is no
+    # block. `fields` are written first; the block may set them again (the
+    # bytes never leave the process, so overwrites are allowed).
+    #
+    # ```ruby
+    # person = Acme::Person.build(name: "Jane") do |pb|
+    #   pb.address { pb.street "x" }
+    # end
+    # ```
+    #
+    # - `fields`: field names to values, as #initialize takes them
+    def self.build: (?Hash[Symbol | String, untyped]? fields, **untyped) ?{ (Builder pb) -> void } -> instance
+
+    # Returns a new message with `b` merged into a copy of `a`.
+    def self.merge: (instance a, instance b) -> instance
+
+    # What a field of this type makes of a value that is neither an
+    # instance nor a Hash. The well-known types' mixins override it, so that
+    # a Time can be assigned to a Timestamp field.
+    #
+    # Returns nil when the value cannot become one.
+    def self.__coerce: (untyped) -> Message?
+
+    # Returns a message with every field unset, bypassing argument parsing.
+    def self.__empty: () -> Message
+
+    def self.__define: (descriptor: untyped, fields: untyped, oneofs: untyped) -> untyped
+
+    def self.inspect: () -> untyped
+
+    # - `hash`: field names (Symbols or Strings) to values
+    # - `fields`: the same, as keywords
+    #
+    # Raises ArgumentError for a name that is not a field.
+    # Raises Protostar::TypeError for a value the field cannot hold.
+    def initialize: (?Hash[Symbol | String, untyped]? hash, **untyped fields) -> void
+
+    # Returns what the field's reader returns.
+    # Raises ArgumentError when there is no such field.
+    def []: (String | Symbol name) -> untyped
+
+    # Raises ArgumentError when there is no such field.
+    def []=: (String | Symbol name, untyped value) -> untyped
+
+    # Returns them frozen, in the order they were read.
+    def unknown_fields: () -> Array[UnknownField]
+
+    # Returns a binary String.
+    def encode: () -> String
+
+    # Writes the message to an IO without building the whole encoding in memory
+    #
+    # Returns the IO given.
+    def encode_to: [T] (T io) -> T
+
+    # - `state`: what the stdlib generator passes; its
+    #   indentation is honoured, so `JSON.pretty_generate(message)` is indented
+    # - `options`: see JSON.encode
+    #
+    # Returns the message as proto3 JSON.
+    def to_json: (?untyped state, **untyped options) -> String
+
+    # - `options`: see Text.print
+    #
+    # Returns the message in protoc's text format.
+    def to_text: (**untyped options) -> String
+
+    # The message prefixed by its varint length
+    #
+    # - `io`: where to write it
+    #
+    # Returns the bytes when no IO is given, otherwise the IO.
+    def encode_delimited: () -> String
+                        | [T] (T io) -> T
+
+    # Returns Symbol keys, every field that is set or not at its
+    # default; nested messages as Hashes, enums as Symbols.
+    def to_h: () -> Hash[Symbol, untyped]
+
+    # #to_h as Message defines it; well-known types replace to_h (a Struct
+    # gives a plain Hash), but nested messages always convert field by field
+    def __to_h: () -> untyped
+
+    # Same class and same field values. Unknown fields are ignored, and NaN
+    # equals NaN in float and double fields, as protoc's MessageDifferencer has it.
+    def ==: (untyped other) -> bool
+
+    def hash: () -> Integer
+
+    # Deep copy; the copy is not frozen
+    def initialize_copy: (untyped source) -> untyped
+
+    # Deep copy, frozen when the original is (or when asked)
+    def clone: (?freeze: bool?) -> self
+
+    # Freezes the message and everything it holds, after which it is Ractor.shareable?
+    def freeze: () -> self
+
+    # Merges `other` into this message: singular fields set in `other`
+    # replace ours, messages merge recursively, repeated fields append, maps
+    # overwrite by key, unknown fields append.
+    def merge!: (self other) -> self
+
+    # Unsets every field and drops unknown fields
+    def clear!: () -> self
+
+    # Returns whether every required field is set, here and in every nested message.
+    def initialized?: () -> bool
+
+    def inspect: () -> String
+
+    # For `pp`: the fields `inspect` shows, one per line with nested
+    # messages indented when they do not fit on one
+    def pretty_print: (untyped q) -> void
+
+    def self.__pretty_print: (untyped q, untyped name, untyped fields) -> untyped
+
+    # The fields `inspect` shows: set, and not at their zero value
+    def __shown: () -> Array[[ String, untyped ]]
+
+    def __values: () -> untyped
+
+    def __reset: () -> untyped
+
+    # Appends an unknown field; the decoder's way in
+    def __add_unknown: (untyped field) -> untyped
+
+    def __seal_unknown: () -> untyped
+
+    def __set: (untyped index, untyped value) -> untyped
+
+    def __clear: (untyped index) -> untyped
+
+    # The stored Array or Hash of a repeated or map field, made on first use
+    def __container: (untyped index) -> untyped
+
+    def __get: (untyped info) -> untyped
+
+    def self.__equal_values?: (untyped info, untyped a, untyped b) -> untyped
+
+    def self.__hash_value: (untyped info, untyped v) -> untyped
+
+    def self.__copy_value: (untyped v) -> untyped
+
+    def self.float_kind?: (untyped kind) -> untyped
+
+    def self.float_equal?: (untyped a, untyped b) -> untyped
+
+    def self.hashable_float: (untyped f) -> untyped
+
+    private
+
+    def __info: (untyped name) -> untyped
+
+    def __assign: (untyped hash) -> untyped
+
+    def __clear_siblings: (untyped info) -> untyped
+
+    def __check_frozen: () -> untyped
+
+    alias to_proto encode
+
+    alias eql? ==
+
+    alias to_s inspect
+  end
+end

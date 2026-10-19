@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/field_not_required.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # FIELD_NOT_REQUIRED: A proto2 `required` field, or an editions field with `LEGACY_REQUIRED` presence
+      class FieldNotRequired < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

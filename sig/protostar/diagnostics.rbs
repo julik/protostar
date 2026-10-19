@@ -1,0 +1,85 @@
+# Generated from lib/protostar/diagnostics.rb by script/types.rb. Do not edit.
+
+module Protostar
+  # Diagnostics the way `rustc` prints them: the source line with the span
+  # underlined, related spans with their own labels, `help:` and `note:`
+  # lines, a code that `protostar lint --explain` looks up, and fixes. Both
+  # the compiler's errors (Compiler::Diagnostic) and lint findings render
+  # through here.
+  #
+  # ```ruby
+  # renderer = Protostar::Diagnostics::Renderer.new(source: ->(name) { File.read(name) })
+  # puts renderer.render(diagnostic)
+  # ```
+  #
+  # Lines and columns are 1-based and count as protoc counts them: bytes, a
+  # tab advancing to the next multiple of 8.
+  module Diagnostics
+    # A stretch of source a diagnostic points at
+    class Span
+      # 1-based.
+      attr_reader line: Integer
+
+      # 1-based.
+      attr_reader column: Integer
+
+      # 1-based; nil when only the start is known, which
+      # renders as the token at the start.
+      attr_reader end_line: Integer?
+
+      # 1-based, just past the last character.
+      attr_reader end_column: Integer?
+
+      # Printed next to the underline.
+      attr_reader label: String?
+
+      def initialize: (Integer line, Integer column, ?Integer? end_line, ?Integer? end_column, ?label: String?, ?primary: bool) -> void
+
+      # The primary span gets the carets, the others dashes
+      def primary?: () -> bool
+
+      # Returns the same span with another label.
+      def with_label: (String? label) -> Span
+
+      def to_h: () -> Hash[Symbol, untyped]
+
+      def ==: (untyped other) -> untyped
+
+      def hash: () -> untyped
+
+      alias eql? ==
+    end
+
+    # One replacement in a file
+    class Edit
+      # 1-based.
+      attr_reader line: Integer
+
+      # 1-based.
+      attr_reader column: Integer
+
+      attr_reader end_line: Integer
+
+      # 1-based, just past the replaced text; equal to #column to insert.
+      attr_reader end_column: Integer
+
+      attr_reader text: String
+
+      def initialize: (Integer line, Integer column, Integer end_line, Integer end_column, String text) -> void
+
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+
+    # A mechanical fix: what it does, in words, and the edits that do it
+    class Fix
+      # E.g. "rename `colorRed` to `color_red`".
+      attr_reader description: String
+
+      attr_reader edits: Array[Edit]
+
+      def initialize: (String description, Array[Edit] edits) -> void
+
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+  end
+end

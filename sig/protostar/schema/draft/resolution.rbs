@@ -1,0 +1,54 @@
+# Generated from lib/protostar/schema/draft/resolution.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    module Draft
+      # Options, features and defaults of a linked file, as protoc's
+      # DescriptorBuilder resolves them once options are known
+      class Resolution
+        # :nodoc: all
+        OPTIONS: untyped
+
+        def initialize: (untyped file, untyped fields, untyped specs, untyped pool) -> untyped
+
+        def call: () -> untyped
+
+        private
+
+        # Custom options are extensions of this file, its imports and theirs,
+        # or else of whatever the pool holds (`import option` files)
+        def extension_finder: () -> untyped
+
+        def declared: (untyped descriptor) -> untyped
+
+        # Options of this file's messages are bound in tree order, so a
+        # message type elsewhere in the file may not be bound yet
+        def map_entry?: (untyped message) -> untyped
+
+        def bind: (untyped descriptor, untyped features) -> untyped
+
+        def resolve_features: () -> untyped
+
+        def resolve_message_features: (untyped message, untyped parent) -> untyped
+
+        def resolve_enum_features: (untyped enum, untyped parent) -> untyped
+
+        # protoc's InferLegacyProtoFeatures for proto2 and proto3 files, then the
+        # label and type adjustments of DescriptorBuilder::PostProcessFieldFeatures
+        def resolve_field_features: (untyped field, untyped parent) -> untyped
+
+        def inherit: (untyped parent, untyped descriptor) -> untyped
+
+        def intern: (untyped features) -> untyped
+
+        def parse_defaults: () -> untyped
+      end
+    end
+
+    class Options
+      # What a descriptor answers before its options are resolved: an empty
+      # instance of its options class
+      UNRESOLVED: untyped
+    end
+  end
+end

@@ -1,0 +1,83 @@
+# Generated from lib/protostar/view/map.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class View
+    # The value of a map field read through a view. The entries are read on
+    # first use, keys and scalar values decoded; message values stay
+    # positions until read, then become nested views. A key that occurs
+    # twice keeps the last entry, as decoding does.
+    #
+    # ```ruby
+    # view.attrs["colour"]
+    # view.attrs.key?("size")
+    # view.attrs.to_h
+    # ```
+    class Map
+      include Enumerable[[ untyped, untyped ]]
+
+      F: untyped
+
+      # Reads one map entry
+      #
+      # Returns key, value and whether the
+      # value is a closed enum's unknown number. A message value is the
+      # flat Array of its segments' offsets and lengths.
+      def self.entry: (untyped buf, untyped offset, untyped length, untyped info, untyped depth) -> [ untyped, untyped, bool ]
+
+      def initialize: (untyped buf, untyped info, untyped entries, untyped depth) -> untyped
+
+      # Returns the value for `key`, nil when there is none.
+      def []: (untyped key) -> untyped
+
+      # Raises KeyError when there is no such key.
+      def fetch: (untyped key, *untyped default) ?{ (?) -> untyped } -> untyped
+
+      def key?: (untyped key) -> untyped
+
+      def keys: () -> Array[untyped]
+
+      def values: () -> Array[untyped]
+
+      def size: () -> Integer
+
+      def empty?: () -> untyped
+
+      # Yields each key and value, in the order the keys first occurred
+      def each: () ?{ (?) -> untyped } -> untyped
+
+      # Returns every key and value, message values as nested views; frozen.
+      def to_h: () -> Hash[untyped, untyped]
+
+      # Equal to another Map or a Hash with equal keys and values
+      def ==: (untyped other) -> untyped
+
+      def hash: () -> untyped
+
+      def inspect: () -> untyped
+
+      def pretty_print: (untyped q) -> untyped
+
+      # Decodes every entry and freezes what it keeps, after which the
+      # container is Ractor-shareable when its buffer is
+      def freeze_index: () -> self
+
+      def __hash: () -> untyped
+
+      private
+
+      def __resolve: () -> untyped
+
+      EMPTY: untyped
+
+      alias has_key? key?
+
+      alias include? key?
+
+      alias member? key?
+
+      alias length size
+
+      alias each_pair each
+    end
+  end
+end

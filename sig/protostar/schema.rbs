@@ -1,0 +1,28 @@
+# Generated from lib/protostar/schema.rb by script/types.rb. Do not edit.
+
+module Protostar
+  # The descriptor model: an immutable, Ractor-shareable graph of files,
+  # messages, fields, enums and services. File.draft builds one;
+  # File#to_proto and File.from_proto translate to and from protoc's
+  # `FileDescriptorProto`.
+  module Schema
+    # Raised for malformed descriptors, missing dependencies and pool clashes
+    class Error < Protostar::Error
+    end
+
+    # The JSON name protoc derives from a field name: underscores dropped,
+    # the letter after each one upper-cased
+    def self.json_name: (String name) -> String
+
+    # Raised when a type name, extendee or method type cannot be resolved
+    class ResolveError < Error
+      # The name as written.
+      attr_reader name: String?
+
+      # The scope the lookup started from.
+      attr_reader scope: String?
+
+      def initialize: (untyped message, ?name: untyped, ?scope: untyped) -> untyped
+    end
+  end
+end

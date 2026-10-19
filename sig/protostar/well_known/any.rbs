@@ -1,0 +1,32 @@
+# Generated from lib/protostar/well_known/any.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module WellKnown
+    # Mixed into google.protobuf.Any
+    module Any
+      DEFAULT_PREFIX: ::String
+
+      def self.included: (untyped base) -> untyped
+
+      module ClassMethods
+        # Returns a new Any holding the message.
+        def pack: (Message message, ?String type_url_prefix) -> Google::Protobuf::Any
+      end
+
+      # Stores the message's bytes and a type URL of the prefix and its full
+      # name; a `/` is put between them when the prefix lacks one
+      def pack: (Message message, ?String type_url_prefix) -> self
+
+      # - `klass`: the message class expected inside
+      #
+      # Returns the decoded message, or nil when the Any holds another type.
+      def unpack: (singleton(Message) klass) -> Message?
+
+      # Returns the full name at the end of the type URL.
+      def type_name: () -> String
+
+      # Returns whether the Any holds a message of that class.
+      def is: (singleton(Message) klass) -> bool
+    end
+  end
+end

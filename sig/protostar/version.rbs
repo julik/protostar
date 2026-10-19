@@ -1,0 +1,5 @@
+# Generated from lib/protostar/version.rb by script/types.rb. Do not edit.
+
+module Protostar
+  VERSION: ::String
+end

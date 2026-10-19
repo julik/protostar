@@ -1,0 +1,51 @@
+# Generated from lib/protostar/codec/decode_generator.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Codec
+    # Writes a decoding loop for one message class as Ruby source and evals
+    # it into the class as `__decode_fields`. The loop dispatches on the whole
+    # tag with one `case` (field number and wire type at once), reads varints
+    # of one byte and fixed-width values inline, and keeps the read position
+    # in a local. Anything it has no branch for (unknown fields, wire type
+    # mismatches, end-group tags, malformed tags) goes to Decoder.field.
+    #
+    # A generic loop over field descriptors spent most of its time in method
+    # calls on the field table; this does the same work with a fraction of them.
+    module DecodeGenerator
+      # :nodoc: all
+      F: untyped
+
+      def self?.install: (Class klass, Array[Message::FieldInfo] fields) -> untyped
+
+      def self?.source: (untyped fields) -> untyped
+
+      def self?.branch: (untyped info) -> untyped
+
+      VARINT_KINDS: untyped
+
+      # A method reading a packed run of varints into `list` in one loop,
+      # rather than a Decoder call per element; it returns the position
+      # after the run. Kept out of `__decode_fields`, which YJIT runs slower
+      # with the loops inline.
+      def self?.packed_method: (untyped info) -> untyped
+
+      # Hands the reader to a Decoder method and picks the position back up
+      def self?.slow: (untyped call) -> untyped
+
+      # Source reading a varint into `var`, inline when it is one or two
+      # bytes; `lim` is where its input ends (a packed run's end, say)
+      def self?.varint: (untyped var, ?untyped lim) -> untyped
+
+      def self?.fixed: (untyped size, untyped directive) -> untyped
+
+      # Source that leaves the field's next value in `v`
+      def self?.read: (untyped info, ?untyped lim) -> untyped
+
+      def self?.bytes: (untyped info) -> untyped
+
+      def self?.enum: (untyped info) -> untyped
+
+      def self?.store: (untyped info, untyped var) -> untyped
+    end
+  end
+end

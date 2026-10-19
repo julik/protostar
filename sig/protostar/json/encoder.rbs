@@ -1,0 +1,90 @@
+# Generated from lib/protostar/json/encoder.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module JSON
+    # Writes a message as proto3 JSON the way google-protobuf's Ruby gem
+    # does: compact, fields in declaration order, unknown fields left out.
+    class Encoder
+      # :nodoc: all
+      F: untyped
+
+      # Messages whose JSON is not an object of their fields
+      SPECIAL: untyped
+
+      NULL_VALUE: ::String
+
+      ESCAPES: untyped
+
+      ESCAPED: ::Regexp
+
+      # Seconds of 0001-01-01T00:00:00Z and 9999-12-31T23:59:59Z
+      TIMESTAMP_MIN: ::Integer
+
+      TIMESTAMP_MAX: ::Integer
+
+      DURATION_MAX: ::Integer
+
+      # - `preserve_proto_field_names`: field names as in the .proto, not lowerCamel
+      # - `emit_defaults`: also fields without presence at their default, and empty
+      #   repeated fields and maps; never unset message fields or oneof members
+      # - `registry`: where the types inside Any are looked up
+      def initialize: (?preserve_proto_field_names: bool, ?emit_defaults: bool, ?format_enums_as_integers: bool, ?registry: Types::Registry, ?preserve_proto_fieldnames: untyped) -> void
+
+      # Returns a UTF-8 String.
+      def encode: (Message message) -> String
+
+      private
+
+      def message: (untyped msg, untyped out) -> untyped
+
+      # Writes the fields of a message, each preceded by a comma unless it is
+      # the first; returns whether nothing was written
+      def fields: (untyped msg, untyped out, untyped first) -> untyped
+
+      # Extensions travel as unknown fields; those known to the message's file
+      # and its imports are written as "[full.name]", the rest left out
+      def extensions: (untyped msg, untyped out, untyped first) -> untyped
+
+      def map: (untyped info, untyped hash, untyped out) -> untyped
+
+      def single: (untyped info, untyped v, untyped out) -> untyped
+
+      def enum: (untyped info, untyped v, untyped out) -> untyped
+
+      def string: (untyped s, untyped out) -> untyped
+
+      # upb's round-trip form: 15 significant digits, or 17 when 15 do not read back
+      def double: (untyped v, untyped out) -> untyped
+
+      # Same for single precision: 6 digits, or 9
+      def float: (untyped v, untyped out) -> untyped
+
+      def nonfinite: (untyped v) -> untyped
+
+      def fail!: (untyped message) -> untyped
+
+      def get: (untyped msg, untyped name) -> untyped
+
+      def any: (untyped msg, untyped out) -> untyped
+
+      def any_class: (untyped url) -> untyped
+
+      def timestamp: (untyped msg, untyped out) -> untyped
+
+      def duration: (untyped msg, untyped out) -> untyped
+
+      # 0, 3, 6 or 9 digits, as few as the value needs
+      def fraction: (untyped nanos) -> untyped
+
+      def field_mask: (untyped msg, untyped out) -> untyped
+
+      def struct: (untyped msg, untyped out) -> untyped
+
+      def list_value: (untyped msg, untyped out) -> untyped
+
+      def value: (untyped msg, untyped out) -> untyped
+
+      def wrapper: (untyped msg, untyped out) -> untyped
+    end
+  end
+end

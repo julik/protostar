@@ -1,0 +1,189 @@
+# Generated from lib/protostar/schema/options.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    # A message-typed value in options: an options message itself, or a
+    # message inside one (a `FeatureSet`, a custom option of a message type).
+    # Fields are kept by name, extensions by their Field, and fields nobody
+    # could interpret as their wire bytes.
+    #
+    # Values are Ruby values: Integers, Floats, Strings (binary for bytes),
+    # true and false, enum values as Symbols (an Integer for a number the enum
+    # does not name), repeated fields as frozen Arrays, messages as
+    # MessageValues. Map fields are repeated entry messages.
+    class MessageValue
+      # Extension values by extension descriptor.
+      attr_reader extensions: Hash[Field, untyped]
+
+      # Binary, wire-format bytes of fields that could not be interpreted.
+      attr_reader unknown_fields: String
+
+      # - `unknown_fields`: binary
+      def initialize: (?Hash[Symbol, untyped] fields, ?Hash[Field, untyped] extensions, ?String unknown_fields) -> void
+
+      # - `name`: a field of the message
+      #
+      # Returns its value, nil when not set.
+      def []: (Symbol | String name) -> untyped
+
+      # Returns whether the field is set.
+      def key?: (untyped name) -> bool
+
+      # The fields that are set, by name, in the order they were given.
+      attr_reader fields: Hash[Symbol, untyped]
+
+      # - `key`: an extension descriptor or its full name
+      #
+      # Returns the extension's value.
+      def extension: (Field | String key) -> untyped
+
+      # The same value with every extension, here and in nested values, looked
+      # up again by full name; one that is not found stays as it was. A copy
+      # of a file in another pool keys its options by that pool's extensions.
+      #
+      # - `extension`: full name to extension Field
+      def rekey: (untyped) -> MessageValue
+
+      # Returns nothing set, not even unknown fields.
+      def empty?: () -> bool
+
+      # Protobuf merge semantics: `other`'s fields win, nested messages merge,
+      # repeated fields concatenate
+      def merge: (MessageValue? other) -> MessageValue
+
+      def self.merge_values: (untyped base, untyped overlay) -> untyped
+
+      def ==: (untyped other) -> untyped
+
+      def hash: () -> untyped
+
+      # A plain Hash for reading: fields by name, extensions under their full
+      # name in parentheses, nested messages as Hashes
+      def to_h: () -> Hash[untyped, untyped]
+
+      def self.plain: (untyped value) -> untyped
+
+      def inspect: () -> untyped
+
+      private
+
+      def frozen: (untyped hash) -> untyped
+
+      public
+
+      EMPTY_BYTES: untyped
+
+      EMPTY: untyped
+
+      alias set? key?
+
+      alias eql? ==
+    end
+
+    # The declared options of a descriptor: a message of descriptor.proto's
+    # `FileOptions`, `FieldOptions` and so on, one subclass each. Every field
+    # of that message has a reader (booleans also a `?` form); custom options
+    # are #extension values; #features is what the descriptor resolves to.
+    #
+    # ```ruby
+    # field.options.deprecated?               # => true
+    # field.options.packed                    # => nil when not set
+    # file.options.java_package               # => "com.acme"
+    # message.options.extension("acme.limits") # => #<Protostar::Schema::MessageValue max: 10>
+    # field.options[:features]                # => the FeatureSet as declared
+    # field.options.features                  # => #<Protostar::Schema::Features ...> resolved
+    # ```
+    #
+    # A reader answers what was declared: nil (or an empty Array) when the
+    # option was not set, not descriptor.proto's default.
+    class Options < MessageValue
+      TYPE_NAME: untyped
+
+      FIELDS: untyped
+
+      # Returns full name of the options message, e.g. "google.protobuf.FieldOptions".
+      def self.type_name: () -> String
+
+      def self.define: (untyped type_name, *untyped names, ?booleans: untyped, ?repeated: untyped) -> untyped
+
+      # Options built from what a draft was given: nil, an Options or
+      # MessageValue, or a Hash of field values by name with custom options
+      # under `extensions:` (by full name or Field) and wire bytes under
+      # `unknown_fields:`. Message values may be Hashes in the same spelling.
+      #
+      # - `extension`: full name to extension Field
+      #
+      # Returns options without resolved #features.
+      def self.build: ((Hash[untyped, untyped] | MessageValue)? spec, untyped, untyped owner) -> Options?
+
+      # - `features`: resolved features of the descriptor
+      # - `declared`: whether the descriptor carries an options message, even an empty one
+      def initialize: (?untyped fields, ?untyped extensions, ?untyped unknown_fields, ?features: Features?, ?declared: bool) -> void
+
+      # The features the descriptor resolves to, nil before resolution.
+      attr_reader features: Features?
+
+      # Returns whether the descriptor carries an options message (protoc writes `options {}`
+      # for one declared empty).
+      def declared?: () -> bool
+
+      # Returns the same options, bound to resolved features.
+      def with_features: (untyped features) -> Options
+
+      # Returns a name such as "google.protobuf.FieldOptions".
+      def type_name: () -> String
+
+      def inspect: () -> untyped
+
+      # Returned by descriptors before they are resolved
+      EMPTY: untyped
+
+      # These options as the descriptor.proto message they are (a
+      # `Protostar::Google::Protobuf::FieldOptions`, say), custom options as
+      # extension bytes the message keeps as unknown fields
+      def to_proto: () -> Protostar::Message
+    end
+
+    FileOptions: untyped
+
+    MessageOptions: untyped
+
+    FieldOptions: untyped
+
+    OneofOptions: untyped
+
+    EnumOptions: untyped
+
+    EnumValueOptions: untyped
+
+    ServiceOptions: untyped
+
+    MethodOptions: untyped
+
+    ExtensionRangeOptions: untyped
+
+    class MessageValue
+      # A value from a Hash: fields by name, `extensions:` by full name or
+      # Field, `unknown_fields:` as bytes. A field named `extensions` or
+      # `unknown_fields` takes a String key. `__extensions:` and
+      # `__unknown_fields:` (as `[number, wire_type, bytes]` triples) are the
+      # deprecated spellings.
+      def self.from_hash: (untyped hash, untyped extension, untyped owner) -> untyped
+
+      def self.from_value: (untyped value, untyped extension, untyped owner) -> untyped
+
+      def self.unknown_bytes: (untyped triples) -> untyped
+
+      # This value in wire format
+      #
+      # - `type`: the message type it is a value of
+      #
+      # Returns a binary String.
+      def encode: (Message) -> String
+
+      # - `extensions`: (extendee full name, number) to an extension Field;
+      #   fields it does not know stay in #unknown_fields
+      def self.decode: (Message, String bytes, ?untyped extensions) -> MessageValue
+    end
+  end
+end

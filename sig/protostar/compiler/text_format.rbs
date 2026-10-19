@@ -1,0 +1,72 @@
+# Generated from lib/protostar/compiler/text_format.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    # Just enough of protoc's text-format parser to read aggregate option
+    # values (`option (opt) = { a: 1 b { c: "x" } [ext]: 2 };`) into option
+    # entries, with protoc's error messages for the common mistakes.
+    class TextFormat
+      # :nodoc: all
+      ANY_PREFIXES: untyped
+
+      INT32_MAX: untyped
+
+      INT64_MAX: untyped
+
+      UINT32_MAX: untyped
+
+      UINT64_MAX: untyped
+
+      RECURSION_LIMIT: ::Integer
+
+      attr_reader errors: Array[String]
+
+      # - `text`: the aggregate value, braces excluded
+      # - `interpreter`: maps symbols to descriptors
+      # - `table`: resolves `[extension]` names
+      def initialize: (String text, Schema::Message, OptionInterpreter interpreter, SymbolTable table) -> void
+
+      # Returns the entries, or nil after errors.
+      def parse: () -> Array[untyped]?
+
+      private
+
+      def looking_at?: (untyped text) -> untyped
+
+      def looking_at_type?: (untyped type) -> untyped
+
+      def try_consume: (untyped text) -> untyped
+
+      def consume: (untyped text) -> untyped
+
+      def error: (untyped message) -> untyped
+
+      def consume_message: (untyped type, untyped delimiter, untyped entries) -> untyped
+
+      def message_delimiter: () -> untyped
+
+      # The text between brackets, URL characters included
+      def bracketed_name: () -> untyped
+
+      def consume_field: (untyped type, untyped entries) -> untyped
+
+      def group_like?: (untyped field) -> untyped
+
+      def find_extension: (untyped type, untyped name) -> untyped
+
+      def field_message: (untyped field) -> untyped
+
+      def consume_any: (untyped type, untyped entries) -> untyped
+
+      def field_value: (untyped field) -> untyped
+
+      def enum_value: (untyped field) -> untyped
+
+      def unsigned_integer: (untyped max) -> untyped
+
+      def signed_integer: (untyped max) -> untyped
+
+      def double: () -> untyped
+    end
+  end
+end

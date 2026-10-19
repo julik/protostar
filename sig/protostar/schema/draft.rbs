@@ -1,0 +1,251 @@
+# Generated from lib/protostar/schema/draft.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    # The construction stage of Schema: mutable handles that create
+    # descriptors, then link, resolve and freeze them. Map entries, the
+    # synthetic oneofs of proto3 `optional` fields, group fields and json
+    # names are made here and nowhere else.
+    module Draft
+      SYNTAXES: untyped
+
+      SCALARS: untyped
+
+      TYPES: untyped
+
+      LABELS: untyped
+
+      # protoc's name for the entry message of a map field: the field name in
+      # CamelCase plus "Entry"
+      def self.map_entry_name: (String field_name) -> String
+
+      # The names protoc's parser gives the synthetic oneofs of proto3
+      # `optional` fields: `_` and the field name, with `X` prepended until
+      # nothing in the message has that name
+      #
+      # - `field_names`: the fields needing one, in order
+      # - `taken`: every field and oneof name of the message
+      def self.synthetic_oneof_names: (Array[String] field_names, Array[String] taken) -> Array[String]
+
+      # The field a `group Name = n { ... }` declares: the group's name in lower case
+      def self.group_field_name: (untyped group_name) -> String
+
+      # protoc's spelling of a default value
+      def self.default_text: (untyped value) -> untyped
+
+      VISIBILITIES: untyped
+
+      # :local or :export from either spelling; nil when unset
+      def self.visibility: (untyped value) -> untyped
+
+      # Inclusive bounds of an Integer or a Range
+      def self.bounds: (untyped item) -> untyped
+
+      # What files and messages share: nested messages, enums and extensions
+      class Scope
+        attr_reader file_draft: untyped
+
+        # A message type
+        #
+        # - `visibility`: :local or :export (edition 2024)
+        def message: (String name, ?visibility: Symbol?, ?options: Hash[untyped, untyped]?) ?{ (Message m) -> untyped } -> Message
+
+        # An enum type
+        def enum: (untyped name, ?visibility: untyped, ?options: untyped) ?{ (Enum e) -> untyped } -> Enum
+
+        # Extensions of another message, declared in this scope
+        #
+        # - `extendee`: the extended message, as written
+        def extend: (String extendee) ?{ (Extend e) -> untyped } -> untyped
+
+        # One extension field; the arguments of Message#field plus the extendee
+        def extension: (untyped name, untyped number, untyped, ?untyped type_name, extendee: untyped, ?label: untyped, ?default: untyped, ?json_name: untyped, ?optional: untyped, ?options: untyped) -> Schema::Field
+
+        def qualify: (untyped name) -> untyped
+
+        def inspect: () -> untyped
+      end
+
+      # A file under construction
+      class File < Scope
+        # The file being built; frozen after #freeze!.
+        attr_reader descriptor: Schema::File
+
+        def initialize: (untyped name, package: untyped, syntax: untyped, edition: untyped, dependencies: untyped, public_dependencies: untyped, weak_dependencies: untyped, option_dependencies: untyped, options: untyped) -> untyped
+
+        def scope_name: () -> String
+
+        # A service
+        def service: (untyped name, ?options: untyped) ?{ (Service s) -> untyped } -> Service
+
+        def source_info=: ((SourceInfo | Array[SourceInfo::Location])? info) -> untyped
+
+        # Sets (or replaces) the options of a descriptor of this file
+        def set_options: (Descriptor descriptor, Hash[untyped, untyped]? options) -> untyped
+
+        # Finds dependencies in the pool, completes every message's lookup
+        # tables and resolves every type name, extendee and method type. Runs
+        # once; #resolve calls it when it has not run.
+        #
+        # - `pool`: where the dependencies are
+        #
+        # Raises Error, ResolveError.
+        def link: (Pool pool) -> self
+
+        # Links (when not done yet), then builds options, resolves features and
+        # parses defaults. May run again after options change.
+        def resolve: (Pool pool) -> self
+
+        # Freezes the whole graph and makes it Ractor-shareable
+        def freeze!: () -> Schema::File
+
+        # Completes every message's, enum's and service's lookup tables once
+        # nothing more will be added. #link does it; a caller that resolves
+        # names itself (the compiler) calls it first.
+        def __seal: () -> untyped
+
+        # Sets what a field's type name resolved to, for a caller that
+        # resolves names itself; #link then leaves the field alone
+        def __resolve_type: (untyped field, untyped target) -> untyped
+
+        def __resolve_extendee: (untyped field, untyped target) -> untyped
+
+        def __resolve_rpc: (untyped method, ?input: untyped, ?output: untyped) -> untyped
+
+        def register: (untyped descriptor) -> untyped
+
+        def new_field: (untyped scope, untyped name, untyped number, untyped type, untyped type_name, untyped index, untyped extendee, untyped label, untyped default, untyped json_name, untyped optional, untyped options, untyped oneof) -> untyped
+
+        def new_method: (untyped method, untyped options) -> untyped
+
+        private
+
+        def kind_name: (untyped descriptor) -> untyped
+
+        def indexes: (untyped name, untyped list) -> untyped
+
+        def syntax_and_edition: (untyped name, untyped syntax, untyped edition) -> untyped
+
+        def containing_message: () -> untyped
+
+        def seal: () -> untyped
+
+        def link_fields: (untyped pool) -> untyped
+
+        def link_methods: (untyped pool) -> untyped
+
+        def resolve_name: (untyped pool, untyped name, untyped scope, untyped element) -> untyped
+      end
+
+      # A message under construction: the block argument of Scope#message
+      class Message < Scope
+        attr_reader descriptor: Schema::Message
+
+        def initialize: (untyped file_draft, untyped descriptor, untyped visibility, untyped options) -> untyped
+
+        def scope_name: () -> String
+
+        # A field
+        #
+        # - `type`: :int32, :string, ... :message, :enum or :group (then
+        #   give `type_name`), or a type name whose kind is found when linking
+        # - `type_name`: the message or enum type as written, e.g. ".acme.Person"
+        # - `label`: :optional, :required or :repeated
+        # - `default`: the default; text is taken as protoc stores it
+        # - `json_name`: when not the one derived from the name
+        # - `optional`: a proto3 `optional` field; its synthetic oneof is made here
+        #   unless `oneof:` names one
+        # - `oneof`: the oneof the field belongs to
+        def field: (String | Symbol name, Integer number, Symbol | String, ?String? type_name, ?label: Symbol, ?default: untyped, ?json_name: String?, ?optional: bool, ?oneof: (String | Symbol | Schema::Oneof)?, ?options: Hash[untyped, untyped]?) -> Schema::Field
+
+        # A `map<K, V>` field and the entry message protoc synthesizes for it
+        #
+        # - `key`: the key type
+        # - `value`: a scalar type, or the value's message or enum type name
+        # - `value_type_name`: the type name when `value` is :message or :enum
+        # - `options`: the field's options; its `features` go to the key and value too
+        def map: (untyped name, untyped number, key: Symbol, value: Symbol | String, ?value_type_name: String?, ?json_name: untyped, ?options: Hash[untyped, untyped]?) -> Schema::Field
+
+        # A proto2 group: a nested message and a field of type group named after it
+        #
+        # - `message_options`: the nested message's options
+        def group: (untyped name, untyped number, ?label: untyped, ?json_name: untyped, ?oneof: untyped, ?options: untyped, ?message_options: Hash[untyped, untyped]?) ?{ (Message g) -> untyped } -> Schema::Field
+
+        # A oneof. Fields given in the block belong to it; fields elsewhere may
+        # name it with `oneof:`. Declaring it again only sets its options.
+        def oneof: (untyped name, ?options: untyped) ?{ (Oneof o) -> untyped } -> Schema::Oneof
+
+        # One extension range, inclusive
+        def extension_range: (Range[untyped] | Integer range, ?options: untyped) -> Schema::ExtensionRange
+
+        # Extension ranges, inclusive, sharing options
+        def extensions: (*Range[untyped] | Integer ranges, ?options: untyped) -> untyped
+
+        # Reserved numbers (Integers or inclusive Ranges) and names (Strings or Symbols)
+        def reserved: (*untyped items) -> untyped
+
+        def __oneof_member: (untyped field, untyped oneof) -> untyped
+
+        def __seal: (untyped options) -> untyped
+
+        private
+
+        def containing_message: () -> untyped
+
+        def declare_oneof: (untyped name) -> untyped
+
+        def frozen: (untyped list) -> untyped
+      end
+
+      # The block argument of Message#oneof
+      class Oneof
+        def initialize: (untyped message, untyped oneof) -> untyped
+
+        # A member field; the arguments of Message#field
+        def field: (untyped name, untyped number, untyped type, ?untyped type_name, **untyped kwargs) -> untyped
+
+        # A member group; the arguments of Message#group
+        def group: (untyped name, untyped number, **untyped kwargs) ?{ (?) -> untyped } -> untyped
+      end
+
+      # The block argument of Scope#extend
+      class Extend
+        def initialize: (untyped scope, untyped extendee) -> untyped
+
+        # An extension field; the arguments of Message#field
+        def field: (untyped name, untyped number, untyped, ?untyped type_name, **untyped kwargs) -> Schema::Field
+      end
+
+      # An enum under construction: the block argument of Scope#enum
+      class Enum
+        def inspect: () -> untyped
+
+        attr_reader descriptor: Schema::Enum
+
+        def initialize: (untyped file_draft, untyped descriptor, untyped scope, untyped visibility, untyped options) -> untyped
+
+        # A value. Its full name is a sibling of the enum's, as in C++.
+        def value: (untyped name, untyped number, ?options: untyped) -> Schema::EnumValue
+
+        # Reserved numbers (Integers or inclusive Ranges) and names
+        def reserved: (*untyped items) -> untyped
+
+        def __seal: (untyped _options) -> untyped
+      end
+
+      # A service under construction: the block argument of File#service
+      class Service
+        def inspect: () -> untyped
+
+        attr_reader descriptor: Schema::Service
+
+        def initialize: (untyped file_draft, untyped descriptor) -> untyped
+
+        # - `input_type`: as written, e.g. ".acme.Request"
+        def rpc: (String | Symbol name, String input_type, String output_type, ?client_streaming: untyped, ?server_streaming: untyped, ?options: untyped) -> Schema::Method
+
+        def __seal: () -> untyped
+      end
+    end
+  end
+end

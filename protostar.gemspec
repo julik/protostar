@@ -33,6 +33,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "minitest-fail-fast"
   spec.add_development_dependency "standard", "~> 1.50"
   spec.add_development_dependency "magic_frozen_string_literal"
-  spec.add_development_dependency "yard"
-  spec.add_development_dependency "rbs", ">= 3.5"
+  spec.add_development_dependency "rbs", ">= 4.0"
+  spec.add_development_dependency "rbs-inline", "~> 0.14"
+  spec.add_development_dependency "rdoc", ">= 8.1"
 end

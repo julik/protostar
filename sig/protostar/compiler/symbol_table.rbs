@@ -1,0 +1,100 @@
+# Generated from lib/protostar/compiler/symbol_table.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    # The names visible while one file is linked: its own symbols, drafted
+    # as the linker meets them, and everything in the pool. Lookups follow
+    # protoc's DescriptorBuilder (FindSymbol and LookupSymbolNoPlaceholder):
+    # the same first-component scoping rule as Schema::Resolver, with a
+    # symbol in another file visible only through a direct import or a chain
+    # of `import public`, and with the failure explanations protoc gives.
+    class SymbolTable
+      # A named thing
+      class Symbol
+        # :message, :enum, :enum_value, :field, :oneof, :service, :method or :package.
+        attr_reader kind: Symbol
+
+        attr_reader full_name: String
+
+        # The file defining it.
+        attr_reader file_name: String
+
+        # The descriptor (drafted, for the file being
+        # linked); nil for a package.
+        attr_reader object: Schema::Descriptor?
+
+        def initialize: (kind: untyped, full_name: untyped, file_name: untyped, object: untyped, ?local: untyped) -> untyped
+
+        def type?: () -> untyped
+
+        def aggregate?: () -> untyped
+
+        # Returns defined by the file being linked.
+        def local?: () -> bool
+      end
+
+      SCHEMA_KINDS: untyped
+
+      # Set when the last failed lookup found the name in a file that is not imported.
+      attr_reader undeclared_file: String?
+
+      # Set when the last failed lookup found the name in a file that is not imported.
+      attr_reader undeclared_name: String?
+
+      # Set when the last failed lookup resolved a compound name to a missing symbol.
+      attr_reader unresolved_name: String?
+
+      # Direct imports no lookup has used yet.
+      attr_reader unused: Array[String]
+
+      # - `file_name`: the file being linked
+      # - `dependencies`: direct imports, nil where missing
+      # - `option_dependencies`: `import option` files
+      # - `unused`: imports to report when never used
+      def initialize: (String file_name, String package, Schema::Pool pool, Array[Schema::File?] dependencies, Array[Schema::File?] option_dependencies, Array[Schema::File] unused) -> void
+
+      # The file's own symbols.
+      attr_reader local: Hash[String, Symbol]
+
+      # Registers a symbol of the file being linked
+      #
+      # - `descriptor`: as drafted
+      #
+      # Returns the existing symbol when the name is taken.
+      def add: (untyped kind, untyped full_name, Schema::Descriptor descriptor) -> Symbol?
+
+      # Registers the file's package and its parents, as AddPackage does
+      #
+      # Returns a non-package symbol already using one of the names.
+      def add_package: (untyped package) -> Symbol?
+
+      # Any symbol by full name, ignoring visibility
+      def find_any: (untyped full_name) -> Symbol?
+
+      # FindSymbolNotEnforcingDeps: any symbol, marking its file's import as used
+      def find_not_enforcing_deps: (untyped full_name) -> untyped
+
+      # FindSymbol: a symbol visible from the file being linked, or nil (and
+      # #undeclared_file set) when it lives in a file that is not imported
+      def find: (untyped full_name) -> untyped
+
+      # LookupSymbolNoPlaceholder
+      #
+      # - `name`: as written, maybe with a leading dot
+      # - `relative_to`: full name of the element doing the lookup
+      # - `types_only`: skip simple names that are not types
+      def lookup: (String name, String relative_to, ?types_only: bool) -> Symbol?
+
+      # AddNotDefinedError's messages for the last failed #lookup
+      def not_defined_messages: (untyped name) -> Array[String]
+
+      private
+
+      def record_public: (untyped file, untyped into) -> untyped
+
+      def add_package_names: (untyped package, untyped file_name) -> untyped
+
+      def in_package?: (untyped package, untyped name) -> untyped
+    end
+  end
+end

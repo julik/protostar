@@ -15,3 +15,8 @@ end
 group :sorbet, optional: true do
   gem "sorbet-static"
 end
+
+# Checks lib/ against the signatures in sig/ (rake steep); it needs Ruby 3.3
+if RUBY_VERSION >= "3.3"
+  gem "steep", "~> 2.1", require: false
+end

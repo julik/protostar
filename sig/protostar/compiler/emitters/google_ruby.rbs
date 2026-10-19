@@ -1,0 +1,46 @@
+# Generated from lib/protostar/compiler/emitters/google_ruby.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    module Emitters
+      # Writes the `_pb.rb` file protoc's own Ruby generator writes
+      # (ruby_generator.cc): the serialized descriptor added to
+      # google-protobuf's generated pool, and constants looked up from it.
+      class GoogleRuby
+        # - `pool`: where extensions used in options but defined in
+        #   `import option` files are found
+        def initialize: (?pool: Schema::Pool?) -> void
+
+        # Returns a Hash of output path to source.
+        def emit: (Array[Schema::File] files) -> Hash[String, String]
+
+        # Raises Emitters::Error for a `ruby_package` protoc refuses.
+        def file: (Schema::File file) -> String
+
+        # What protoc embeds: the file as `FileDescriptor::CopyTo` writes it,
+        # without source info and with `json_name` only where the .proto set
+        # one. Whether it was set is not kept, so a `json_name` equal to the
+        # derived one is taken as not set.
+        #
+        # Returns a binary String.
+        def self.serialized: (untyped file) -> String
+
+        PRINTABLE: untyped
+
+        HEX: ::Regexp
+
+        C_ESCAPES: untyped
+
+        # absl::CHexEscape, then a backslash before every `#` that would
+        # start an interpolation: ruby_generator.cc's RubyEscape
+        def self.ruby_escape: (untyped bytes) -> untyped
+
+        private
+
+        def message_assignment: (untyped p, untyped prefix, untyped message) -> untyped
+
+        def enum_assignment: (untyped p, untyped prefix, untyped enum) -> untyped
+      end
+    end
+  end
+end

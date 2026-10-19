@@ -1,0 +1,27 @@
+# Generated from lib/protostar/diagnostics/formats.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Diagnostics
+    # Diagnostics for machines: one JSON object per diagnostic (JSON Lines),
+    # or GitHub Actions workflow commands, which annotate the lines of a pull
+    # request.
+    module Formats
+      # - `source`: the file's text, to find where spans end
+      #
+      # Returns code, severity, message, file, path, line, column, spans,
+      # help, notes, fix and rule; the message is the short title, `protoc` the
+      # compiler's own wording when that differs.
+      def self.record: (Compiler::Diagnostic diagnostic, ?source: Source?) -> Hash[Symbol, untyped]
+
+      # Returns one line of JSON.
+      def self.json: (Compiler::Diagnostic diagnostic, ?source: Source?) -> String
+
+      # Returns an `::error` or `::warning` workflow command.
+      def self.github: (Compiler::Diagnostic diagnostic, ?source: Source?) -> String
+
+      def self.escape_data: (untyped text) -> untyped
+
+      def self.escape_property: (untyped text) -> untyped
+    end
+  end
+end

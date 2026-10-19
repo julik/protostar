@@ -1,0 +1,33 @@
+# Generated from lib/protostar/schema/draft/copy.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    module Draft
+      # A copy of a built file for another pool, its imports taken from that
+      # pool, with each descriptor's options replaced by what the block
+      # returns (a MessageValue, or nil for none)
+      #
+      # - `pool`: holds the copy's imports
+      #
+      # Returns a frozen copy, not added to the pool.
+      def self.copy: (Schema::File file, pool: Pool, ?source_info: SourceInfo?) ?{ (Descriptor descriptor) -> untyped } -> Schema::File
+
+      class Copy
+        # :nodoc: all
+        def initialize: (untyped file, untyped options) -> untyped
+
+        def call: (untyped pool, untyped source_info) -> untyped
+
+        private
+
+        def options: (untyped descriptor) -> untyped
+
+        def message: (untyped scope, untyped message) -> untyped
+
+        def field: (untyped scope, untyped field, untyped oneof) -> untyped
+
+        def enum: (untyped scope, untyped enum) -> untyped
+      end
+    end
+  end
+end

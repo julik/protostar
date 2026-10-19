@@ -1,0 +1,74 @@
+# Generated from lib/protostar/codec/encode_generator.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Codec
+    # Writes the two encoding passes of one message class as Ruby source and
+    # evals them into the class: `__size(sizes)`, which returns the encoded
+    # size and records it (and every packed run's) in `sizes`, and
+    # `__write(w, buf, sizes)`, which appends the fields to the Writer's
+    # buffer. Fields come in ascending number order, tags are literal bytes,
+    # one-byte varints are appended inline, and enum names map to numbers
+    # through a literal `case`. Maps, packed runs and unknown fields go to
+    # Sizer and Encoder.
+    #
+    # The generic loop over field descriptors this replaces spent most of
+    # its time on method calls into the field table.
+    module EncodeGenerator
+      # :nodoc: all
+      F: untyped
+
+      INT_BOUNDS: untyped
+
+      VARINT_KINDS: untyped
+
+      def self?.install: (Class klass, Array[Message::FieldInfo] fields) -> untyped
+
+      def self?.source: (untyped fields) -> untyped
+
+      def self?.info: (untyped f) -> untyped
+
+      # The condition under which a field is written, with its value in `v`
+      def self?.present: (untyped f) -> untyped
+
+      # Negative zero is written, as protoc compares the bits
+      def self?.nonzero: (untyped f) -> untyped
+
+      def self?.tag_bytes: (untyped f, ?untyped wire_type) -> untyped
+
+      def self?.size_field: (untyped f) -> untyped
+
+      # Statements leaving the payload size of packed run `v` in `run`,
+      # checking each element as Sizer.packed does, without a call per element
+      def self?.packed_size: (untyped f) -> untyped
+
+      # Statements appending packed run `v`'s payload
+      def self?.packed_write: (untyped f) -> untyped
+
+      def self?.repeated_size: (untyped f, untyped tag) -> untyped
+
+      # A loop running `body` with each element of `v` in `e`
+      def self?.each_element: (untyped body) -> untyped
+
+      # Whether an element of a repeated field can be written; elements may
+      # have been pushed into the plain Array past the writers' checks
+      def self?.valid: (untyped f, untyped var) -> untyped
+
+      def self?.varint_size: (untyped var) -> untyped
+
+      # Statements leaving the size of value `var`, tag excluded, in `out`
+      def self?.value_size: (untyped f, untyped var, untyped out) -> untyped
+
+      # An expression for the number of enum value `var`
+      def self?.enum_number: (untyped f, untyped var) -> untyped
+
+      def self?.write_field: (untyped f) -> untyped
+
+      # Appending an Integer to a binary String appends that byte
+      def self?.append: (untyped bytes) -> untyped
+
+      def self?.write_varint: (untyped expr) -> untyped
+
+      def self?.write_value: (untyped f, untyped var) -> untyped
+    end
+  end
+end

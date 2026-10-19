@@ -1,0 +1,20 @@
+# Generated from lib/protostar/lint/rules/reserved_names_with_numbers.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # RESERVED_NAMES_WITH_NUMBERS: A message or enum that reserves numbers but no names, or names but no numbers
+      class ReservedNamesWithNumbers < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+
+        private
+
+        def check_element: (untyped node, untyped element, untyped what, untyped range_field, untyped name_field) -> untyped
+      end
+    end
+  end
+end

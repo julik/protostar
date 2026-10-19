@@ -1,0 +1,133 @@
+# Generated from lib/protostar/message/field_info.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Message
+    # Everything the runtime and the codec need about one field of a message
+    # class, resolved once when the class is defined: the slot it is stored
+    # in, its kind as a small Integer to dispatch on, precomputed tag bytes,
+    # the classes and enum tables it refers to. Frozen and shareable.
+    class FieldInfo
+      # Kinds are FieldDescriptorProto.Type numbers
+      DOUBLE: ::Integer
+
+      FLOAT: ::Integer
+
+      INT64: ::Integer
+
+      UINT64: ::Integer
+
+      INT32: ::Integer
+
+      FIXED64: ::Integer
+
+      FIXED32: ::Integer
+
+      BOOL: ::Integer
+
+      STRING: ::Integer
+
+      GROUP: ::Integer
+
+      MESSAGE: ::Integer
+
+      BYTES: ::Integer
+
+      UINT32: ::Integer
+
+      ENUM: ::Integer
+
+      SFIXED32: ::Integer
+
+      SFIXED64: ::Integer
+
+      SINT32: ::Integer
+
+      SINT64: ::Integer
+
+      KINDS: untyped
+
+      # Byte width and unpack directive of the fixed-width kinds
+      FIXED: untyped
+
+      attr_reader descriptor: Schema::Field
+
+      attr_reader name: String
+
+      attr_reader symbol: Symbol
+
+      attr_reader number: Integer
+
+      # The slot in the message's value array; nil for map keys and values.
+      attr_reader index: Integer?
+
+      # One of the kind constants.
+      attr_reader kind: Integer
+
+      # Wire type of one unpacked value.
+      attr_reader wire_type: Integer
+
+      attr_reader repeated: bool
+
+      attr_reader packed: bool
+
+      attr_reader packable: bool
+
+      attr_reader presence: bool
+
+      attr_reader map: bool
+
+      attr_reader closed_enum: bool
+
+      attr_reader utf8_validation: bool
+
+      attr_reader required: bool
+
+      # Slots of the other members of the field's real oneof.
+      attr_reader siblings: Array[Integer]?
+
+      # For message and group fields.
+      attr_reader message_class: Class?
+
+      # For enum fields.
+      attr_reader enum_module: Module?
+
+      # Enum number to its first name.
+      attr_reader enum_names: Hash[Integer, Symbol]?
+
+      # Every enum name, aliases included, to its number.
+      attr_reader enum_numbers: Hash[Symbol, Integer]?
+
+      # The value an unset field reads as.
+      attr_reader default: untyped
+
+      # The tag of one unpacked value, varint-encoded.
+      attr_reader tag: String
+
+      # The length-delimited tag, for packable fields.
+      attr_reader packed_tag: String?
+
+      # The end-group tag, for groups.
+      attr_reader end_tag: String?
+
+      # For map fields.
+      attr_reader key: FieldInfo?
+
+      # For map fields.
+      attr_reader value: FieldInfo?
+
+      # - `classes`: resolves a Schema::Message or Schema::Enum to its Class or Module
+      # - `open_enums`: treat a closed enum as open
+      def initialize: (Schema::Field field, Integer? index, untyped classes, ?siblings: untyped, ?open_enums: bool) -> void
+
+      # Returns whether the field is a message or group.
+      def message?: () -> bool
+
+      # Returns whether a singular value equals the type's zero
+      # value, so that a field without presence is left out on encode.
+      # Negative zero is not a default, as in protoc.
+      def zero?: (untyped value) -> bool
+
+      def inspect: () -> untyped
+    end
+  end
+end

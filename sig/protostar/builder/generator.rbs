@@ -1,0 +1,26 @@
+# Generated from lib/protostar/builder/generator.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Builder
+    # Makes the builder class for a message class. The builder writes
+    # nested messages with the same object, so it needs a method for every
+    # field name of every message reachable from the root; each method
+    # dispatches on the index of the message being written (`@k`) with a
+    # literal `case`, the way the codec's generated methods do, and is
+    # compiled from source so that it runs in any Ractor.
+    module Generator
+      # - `root`: a message class
+      #
+      # Returns a frozen subclass of Builder.
+      def self?.generate: (Class root) -> Class
+
+      # Message classes reachable from `root` through message fields and map values, `root` first
+      def self?.reachable: (untyped root) -> untyped
+
+      # Names that would replace a method every object or every builder needs
+      def self?.reserved?: (untyped name) -> untyped
+
+      def self?.field_method: (untyped name, untyped entries) -> untyped
+    end
+  end
+end

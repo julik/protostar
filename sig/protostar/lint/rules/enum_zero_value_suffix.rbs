@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/enum_zero_value_suffix.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # ENUM_ZERO_VALUE_SUFFIX: An enum whose zero value does not end in `_UNSPECIFIED`
+      class EnumZeroValueSuffix < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

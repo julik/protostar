@@ -1,0 +1,18 @@
+# Generated from lib/protostar/lint/rules/package_version_suffix.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # PACKAGE_VERSION_SUFFIX: A package without a version as its last component
+      class PackageVersionSuffix < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        VERSION: ::Regexp
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

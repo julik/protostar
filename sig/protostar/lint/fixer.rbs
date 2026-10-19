@@ -1,0 +1,52 @@
+# Generated from lib/protostar/lint/fixer.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    # Applies the Diagnostics::Fixes lint findings carry, file by file. An
+    # edit that overlaps one already taken is left out (the finding stays
+    # unfixed), so the result never depends on two fixes agreeing.
+    class Fixer
+      CONTEXT: ::Integer
+
+      # The fixes for one file
+      class Change
+        # The file name as imported.
+        attr_reader name: String
+
+        # Where it is on disk.
+        attr_reader path: String?
+
+        attr_reader before: String
+
+        attr_reader after: String
+
+        # The findings fixed.
+        attr_reader fixed: Array[Compiler::Diagnostic]
+
+        def initialize: (untyped name, untyped path, untyped before, untyped after, untyped fixed) -> untyped
+      end
+
+      # - `text`: the text of a file, by name
+      # - `path`: where a file is on disk, by name, or nil
+      #
+      # Returns one per file with a fix.
+      def self.plan: (Array[Compiler::Diagnostic] diagnostics, text: ^(String) -> String?, path: ^(String) -> String?) -> Array[Change]
+
+      def self.overlap?: (untyped a, untyped b) -> untyped
+
+      # Returns a unified diff, as `diff -u` prints it.
+      def self.diff: (Change change) -> String
+
+      # The lines that differ, as aligned runs: lint's edits change lines in
+      # place or insert whole lines, so a run ends where the two sides meet again
+      def self.block: (untyped old_lines, untyped new_lines, untyped i, untyped j, untyped oe, untyped ne) -> untyped
+
+      # Hunks as [old start, old end, new start, new end], 0-based, ends exclusive
+      def self.hunks: (untyped old_lines, untyped new_lines) -> untyped
+
+      def self.range: (untyped start, untyped finish) -> untyped
+
+      def self.terminated: (untyped line) -> untyped
+    end
+  end
+end

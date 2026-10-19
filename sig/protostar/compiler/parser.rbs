@@ -1,0 +1,324 @@
+# Generated from lib/protostar/compiler/parser.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    # protoc's `.proto` parser (`compiler/parser.cc`). Produces an AST::File
+    # shaped like the parser's FileDescriptorProto, the source locations protoc
+    # records, and protoc's parse errors with its recovery (skip to the end of
+    # the statement or block and carry on).
+    class Parser
+      # :nodoc: all
+      TYPES: untyped
+
+      # EDITION_UNSTABLE spells integer types by their wire format
+      UNSTABLE_TYPES: untyped
+
+      UNSTABLE_REPLACEMENTS: untyped
+
+      INT32_MAX: untyped
+
+      INT64_MAX: untyped
+
+      UINT32_MAX: untyped
+
+      UINT64_MAX: untyped
+
+      MAX_FIELD_NUMBER: ::Integer
+
+      MAX_NESTING: ::Integer
+
+      # end of a `to max` range until the message's maximum is known
+      MAX_RANGE_SENTINEL: ::Integer
+
+      # descriptor.proto field numbers used in source paths
+      FILE_PACKAGE: ::Integer
+
+      FILE_DEPENDENCY: ::Integer
+
+      FILE_MESSAGE_TYPE: ::Integer
+
+      FILE_ENUM_TYPE: ::Integer
+
+      FILE_SERVICE: ::Integer
+
+      FILE_EXTENSION: ::Integer
+
+      FILE_OPTIONS: ::Integer
+
+      FILE_PUBLIC_DEPENDENCY: ::Integer
+
+      FILE_WEAK_DEPENDENCY: ::Integer
+
+      FILE_SYNTAX: ::Integer
+
+      FILE_OPTION_DEPENDENCY: ::Integer
+
+      MESSAGE_NAME: ::Integer
+
+      MESSAGE_FIELD: ::Integer
+
+      MESSAGE_NESTED_TYPE: ::Integer
+
+      MESSAGE_ENUM_TYPE: ::Integer
+
+      MESSAGE_EXTENSION_RANGE: ::Integer
+
+      MESSAGE_EXTENSION: ::Integer
+
+      MESSAGE_OPTIONS: ::Integer
+
+      MESSAGE_ONEOF_DECL: ::Integer
+
+      MESSAGE_RESERVED_RANGE: ::Integer
+
+      MESSAGE_RESERVED_NAME: ::Integer
+
+      RANGE_START: ::Integer
+
+      RANGE_END: ::Integer
+
+      RANGE_OPTIONS: ::Integer
+
+      FIELD_NAME: ::Integer
+
+      FIELD_EXTENDEE: ::Integer
+
+      FIELD_NUMBER: ::Integer
+
+      FIELD_LABEL: ::Integer
+
+      FIELD_TYPE: ::Integer
+
+      FIELD_TYPE_NAME: ::Integer
+
+      FIELD_DEFAULT_VALUE: ::Integer
+
+      FIELD_OPTIONS: ::Integer
+
+      FIELD_JSON_NAME: ::Integer
+
+      ONEOF_NAME: ::Integer
+
+      ONEOF_OPTIONS: ::Integer
+
+      ENUM_NAME: ::Integer
+
+      ENUM_VALUE: ::Integer
+
+      ENUM_OPTIONS: ::Integer
+
+      ENUM_RESERVED_RANGE: ::Integer
+
+      ENUM_RESERVED_NAME: ::Integer
+
+      ENUM_VALUE_NAME: ::Integer
+
+      ENUM_VALUE_NUMBER: ::Integer
+
+      ENUM_VALUE_OPTIONS: ::Integer
+
+      SERVICE_NAME: ::Integer
+
+      SERVICE_METHOD: ::Integer
+
+      SERVICE_OPTIONS: ::Integer
+
+      METHOD_NAME: ::Integer
+
+      METHOD_INPUT_TYPE: ::Integer
+
+      METHOD_OUTPUT_TYPE: ::Integer
+
+      METHOD_OPTIONS: ::Integer
+
+      METHOD_CLIENT_STREAMING: ::Integer
+
+      METHOD_SERVER_STREAMING: ::Integer
+
+      UNINTERPRETED_OPTION: ::Integer
+
+      OPTION_NAME: ::Integer
+
+      OPTION_IDENTIFIER_VALUE: ::Integer
+
+      OPTION_POSITIVE_INT_VALUE: ::Integer
+
+      OPTION_NEGATIVE_INT_VALUE: ::Integer
+
+      OPTION_DOUBLE_VALUE: ::Integer
+
+      OPTION_STRING_VALUE: ::Integer
+
+      OPTION_AGGREGATE_VALUE: ::Integer
+
+      NAME_PART: ::Integer
+
+      # 0-based errors, lexer's included.
+      attr_reader errors: Array[[ Integer, Integer, String ]]
+
+      attr_reader warnings: Array[[ Integer, Integer, String ]]
+
+      # "proto2", "proto3" or "editions" once parsed.
+      attr_reader syntax_identifier: String
+
+      # - `require_syntax`: reject files without `syntax` or `edition`
+      def initialize: (String source, ?require_syntax: bool) -> void
+
+      # - `name`: the file name to record
+      #
+      # Returns the tree, complete as far as parsing got.
+      def parse: (?String? name) -> AST::File
+
+      # Returns whether parsing went without errors.
+      def success?: () -> bool
+
+      # Returns the token parsing stopped at.
+      def current_token: () -> Lexer::Token
+
+      private
+
+      def looking_at?: (untyped text) -> untyped
+
+      def looking_at_type?: (untyped type) -> untyped
+
+      def at_end?: () -> untyped
+
+      def try_consume: (untyped text) -> untyped
+
+      def consume: (untyped text, ?untyped error) -> untyped
+
+      def consume_identifier: (untyped error) -> String?
+
+      # Parser::ConsumeInteger: an unsigned int32
+      def consume_integer: (untyped error) -> Integer?
+
+      # Returns an int32, sign included.
+      def consume_signed_integer: (untyped error) -> Integer?
+
+      def consume_integer64: (untyped max, untyped error) -> untyped
+
+      def try_consume_integer64: (untyped max) -> untyped
+
+      def consume_number: (untyped error) -> Float?
+
+      # Returns a binary String, adjacent literals concatenated.
+      def consume_string: (untyped error) -> String?
+
+      def try_consume_end_of_declaration: (untyped text, untyped location) -> untyped
+
+      def consume_end_of_declaration: (untyped text, untyped location) -> untyped
+
+      def record_error: (untyped message) -> untyped
+
+      def record_error_at: (untyped line, untyped column, untyped message) -> untyped
+
+      def record_warning_at: (untyped line, untyped column, untyped message) -> untyped
+
+      # Runs the block with a location that is finished however the block exits
+      def scoped: (untyped recorder) -> untyped
+
+      def skip_statement: () -> untyped
+
+      def skip_rest_of_block: () -> untyped
+
+      def validate_message: (untyped message) -> untyped
+
+      def validate_enum: (untyped enum) -> untyped
+
+      def parse_syntax_identifier: (untyped file, untyped parent) -> untyped
+
+      def edition_number: () -> untyped
+
+      def parse_top_level_statement: (untyped file, untyped root) -> untyped
+
+      # protoc's GenerateSyntheticOneofs
+      def generate_synthetic_oneofs: (untyped message) -> untyped
+
+      def parse_message_definition: (untyped message, untyped visibility, untyped message_location) -> untyped
+
+      def message_set?: (untyped message) -> untyped
+
+      def adjust_max_ranges: (untyped message, untyped ranges) -> untyped
+
+      def parse_message_block: (untyped message, untyped message_location) -> untyped
+
+      def parse_message_statement: (untyped message, untyped message_location) -> untyped
+
+      def parse_message_field: (untyped field, untyped messages, untyped parent_location, untyped nested_type_number, untyped field_location) -> untyped
+
+      def default_to_optional_fields?: () -> untyped
+
+      def parse_message_field_no_label: (untyped field, untyped messages, untyped parent_location, untyped nested_type_number, untyped field_location) -> untyped
+
+      def parse_map_type: (untyped map_field, untyped field, untyped location) -> untyped
+
+      def generate_map_entry: (untyped map_field, untyped field, untyped messages) -> untyped
+
+      def map_entry_field: (untyped name, untyped number) -> untyped
+
+      def parse_field_options: (untyped field, untyped field_location) -> untyped
+
+      def parse_default_assignment: (untyped field, untyped field_location) -> untyped
+
+      def parse_json_name: (untyped field, untyped field_location) -> untyped
+
+      def parse_option_name_part: (untyped option, untyped part_location) -> untyped
+
+      def parse_uninterpreted_block: () -> untyped
+
+      # - `holder`: the element whose options this sets
+      # - `style`: :statement (`option x = y;`) or :assignment (`[x = y]`)
+      def parse_option: (AST::Node holder, untyped options_location, Symbol style) -> untyped
+
+      def parse_extensions: (untyped message, untyped extensions_location) -> untyped
+
+      def parse_message_reserved: (untyped message, untyped message_location) -> untyped
+
+      def parse_reserved: (untyped holder, untyped parent_location, untyped name_number, untyped range_number, enum: untyped) -> untyped
+
+      def parse_reserved_names: (untyped holder, untyped parent_location, untyped error) -> untyped
+
+      def parse_reserved_identifiers: (untyped holder, untyped parent_location, untyped error) -> untyped
+
+      def parse_reserved_numbers: (untyped message, untyped parent_location) -> untyped
+
+      def parse_enum_reserved_numbers: (untyped enum, untyped parent_location) -> untyped
+
+      def parse_extend: (untyped extensions, untyped messages, untyped parent_location, untyped nested_type_number, untyped extend_location) -> untyped
+
+      def parse_oneof: (untyped oneof, untyped message, untyped index, untyped oneof_location, untyped message_location) -> untyped
+
+      def parse_enum_definition: (untyped enum, untyped visibility, untyped enum_location) -> untyped
+
+      def parse_enum_block: (untyped enum, untyped enum_location) -> untyped
+
+      def parse_enum_statement: (untyped enum, untyped enum_location) -> untyped
+
+      def parse_enum_constant: (untyped value, untyped value_location) -> untyped
+
+      def parse_service_definition: (untyped service, untyped service_location) -> untyped
+
+      def parse_service_statement: (untyped service, untyped service_location) -> untyped
+
+      def parse_service_method: (untyped method, untyped method_location) -> untyped
+
+      def parse_method_options: (untyped method, untyped parent_location) -> untyped
+
+      def parse_label: (untyped field_location) -> Symbol?
+
+      def fixed_wire_for_int_types?: () -> untyped
+
+      # Returns the type, or "" and a type name.
+      def parse_type: () -> [ Symbol, String ]?
+
+      def parse_user_defined_type: () -> String?
+
+      def parse_package: (untyped file, untyped root) -> untyped
+
+      def parse_import: (untyped file, untyped root) -> untyped
+
+      # Returns success and the visibility, if any.
+      def parse_visibility: (untyped file) -> [ bool, Symbol ]
+    end
+  end
+end

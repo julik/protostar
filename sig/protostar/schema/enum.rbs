@@ -1,0 +1,59 @@
+# Generated from lib/protostar/schema/enum.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    # An enum type
+    class Enum < Descriptor
+      attr_reader file: File
+
+      attr_reader containing_message: Message?
+
+      # Declaration order.
+      attr_reader values: Array[EnumValue]
+
+      # The first declared value wins for aliases.
+      attr_reader values_by_number: Hash[Integer, EnumValue]
+
+      attr_reader values_by_name: Hash[String, EnumValue]
+
+      # Inclusive.
+      attr_reader reserved_ranges: Array[Range[untyped]]
+
+      attr_reader reserved_names: Array[String]
+
+      # Declared `visibility`: :local or :export (edition 2024), nil when not declared.
+      attr_reader visibility: Symbol?
+
+      def initialize: (name: untyped, full_name: untyped, file: untyped, containing_message: untyped, index: untyped) -> untyped
+
+      def __values: (untyped values) -> untyped
+
+      # - `key`: a value number or name
+      def value: (Integer | String | Symbol key) -> EnumValue?
+
+      def allow_alias?: () -> bool
+
+      # Whether unknown numbers go to unknown fields (proto2, editions
+      # `enum_type = CLOSED`) instead of being kept in the field (proto3, `OPEN`).
+      def closed?: () -> bool
+
+      def open?: () -> bool
+
+      def to_proto: () -> Protostar::Google::Protobuf::EnumDescriptorProto
+    end
+
+    # A value of an enum. Its #full_name lives in the enum's enclosing scope,
+    # as in protoc: value `FOO` of `pkg.Color` is `pkg.FOO`.
+    class EnumValue < Descriptor
+      attr_reader number: Integer
+
+      attr_reader enum: Enum
+
+      def initialize: (name: untyped, full_name: untyped, number: untyped, enum: untyped, index: untyped) -> untyped
+
+      def file: () -> File
+
+      def to_proto: () -> Protostar::Google::Protobuf::EnumValueDescriptorProto
+    end
+  end
+end

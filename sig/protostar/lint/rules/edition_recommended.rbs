@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/edition_recommended.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # EDITION_RECOMMENDED: A proto2 or proto3 file
+      class EditionRecommended < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

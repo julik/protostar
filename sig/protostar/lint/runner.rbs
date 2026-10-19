@@ -1,0 +1,58 @@
+# Generated from lib/protostar/lint/runner.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    # Compiles each file on its own, so one that fails does not stop the
+    # others, sharing one pool so imports are built once; then runs the rules
+    # over every file that compiled.
+    #
+    # The compiler's diagnostics come first, in the order it reports them
+    # (protoc's): errors from any file, warnings for the files asked about.
+    # Then each file's lint findings, in file order and by position within a
+    # file. Comment directives switch off warnings, never errors.
+    class Runner
+      # What a run found
+      class Result
+        attr_reader diagnostics: Array[Compiler::Diagnostic]
+
+        # The files that compiled.
+        attr_reader contexts: Array[Context]
+
+        # Every file asked about.
+        attr_reader names: Array[String]
+
+        def initialize: (untyped diagnostics, untyped contexts, untyped names) -> untyped
+
+        def errors?: () -> bool
+
+        def warnings?: () -> bool
+      end
+
+      attr_reader compiler: Compiler
+
+      # - `include_paths`: where file names and imports are resolved
+      # - `rules`: rule ids to run, from Lint.select
+      # - `except`: rule ids switched off by name; the compiler
+      #   warnings they would report are not passed through either
+      # - `directives`: honour `// protostar-lint:` comments
+      def initialize: (include_paths: Array[String], rules: Array[String], ?except: Array[String], ?directives: bool) -> void
+
+      # - `names`: file names relative to an include path
+      # - `sources`: file contents by name, before the include paths
+      def run: (Array[String] names, ?sources: Hash[String, String]) -> Result
+
+      # Returns the file's text, from the sources given or from disk.
+      def text: (String name) -> String?
+
+      private
+
+      def lint: (untyped context) -> untyped
+
+      def suppressed?: (untyped diagnostic) -> untyped
+
+      def shown_path: (untyped name) -> untyped
+
+      def disk_path: (untyped name) -> untyped
+    end
+  end
+end

@@ -1,0 +1,264 @@
+# Generated from lib/protostar/compiler/ast.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    # The parse tree of a `.proto` file. It holds what protoc's parser puts
+    # in a `FileDescriptorProto` before linking: names as written, options
+    # uninterpreted, map entries, groups and the synthetic oneofs of proto3
+    # `optional` fields already expanded, as protoc's parser expands them.
+    #
+    # Every node records where its parts start in Node#positions, keyed by
+    # the error locations protoc's DescriptorPool reports against (`:name`,
+    # `:number`, `:type`, `:extendee`, `:default_value`, `:option_name`,
+    # `:option_value`, `:input_type`, `:output_type`, `:editions`, `:other`),
+    # each a 0-based `[line, column]`.
+    module AST
+      class Node
+        # :nodoc: all
+        attr_reader positions: Hash[Symbol, [ Integer, Integer ]]
+
+        # Linker state: full name and source path
+        attr_accessor full_name: untyped
+
+        # Linker state: full name and source path
+        attr_accessor path: untyped
+
+        def initialize: () -> untyped
+
+        def position: (untyped kind) -> [ Integer, Integer ]?
+      end
+
+      # A whole `.proto` file
+      class File < Node
+        attr_accessor name: untyped
+
+        attr_accessor package: untyped
+
+        attr_accessor syntax: untyped
+
+        attr_accessor edition: untyped
+
+        attr_accessor options: untyped
+
+        attr_reader dependency: untyped
+
+        attr_reader public_dependency: untyped
+
+        attr_reader weak_dependency: untyped
+
+        attr_reader option_dependency: untyped
+
+        attr_reader message_type: untyped
+
+        attr_reader enum_type: untyped
+
+        attr_reader service: untyped
+
+        attr_reader extension: untyped
+
+        attr_reader import_positions: untyped
+
+        # In protoc's order.
+        attr_accessor locations: Array[SourceInfo::Location]
+
+        def initialize: () -> untyped
+      end
+
+      # The options of one element: the uninterpreted `option` statements and
+      # the few options protoc's parser sets itself (`map_entry`)
+      class Options
+        attr_reader uninterpreted: Array[Option]
+
+        # Options set directly, e.g. `{map_entry: true}`.
+        attr_reader known: Hash[untyped, untyped]
+
+        def initialize: () -> untyped
+
+        def empty?: () -> untyped
+
+        # A copy whose options carry no positions, as protoc's message copy
+        # leaves them out of its location table
+        def copy: () -> untyped
+      end
+
+      # One uninterpreted option: `(my.ext).sub.field = value`
+      class Option < Node
+        # Name parts and whether each is an extension.
+        attr_reader name: Array[[ String, bool ]]
+
+        # Which value field is set: :identifier_value,
+        # :positive_int_value, :negative_int_value, :double_value,
+        # :string_value or :aggregate_value.
+        attr_accessor value_kind: Symbol?
+
+        attr_accessor value: untyped
+
+        def initialize: () -> untyped
+
+        def copy: () -> untyped
+
+        # Returns the name as protoc prints it in errors: `(a.b).c`.
+        def display_name: () -> String
+      end
+
+      # A message, including synthesized map entries and group bodies
+      class Message < Node
+        attr_accessor name: untyped
+
+        attr_accessor options: untyped
+
+        attr_accessor visibility: untyped
+
+        attr_accessor parent: untyped
+
+        attr_accessor index: untyped
+
+        attr_reader field: untyped
+
+        attr_reader nested_type: untyped
+
+        attr_reader enum_type: untyped
+
+        attr_reader extension_range: untyped
+
+        attr_reader extension: untyped
+
+        attr_reader oneof_decl: untyped
+
+        attr_reader reserved_range: untyped
+
+        attr_reader reserved_name: untyped
+
+        def initialize: () -> untyped
+      end
+
+      # A field or an extension
+      class Field < Node
+        attr_accessor name: untyped
+
+        attr_accessor number: untyped
+
+        attr_accessor label: untyped
+
+        attr_accessor type: untyped
+
+        attr_accessor type_name: untyped
+
+        attr_accessor extendee: untyped
+
+        attr_accessor default_value: untyped
+
+        attr_accessor json_name: untyped
+
+        attr_accessor oneof_index: untyped
+
+        attr_accessor proto3_optional: untyped
+
+        attr_accessor options: untyped
+
+        # Set by the linker: the declaring message (nil at file level), whether
+        # this is an extension, and its index
+        attr_accessor parent: untyped
+
+        # Set by the linker: the declaring message (nil at file level), whether
+        # this is an extension, and its index
+        attr_accessor extension: untyped
+
+        # Set by the linker: the declaring message (nil at file level), whether
+        # this is an extension, and its index
+        attr_accessor index: untyped
+      end
+
+      # A `oneof` declaration
+      class Oneof < Node
+        attr_accessor name: untyped
+
+        attr_accessor options: untyped
+
+        attr_accessor parent: untyped
+
+        attr_accessor index: untyped
+      end
+
+      # An `extensions` range (end exclusive) or a `reserved` range
+      # (end exclusive for messages, inclusive for enums)
+      class Range < Node
+        attr_accessor start: untyped
+
+        attr_accessor end: untyped
+
+        attr_accessor options: untyped
+
+        attr_accessor parent: untyped
+
+        attr_accessor index: untyped
+      end
+
+      # An enum
+      class Enum < Node
+        attr_accessor name: untyped
+
+        attr_accessor options: untyped
+
+        attr_accessor visibility: untyped
+
+        attr_accessor parent: untyped
+
+        attr_accessor index: untyped
+
+        attr_reader value: untyped
+
+        attr_reader reserved_range: untyped
+
+        attr_reader reserved_name: untyped
+
+        def initialize: () -> untyped
+      end
+
+      # An enum value
+      class EnumValue < Node
+        attr_accessor name: untyped
+
+        attr_accessor number: untyped
+
+        attr_accessor options: untyped
+
+        attr_accessor parent: untyped
+
+        attr_accessor index: untyped
+      end
+
+      # A service
+      class Service < Node
+        attr_accessor name: untyped
+
+        attr_accessor options: untyped
+
+        attr_accessor index: untyped
+
+        attr_reader rpcs: untyped
+
+        def initialize: () -> untyped
+      end
+
+      # An rpc
+      class Method < Node
+        attr_accessor name: untyped
+
+        attr_accessor input_type: untyped
+
+        attr_accessor output_type: untyped
+
+        attr_accessor options: untyped
+
+        attr_accessor client_streaming: untyped
+
+        attr_accessor server_streaming: untyped
+
+        attr_accessor parent: untyped
+
+        attr_accessor index: untyped
+      end
+    end
+  end
+end

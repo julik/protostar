@@ -1,0 +1,43 @@
+# Generated from lib/protostar/compiler/emitters/protostar_rbi.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    module Emitters
+      # Writes `_pb.rbi` files for Sorbet describing the classes Ruby
+      # generates, with the same types ProtostarRbs gives them. The runtime
+      # API (`Protostar::Message` and the rest) is in the gem's
+      # `rbi/protostar.rbi`. Rbi describes google-protobuf's classes instead.
+      class ProtostarRbi
+        include NativeNames
+
+        # A keyword parameter Ruby accepts; other field names go to `**`
+        KEYWORD: ::Regexp
+
+        # Constant names Ruby parses as keywords, set from outside the module
+        KEYWORD_CONSTANTS: untyped
+
+        # - `namespaces`: Ruby module paths by file name, as Ruby takes them
+        def initialize: (?namespaces: Hash[String, String]) -> void
+
+        # Returns a Hash of output path to the RBI.
+        def emit: (Array[Schema::File] files) -> Hash[String, String]
+
+        def file: (Schema::File file) -> String
+
+        private
+
+        def enum: (untyped p, untyped enum, untyped path, untyped first) -> untyped
+
+        def message: (untyped p, untyped message, untyped path, untyped first) -> untyped
+
+        # `new` takes a Hash, keywords, or both
+        def constructor: (untyped p, untyped message) -> untyped
+
+        # A parameter name no field has
+        def free: (untyped name, untyped names) -> untyped
+
+        def accessors: (untyped p, untyped field, untyped path, untyped taken) -> untyped
+      end
+    end
+  end
+end

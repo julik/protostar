@@ -1,0 +1,172 @@
+# Generated from lib/protostar/compiler/validator.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    # The checks protoc runs once a file's options are interpreted:
+    # DescriptorBuilder's ValidateOptions phase, map entry conflict hints,
+    # unused imports, naming style, proto limits and symbol visibility, and
+    # feature lifetimes, in that order. Checks read the built Schema::File
+    # and report against the AST's recorded positions.
+    class Validator
+      # :nodoc: all
+      INT32_MAX: untyped
+
+      MAX_FIELD_NUMBER: ::Integer
+
+      OPTIONS_EXTENDEES: untyped
+
+      DESCRIPTOR_OPTIONS: untyped
+
+      INT64_TYPES: untyped
+
+      NON_MESSAGE_TYPES: untyped
+
+      NAMING_OPT_OUT: ::String
+
+      COLLISION_OPT_OUT: ::String
+
+      LIMITS_OPT_OUT: ::String
+
+      LIMIT_FIELDS_PER_MESSAGE: ::Integer
+
+      LIMIT_ONEOFS_PER_MESSAGE: ::Integer
+
+      LIMIT_FIELDS_PER_ONEOF: ::Integer
+
+      LIMIT_VALUES_PER_ENUM: ::Integer
+
+      TARGET_TYPES: untyped
+
+      def initialize: (untyped linker) -> untyped
+
+      def validate: () -> untyped
+
+      # The command-line interface's checks over the files it was asked to
+      # compile, once all of them are built
+      def self.cli_checks: (Array[Linker] linkers, Run run) -> untyped
+
+      def self.skip_edition_check?: (untyped name) -> untyped
+
+      # Every option set on the element must allow the element's target type
+      def target_constraints: (untyped node, untyped kind, untyped run) -> untyped
+
+      private
+
+      def errors?: () -> untyped
+
+      def error: (untyped node, untyped location, untyped message, ?related: untyped) -> untyped
+
+      def warning: (untyped node, untyped location, untyped message, ?related: untyped) -> untyped
+
+      def each_element: () ?{ (?) -> untyped } -> untyped
+
+      def check_targets: (untyped value, untyped type, untyped target, untyped label, untyped run) -> untyped
+
+      def check_target: (untyped field, untyped value, untyped target, untyped label, untyped run) -> untyped
+
+      # A built extension by full name: this file's or the pool's
+      def extension_field: (untyped name) -> untyped
+
+      # The options message an element's options are read with
+      def options_message: (untyped kind) -> untyped
+
+      # The Schema descriptor for an AST node
+      def schema_of: (untyped node, untyped _kind) -> untyped
+
+      def schema_options: (untyped node, untyped kind) -> untyped
+
+      def validate_options: () -> untyped
+
+      def lite?: (untyped file) -> untyped
+
+      def validate_file: () -> untyped
+
+      def validate_proto3: () -> untyped
+
+      def validate_proto3_message: (untyped message) -> untyped
+
+      def validate_proto3_field: (untyped node) -> untyped
+
+      def validate_message: (untyped node, untyped message) -> untyped
+
+      def json_name_uniqueness: (untyped node, untyped message, untyped use_custom) -> untyped
+
+      def extension_range_options: (untyped node, untyped message) -> untyped
+
+      def validate_declarations: (untyped node, untyped range, untyped declarations, untyped names) -> untyped
+
+      def declaration_symbol_problem: (untyped symbol) -> untyped
+
+      def validate_field: (untyped node, untyped field) -> untyped
+
+      def field_features: (untyped node, untyped field) -> untyped
+
+      def validate_map: (untyped node, untyped field) -> untyped
+
+      def camel_case: (untyped name) -> untyped
+
+      def valid_map_entry?: (untyped node, untyped entry) -> untyped
+
+      def jstype: (untyped node, untyped field) -> untyped
+
+      def extension_declaration: (untyped node, untyped field) -> untyped
+
+      def check_declaration: (untyped node, untyped field, untyped declaration) -> untyped
+
+      def validate_enum: (untyped node, untyped enum) -> untyped
+
+      def enum_value_uniqueness: (untyped node, untyped enum) -> untyped
+
+      def remove_prefix: (untyped prefix, untyped name) -> untyped
+
+      def pascal_case: (untyped name) -> untyped
+
+      def validate_enum_value: (untyped node, untyped value) -> untyped
+
+      def validate_service: (untyped node) -> untyped
+
+      def edition_value: (untyped name) -> untyped
+
+      # FeatureResolver::ValidateFeatureSupport
+      def feature_support_problem: (untyped support, untyped full_name) -> untyped
+
+      def enum_value_support_problem: (untyped parent, untyped value, untyped field_name) -> untyped
+
+      def detect_map_conflicts: (untyped message) -> untyped
+
+      def map_entry?: (untyped message) -> untyped
+
+      def unused_imports: () -> untyped
+
+      def style_at_least?: (untyped features, untyped style) -> untyped
+
+      def naming_style: (untyped node, untyped kind) -> untyped
+
+      def collision_problem: (untyped node, untyped kind) -> untyped
+
+      def bad_underscores?: (untyped name) -> untyped
+
+      def title_case_problem: (untyped name) -> untyped
+
+      def lower_snake_case_problem: (untyped name) -> untyped
+
+      def upper_snake_case_problem: (untyped name) -> untyped
+
+      def proto_limits: (untyped node, untyped kind) -> untyped
+
+      def symbol_visibility: () -> untyped
+
+      def namespaced_enum?: (untyped enum) -> untyped
+
+      # FeatureResolver::ValidateFeatureLifetimes over every element's
+      # features and options
+      def feature_lifetimes: () -> untyped
+
+      def lifetimes: (untyped value, untyped type, untyped edition, untyped node, ?except: untyped) -> untyped
+
+      def single_lifetime: (untyped edition, untyped full_name, untyped support, untyped node) -> untyped
+
+      def edition_label: (untyped edition) -> untyped
+    end
+  end
+end

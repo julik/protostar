@@ -1,0 +1,83 @@
+# Generated from lib/protostar/schema/features.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    # Resolved editions features of a descriptor. proto2 and proto3 files are
+    # resolved as the editions EDITION_PROTO2 and EDITION_PROTO3, the way protoc
+    # does internally, so every descriptor has a complete set.
+    #
+    # Custom (extension) features such as `pb.cpp` are carried in #extensions
+    # as merged explicit values; their defaults are not known to this model.
+    class Features
+      # The Edition enum from descriptor.proto (lines 45-82)
+      EDITIONS: untyped
+
+      # Edition numbers to their enum names
+      EDITION_NAMES: untyped
+
+      # The `edition_defaults` annotations on FeatureSet in descriptor.proto,
+      # as [edition, value] pairs in ascending edition order. A feature takes the
+      # value of the last pair whose edition is at or before the file's edition.
+      DEFAULTS: untyped
+
+      # Names of the core features, in FeatureSet field number order
+      NAMES: untyped
+
+      # - `edition`: an Edition enum name or number
+      def self.edition_number: (Symbol | Integer edition) -> Integer
+
+      # The defaults for an edition, as protoc computes them from descriptor.proto
+      def self.defaults: (Symbol | Integer edition) -> Features
+
+      # Merged explicit custom features by extension.
+      attr_reader extensions: Hash[Field, MessageValue]
+
+      def initialize: (untyped values, untyped extensions) -> untyped
+
+      # :EXPLICIT, :IMPLICIT or :LEGACY_REQUIRED
+      attr_reader field_presence: Symbol
+
+      # :OPEN or :CLOSED
+      attr_reader enum_type: Symbol
+
+      # :PACKED or :EXPANDED
+      attr_reader repeated_field_encoding: Symbol
+
+      # :VERIFY or :NONE
+      attr_reader utf8_validation: Symbol
+
+      # :LENGTH_PREFIXED or :DELIMITED
+      attr_reader message_encoding: Symbol
+
+      # :ALLOW or :LEGACY_BEST_EFFORT
+      attr_reader json_format: Symbol
+
+      attr_reader enforce_naming_style: Symbol
+
+      attr_reader default_symbol_visibility: Symbol
+
+      attr_reader enforce_proto_limits: Symbol
+
+      # Overlays a declared `features` option (a FeatureSet) on these features
+      #
+      # Returns self when the overlay changes nothing.
+      def merge: (MessageValue? declared) -> Features
+
+      # - `values`: core features to override
+      #
+      # Returns self when nothing changes.
+      def with: (**untyped values) -> Features
+
+      # Returns the core features by name.
+      def to_h: () -> Hash[Symbol, Symbol]
+
+      def ==: (untyped other) -> untyped
+
+      attr_reader hash: untyped
+
+      def inspect: () -> untyped
+
+      alias eql? ==
+    end
+  end
+end

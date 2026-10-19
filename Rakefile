@@ -108,8 +108,20 @@ namespace :test do
   end
 end
 
+namespace :types do
+  desc "Write sig/ and rbi/protostar.rbi from the inline RBS in lib/ and sig/protostar_manual.rbs"
+  task :generate do
+    ruby "script/types.rb", "generate"
+  end
+
+  desc "Fail when sig/ or rbi/protostar.rbi differ from what lib/ generates"
+  task :check do
+    ruby "script/types.rb", "check"
+  end
+end
+
 namespace :rbs do
-  desc "Check sig/ (the public API and the well-known types) with rbs validate"
+  desc "Check sig/ (generated from lib/, and the well-known types) with rbs validate"
   task :validate do
     sh "rbs", "-I", "sig", "validate"
   end

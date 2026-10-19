@@ -1,0 +1,29 @@
+# Generated from lib/protostar/lint/directives.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    # Comments that switch rules off for part of a file:
+    #
+    # ```ruby
+    # // protostar-lint: disable-next-line FIELD_NOT_REQUIRED
+    # required string id = 1;
+    #
+    # // protostar-lint: disable COMMENT_FIELD, COMMENT_MESSAGE
+    # ...
+    # // protostar-lint: enable COMMENT_FIELD, COMMENT_MESSAGE
+    # ```
+    #
+    # A directive names rule ids or codes (a compiler warning's code works
+    # too), or none for every rule. `disable` without `enable` runs to the end
+    # of the file. Directives are read from the text line by line.
+    class Directives
+      PATTERN: ::Regexp
+
+      # - `text`: the file's bytes
+      def initialize: (String text) -> void
+
+      # Returns whether a directive switches it off where it starts.
+      def suppressed?: (Compiler::Diagnostic diagnostic) -> bool
+    end
+  end
+end

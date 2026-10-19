@@ -1,0 +1,22 @@
+# Generated from lib/protostar/schema/oneof.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    # A oneof, real or synthesized for a proto3 `optional` field
+    class Oneof < Descriptor
+      attr_reader containing_message: Message
+
+      # Members in declaration order.
+      attr_reader fields: Array[Field]
+
+      def initialize: (name: untyped, full_name: untyped, containing_message: untyped, index: untyped) -> untyped
+
+      def file: () -> File
+
+      # Returns whether protoc synthesized it for a proto3 `optional` field.
+      def synthetic?: () -> bool
+
+      def to_proto: () -> Protostar::Google::Protobuf::OneofDescriptorProto
+    end
+  end
+end

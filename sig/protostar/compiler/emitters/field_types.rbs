@@ -1,0 +1,104 @@
+# Generated from lib/protostar/compiler/emitters/field_types.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    module Emitters
+      # What field readers return and writers take, shared by the RBS and RBI
+      # emitters. The model decides the types; a dialect (RBS or Sorbet)
+      # spells them.
+      #
+      # For protostar's classes the types are what Message::Coercion accepts
+      # and what readers return. For google-protobuf's they are what the gem's
+      # accessors take, as protoc's RBS has them.
+      class FieldTypes
+        INTEGERS: untyped
+
+        # Ruby values Message::Coercion turns into these messages, for protostar's classes
+        COERCED: untyped
+
+        # ... and what google-protobuf's accessors take for them
+        GOOGLE_COERCED: untyped
+
+        # RBS spelling
+        module RBS
+          ATOMS: untyped
+
+          def self?.atom: (untyped name) -> untyped
+
+          def self?.enum_names: (untyped const) -> untyped
+
+          def self?.enum_strings: (untyped const) -> untyped
+
+          def self?.init_map: (untyped const) -> untyped
+
+          def self?.union: (untyped types) -> untyped
+
+          def self?.nilable: (untyped type) -> untyped
+
+          def self?.array: (untyped type) -> untyped
+
+          def self?.hash: (untyped key, untyped value) -> untyped
+
+          def self?.generic: (untyped name, *untyped types) -> untyped
+        end
+
+        # Sorbet's `sig` spelling. Everything is spelled from the root, since a
+        # message may well be called `T` or `String`
+        module Sorbet
+          ATOMS: untyped
+
+          # What a Hash of field values is, wherever RBS has an init_map
+          FIELDS: ::String
+
+          def self?.atom: (untyped name) -> untyped
+
+          def self?.enum_names: (untyped _const) -> untyped
+
+          def self?.enum_strings: (untyped _const) -> untyped
+
+          def self?.init_map: (untyped _const) -> untyped
+
+          def self?.union: (untyped types) -> untyped
+
+          def self?.nilable: (untyped type) -> untyped
+
+          def self?.array: (untyped type) -> untyped
+
+          def self?.hash: (untyped key, untyped value) -> untyped
+
+          def self?.generic: (untyped name, *untyped types) -> untyped
+        end
+
+        # - `dialect`: RBS or Sorbet
+        # - `google`: google-protobuf's classes rather than protostar's
+        # - `constant`: the constant path of a Schema::Message or Schema::Enum
+        def self?.initialize: (Module dialect, ?google: bool) ?{ (?) -> untyped } -> void
+
+        # Returns what the reader returns for one value.
+        def self?.read_one: (untyped field) -> String
+
+        # Returns what the writer takes for one value.
+        def self?.write_one: (untyped field) -> String
+
+        # Returns the reader's type.
+        def self?.read_type: (untyped field) -> String
+
+        # Returns the writer's type.
+        def self?.write_type: (untyped field) -> String
+
+        # Returns what `new` takes for the field.
+        def self?.init_type: (untyped field) -> String
+
+        def self?.message?: (untyped field) -> bool
+
+        private
+
+        def self?.container: (untyped field) -> untyped
+
+        def self?.message_write: (untyped field, untyped coerced) -> untyped
+
+        def self?.google_write_one: (untyped field) -> untyped
+      end
+    end
+  end
+end

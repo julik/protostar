@@ -1,0 +1,31 @@
+# Generated from lib/protostar/schema/default_value.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    # Parses `FieldDescriptorProto.default_value` text into Ruby values
+    module DefaultValue
+      # :nodoc: all
+      INTEGER_TYPES: untyped
+
+      SIMPLE_ESCAPES: untyped
+
+      # protoc's SimpleDtoa: the shortest of %.15g and %.17g that reads back exactly
+      def self.simple_dtoa: (Float value) -> String
+
+      # - `text`: as protoc writes it
+      # - `type`: the field's short type
+      # - `enum`: the field's enum type
+      def self.parse: (String text, Symbol, Enum? enum) -> untyped
+
+      def self.parse_integer: (untyped text) -> untyped
+
+      def self.parse_float: (untyped text) -> untyped
+
+      # The value a float field actually holds: the nearest single-precision value
+      def self.to_float32: (untyped value) -> untyped
+
+      # Undoes protoc's CEscape: simple escapes, 1-3 digit octal, \x hex
+      def self.unescape_bytes: (untyped text) -> untyped
+    end
+  end
+end

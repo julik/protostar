@@ -1,0 +1,21 @@
+# Generated from lib/protostar/builder/sink.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Builder
+    # The writer a builder streams into. What the sink raises is raised
+    # again with the field being written added to its message, keeping its
+    # class: a broken pipe stays an Errno::EPIPE.
+    class Sink < Wire::Writer
+      def initialize: (untyped target, untyped flush_at, untyped builder) -> untyped
+
+      # Returns `e` again, its message saying where the builder was.
+      def annotate: (untyped e) -> Exception
+
+      private
+
+      def deliver: (untyped bytes) -> untyped
+
+      def deliver_all: (*untyped chunks) -> untyped
+    end
+  end
+end

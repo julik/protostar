@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/field_numbers_hot_range.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # FIELD_NUMBERS_HOT_RANGE: A message using field numbers above 15 while numbers 1 to 15 are free
+      class FieldNumbersHotRange < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

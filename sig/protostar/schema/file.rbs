@@ -1,0 +1,149 @@
+# Generated from lib/protostar/schema/file.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    # A built `.proto` file
+    class File < Descriptor
+      # The package, "" when none.
+      attr_reader package: String
+
+      # :proto2, :proto3 or :editions.
+      attr_reader syntax: Symbol
+
+      # The Edition enum name for editions files
+      # (an Integer only for an edition this model has no name for).
+      attr_reader edition: (Symbol | Integer)?
+
+      # Imported file names, in declaration order.
+      attr_reader dependencies: Array[String]
+
+      # Indexes into #dependencies of `import public`.
+      attr_reader public_dependencies: Array[Integer]
+
+      # Indexes into #dependencies of `import weak`.
+      attr_reader weak_dependencies: Array[Integer]
+
+      # `import option` file names (edition 2024).
+      attr_reader option_dependencies: Array[String]
+
+      # Linked #dependencies, same order.
+      attr_reader dependency_files: Array[File]
+
+      # Top-level messages.
+      attr_reader messages: Array[Message]
+
+      # Top-level enums.
+      attr_reader enums: Array[Enum]
+
+      attr_reader services: Array[Service]
+
+      # Top-level extensions.
+      attr_reader extensions: Array[Field]
+
+      attr_reader source_info: SourceInfo?
+
+      # Every message, depth first in declaration order.
+      attr_reader all_messages: Array[Message]
+
+      # Every enum, top level first, then by message in #all_messages order.
+      attr_reader all_enums: Array[Enum]
+
+      # Every extension, top level first, then by message in #all_messages order.
+      attr_reader all_extensions: Array[Field]
+
+      # Every symbol this file defines, by full name.
+      attr_reader symbols: Hash[String, Descriptor]
+
+      # This file, its imports and whatever they re-export
+      # through `import public`: the files whose symbols are visible here.
+      attr_reader visible_files: Array[File]
+
+      def initialize: (name: untyped, package: untyped, syntax: untyped, edition: untyped, proto_syntax: untyped) -> untyped
+
+      def __dependencies: (dependencies: untyped, public_dependencies: untyped, weak_dependencies: untyped, option_dependencies: untyped, dependency_files: untyped) -> untyped
+
+      # The `syntax` string the FileDescriptorProto carries.
+      attr_reader proto_syntax: String?
+
+      # Returns itself, so every descriptor answers `#file`.
+      def file: () -> File
+
+      # Returns the edition number features resolve against
+      # (EDITION_PROTO2 or EDITION_PROTO3 for the legacy syntaxes).
+      def edition_number: () -> Integer
+
+      # - `full_name`: without a leading dot
+      #
+      # Returns a message defined in this file.
+      def find_message: (String full_name) -> Message?
+
+      # Returns an enum defined in this file.
+      def find_enum: (String full_name) -> Enum?
+
+      # Returns a service defined in this file.
+      def find_service: (untyped full_name) -> Service?
+
+      # Returns an extension defined in this file.
+      def find_extension: (untyped full_name) -> Field?
+
+      # Returns any symbol defined in this file: message, field,
+      # oneof, enum, enum value, service or method.
+      def find_symbol: (untyped full_name) -> Descriptor?
+
+      def inspect: () -> untyped
+
+      # This file as a `google.protobuf.FileDescriptorProto` of the bootstrap
+      # classes, as protoc's `FileDescriptor::CopyTo` writes it
+      #
+      # - `source_info`: include `source_code_info` when the file has it
+      # - `default_json_names`: false leaves out every `json_name` equal to the one
+      #   derived from the field name, as protoc's Ruby generator embeds descriptors
+      def to_proto: (?source_info: bool, ?default_json_names: bool) -> Protostar::Google::Protobuf::FileDescriptorProto
+
+      # - `(see`: #to_proto)
+      #
+      # Returns the serialized FileDescriptorProto, byte for byte what protoc writes.
+      def serialize: (?source_info: bool, ?default_json_names: bool) -> String
+
+      # Builds a file from a `google.protobuf.FileDescriptorProto` message (or
+      # its bytes), as a plugin receives them. Extension bytes in options are
+      # decoded by the extensions the pool (or the file itself) defines;
+      # others stay Options#unknown_fields.
+      #
+      # - `pool`: where dependencies and extensions are looked up; the file is not added
+      def self.from_proto: (Protostar::Google::Protobuf::FileDescriptorProto | String proto, pool: Pool) -> File
+
+      # Starts describing a file. The draft creates the real descriptors as it
+      # goes; Draft::File#resolve links them and Draft::File#freeze! hands
+      # back the finished, shareable file.
+      #
+      # ```ruby
+      # file = Schema::File.draft("shop.proto", package: "shop", syntax: :proto3)
+      # file.message("Item") do |m|
+      #   m.field "name", 1, :string
+      #   m.field "price_cents", 2, :int64, optional: true
+      #   m.map "stock", 3, key: :string, value: :int32
+      # end
+      # file.resolve(pool)
+      # file.freeze!  # => #<Protostar::Schema::File shop.proto>
+      # ```
+      #
+      # - `name`: the file name as imported
+      # - `syntax`: :proto2, :proto3 or :editions; nil is proto2, and
+      #   unlike an explicit :proto2 leaves `syntax` out of the FileDescriptorProto, as protoc does
+      # - `edition`: e.g. :EDITION_2023; implies :editions
+      # - `dependencies`: imported file names
+      # - `public_dependencies`: names or indexes of `import public` files
+      # - `option_dependencies`: `import option` file names
+      # - `options`: the file's options
+      def self.draft: (String name, ?package: String?, ?syntax: Symbol?, ?edition: (Symbol | Integer)?, ?dependencies: Array[String], ?public_dependencies: Array[String | Integer], ?weak_dependencies: Array[String | Integer], ?option_dependencies: Array[String], ?options: Hash[untyped, untyped]?) -> Draft::File
+
+      private
+
+      # protoc's rule: direct imports, plus the public imports of those, recursively
+      def compute_visible_files: () -> untyped
+
+      alias to_s inspect
+    end
+  end
+end

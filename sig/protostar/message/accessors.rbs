@@ -1,0 +1,24 @@
+# Generated from lib/protostar/message/accessors.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Message
+    # Writes the field accessors of a message class as Ruby source and evals
+    # it into the class. Methods made from source, unlike `define_method`
+    # blocks, can be called from any Ractor, and they read their slot by a
+    # literal index.
+    module Accessors
+      # Methods every message has; a field whose accessor would replace one
+      # is reachable only through `[]` and `[]=`
+      def self?.reserved: () -> untyped
+
+      # - `oneofs`: real oneofs: name and member slots
+      # - `reserved`: from `reserved`, computed once for many classes
+      def self?.install: (Class klass, Array[FieldInfo] fields, Array[[ Symbol, Array[Integer] ]] oneofs, ?Hash[Symbol, bool] reserved) -> untyped
+
+      def self?.reader_source: (untyped name, untyped info) -> untyped
+
+      # The default as a literal when it has an exact one, otherwise a lookup
+      def self?.default_literal: (untyped info) -> untyped
+    end
+  end
+end

@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/import_no_weak.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # IMPORT_NO_WEAK: An `import weak`
+      class ImportNoWeak < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

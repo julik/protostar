@@ -1,0 +1,19 @@
+# Generated from lib/protostar/json/path.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module JSON
+    # Where the encoder or parser is in a message, kept as a stack of field
+    # names, Integer indexes and map keys, turned into text only for errors
+    module Path
+      # A map key on the stack, printed as `[key]`
+      class MapKey
+        attr_reader key: untyped
+
+        def initialize: (untyped key) -> untyped
+      end
+
+      # Returns a name such as `friends[2].name` or `labels["x"]`.
+      def self?.to_s: (Array[String | Integer | MapKey] stack) -> String
+    end
+  end
+end

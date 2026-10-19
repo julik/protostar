@@ -1,0 +1,80 @@
+# Generated from lib/protostar/lint/rule.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    # The base of every lint rule. A rule is a class under Rules named after
+    # its id (`FIELD_NOT_REQUIRED` is `Rules::FieldNotRequired`) with two
+    # constants, `REASON` (one line) and `EXPLANATION` (why, an example, the
+    # fix), and a #check that calls #report for every problem it finds.
+    #
+    # ```ruby
+    # class Rules::PackageDefined < Rule
+    #   REASON = "A file without a package puts its types in the global namespace."
+    #   EXPLANATION = "..."
+    #
+    #   def check
+    #     report(context.ast, :other, "file has no package") if context.file.package.empty?
+    #   end
+    # end
+    # ```
+    #
+    # Rules read the compiled Schema::File, the AST positions and the source
+    # info through Context; none parses anything.
+    class Rule
+      # Returns a name such as "FIELD_NOT_REQUIRED".
+      def self.id: () -> String
+
+      # Returns a name such as "W0101".
+      def self.code: () -> String
+
+      # Returns the smallest set the rule is in.
+      def self.tier: () -> Symbol
+
+      def self.category: () -> Symbol
+
+      def self.reason: () -> String
+
+      def self.explanation: () -> String
+
+      # The compiler codes whose warnings the rule reports as its own, so they
+      # are not printed twice
+      CLAIMS: untyped
+
+      attr_reader context: Context
+
+      # What #report collected.
+      attr_reader diagnostics: Array[Compiler::Diagnostic]
+
+      def initialize: (Context context) -> void
+
+      # Finds the rule's problems in #context
+      def check: () -> void
+
+      private
+
+      # Records a problem at a node's recorded position
+      #
+      # - `kind`: the position kind: :name, :number, :type, ...
+      # - `message`: the headline, lower case, no full stop
+      # - `label`: under the span
+      # - `help`: the concrete fix in words
+      # - `fix`: when the fix is mechanical and safe
+      # - `related`: other places
+      # - `span`: instead of the node's position
+      def report: (Compiler::AST::Node node, Symbol kind, String message, ?label: String?, ?help: String?, ?fix: Diagnostics::Fix?, ?related: Array[[ Compiler::AST::Node, Symbol, String ]], ?span: Diagnostics::Span?) -> untyped
+
+      # Records a problem at a span, or at none
+      def add: (untyped message, untyped spans, ?help: untyped, ?fix: untyped) -> untyped
+
+      # - `numbers`: sorted
+      #
+      # Returns "2, 4 to 6".
+      def numbers_text: (Array[Integer] numbers) -> String
+
+      # A rename of the identifier under a span, offered only when the old
+      # name appears once in the file (no reference, option or comment would
+      # be left behind) and the new one not at all
+      def rename: (untyped span, untyped from, untyped to) -> Diagnostics::Fix?
+    end
+  end
+end

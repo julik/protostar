@@ -1,0 +1,20 @@
+# Generated from lib/protostar/lint/rules/package_same_directory.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # PACKAGE_SAME_DIRECTORY: Files in one directory that declare different packages
+      class PackageSameDirectory < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+
+        private
+
+        def directory: (untyped context) -> untyped
+      end
+    end
+  end
+end

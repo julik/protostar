@@ -1,0 +1,71 @@
+# Generated from lib/protostar/lint/context.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    # What a rule sees of one compiled file: the frozen Schema::File, the
+    # AST with its recorded positions, the source locations with their
+    # comments, the text, and the compiler's warnings for it.
+    class Context
+      # Source paths of `FileDescriptorProto` fields the rules point at
+      PATHS: untyped
+
+      # The file name as imported.
+      attr_reader name: String
+
+      # The file on disk, as diagnostics print it.
+      attr_reader path: String?
+
+      # The file on disk, absolute.
+      attr_reader disk_path: String?
+
+      attr_reader file: untyped
+
+      attr_reader ast: untyped
+
+      # The file's bytes.
+      attr_reader text: String
+
+      # The compiler's warnings for the file.
+      attr_reader warnings: Array[Compiler::Diagnostic]
+
+      # Every file of the lint run, this one included.
+      attr_reader all: Array[Context]
+
+      # - `linker`: the linker that built the file
+      def initialize: (name: untyped, path: untyped, disk_path: untyped, linker: Compiler::Linker, text: untyped, warnings: untyped, all: untyped) -> void
+
+      def source: () -> Diagnostics::Source
+
+      # Every element of a kind, as protoc visits them, without the map entry
+      # messages and synthetic oneofs the compiler made up
+      #
+      # - `kind`: :message, :field, :oneof, :enum, :enum_value, :service or :method
+      def each: (Symbol kind) { (untyped node, untyped descriptor) -> void } -> void
+
+      # Returns what the compiler built for a node.
+      def descriptor: (untyped node) -> untyped
+
+      # - `kind`: a position kind the parser recorded: :name, :number, :type, ...
+      #
+      # Returns from the position to the end of the element that starts there.
+      def span: (untyped node, Symbol kind, ?label: String?, ?primary: bool) -> Diagnostics::Span?
+
+      # - `path`: a source path, e.g. [3, 0] for the first import
+      #
+      # Returns the span of the first location with that path.
+      def span_at: (Array[Integer] path, ?label: String?, ?primary: bool) -> Diagnostics::Span?
+
+      # Returns the leading comment of an element, or its trailing
+      # one, stripped; nil when it has none.
+      def comment: (untyped node) -> String?
+
+      # Whether renaming `from` to `to` is safe to do mechanically: `from` is
+      # written once in the file, as the declaration, and `to` nowhere
+      def renamable?: (String from, String to) -> bool
+
+      private
+
+      def synthetic?: (untyped node, untyped kind, untyped descriptor) -> untyped
+    end
+  end
+end

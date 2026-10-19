@@ -1,0 +1,46 @@
+# Generated from lib/protostar/text/extensions.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Text
+    # Extensions seen through the unknown fields that hold them: finding the
+    # extensions of a message, reading their values out of unknown fields
+    # and writing values back into unknown fields.
+    class Extensions
+      # :nodoc: all
+      F: untyped
+
+      def initialize: (Types::Registry registry, Schema::Pool? pool) -> void
+
+      # Returns extensions of the message by number.
+      def of: (Schema::Message descriptor) -> Hash[Integer, Schema::Field]
+
+      # - `name`: the extension's full name
+      def named: (Schema::Message descriptor, String name) -> Schema::Field?
+
+      # - `field`: an extension
+      #
+      # Returns nil when its message or enum type has no class.
+      def info: (Schema::Field field) -> Message::FieldInfo?
+
+      # The values an extension holds in a message's unknown fields
+      #
+      # - `unknown`: those with the extension's number
+      #
+      # Returns the values as the field's reader would give them, or nil
+      # when the bytes do not read as the extension's type.
+      def read: (Message::FieldInfo info, Array[UnknownField] unknown) -> Array[untyped]
+
+      # Returns the fields the binary codec would have kept.
+      def write: (Message::FieldInfo info, Array[untyped] values) -> Array[UnknownField]
+
+      private
+
+      def scalar: (untyped info, untyped r) -> untyped
+
+      def resolve: (untyped descriptor) -> untyped
+
+      # The file and everything it imports, transitively
+      def files: (untyped file, ?untyped seen) -> untyped
+    end
+  end
+end

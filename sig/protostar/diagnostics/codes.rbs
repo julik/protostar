@@ -1,0 +1,83 @@
+# Generated from lib/protostar/diagnostics/codes.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Diagnostics
+    # Every message the compiler can report, with a stable code: `P` for the
+    # lexer and parser, `L` for the linker and option interpreter, `V` for the
+    # validator (the checks protoc runs once a file is built). Lint rules have
+    # `W` codes of their own, in Lint::RULES.
+    #
+    # A message is matched against templates, protoc's wording with `%{name}`
+    # where it varies; the captures fill the entry's short title, the label
+    # under the span and the `help:` line. `protostar lint --explain CODE`
+    # prints Entry#explanation.
+    module Codes
+      # One code
+      class Entry
+        # E.g. "L0301".
+        attr_reader code: String
+
+        # A few words, as `--explain` heads it.
+        attr_reader summary: String
+
+        # Protoc's messages, `%{name}` where they vary.
+        attr_reader templates: Array[String]
+
+        # What the error means, an example and the fix.
+        attr_reader explanation: String
+
+        def initialize: (untyped code, untyped summary, untyped templates, untyped explanation, ?title: untyped, ?label: untyped, ?help: untyped, ?note: untyped) -> untyped
+
+        # Returns the best match and its literal length.
+        def match: (untyped message) -> [ MatchData, Integer ]?
+
+        # Returns the short title for a match.
+        def title: (untyped captures) -> String?
+
+        # Returns the label under the primary span.
+        def label: (untyped captures) -> String?
+
+        def help: (untyped captures) -> String?
+
+        def note: (untyped captures) -> String?
+
+        private
+
+        # A template with a capture the match lacks is left out; protoc's quotes
+        # in what is filled in become backticks
+        def fill: (untyped template, untyped captures) -> untyped
+      end
+
+      # A Codes.lookup result
+      class Match
+        attr_reader entry: Entry
+
+        attr_reader captures: Hash[Symbol, String]
+
+        def initialize: (untyped entry, untyped captures) -> untyped
+
+        def code: () -> String
+      end
+
+      # Returns the template with each `%{name}` as a lazy named group.
+      def self.pattern: (String template) -> Regexp
+
+      # - `message`: as the compiler reports it
+      #
+      # Returns the entry whose template matches the most literal text.
+      def self.lookup: (String message) -> Match?
+
+      def self.[]: (String code) -> Entry?
+
+      # Returns the diagnostic with the code, title, label, help and note the
+      # catalogue has for its message.
+      def self.annotate: (Compiler::Diagnostic diagnostic) -> Compiler::Diagnostic
+
+      ENTRIES: ::Array[untyped]
+
+      def self.define: (untyped code, untyped summary, untyped templates, untyped explanation, **untyped kwargs) -> untyped
+
+      BY_CODE: untyped
+    end
+  end
+end

@@ -1,0 +1,66 @@
+# Generated from lib/protostar/schema/message.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    # A message type
+    class Message < Descriptor
+      attr_reader file: File
+
+      # The enclosing message for a nested type.
+      attr_reader containing_message: Message?
+
+      # Declaration order, oneof members included, extensions excluded.
+      attr_reader fields: Array[Field]
+
+      attr_reader fields_by_number: Hash[Integer, Field]
+
+      attr_reader fields_by_name: Hash[String, Field]
+
+      attr_reader fields_by_json_name: Hash[String, Field]
+
+      # All oneofs, synthetic ones included.
+      attr_reader oneofs: Array[Oneof]
+
+      # Oneofs that are not synthetic (proto3 `optional`).
+      attr_reader real_oneofs: Array[Oneof]
+
+      attr_reader nested_messages: Array[Message]
+
+      attr_reader nested_enums: Array[Enum]
+
+      # Extensions declared inside this message.
+      attr_reader extensions: Array[Field]
+
+      attr_reader extension_range_descriptors: Array[ExtensionRange]
+
+      # Inclusive extension number ranges.
+      attr_reader extension_ranges: Array[Range[untyped]]
+
+      # Inclusive reserved number ranges.
+      attr_reader reserved_ranges: Array[Range[untyped]]
+
+      attr_reader reserved_names: Array[String]
+
+      # Declared `visibility`: :local or :export (edition 2024), nil when not declared.
+      attr_reader visibility: Symbol?
+
+      def initialize: (name: untyped, full_name: untyped, file: untyped, containing_message: untyped, index: untyped) -> untyped
+
+      def __members: (fields: untyped, oneofs: untyped, nested_messages: untyped, nested_enums: untyped, extensions: untyped, extension_range_descriptors: untyped) -> untyped
+
+      # - `key`: a field number or name
+      def field: (Integer | String | Symbol key) -> Field?
+
+      # Returns whether the number falls in an extension range.
+      def extension_number?: (untyped number) -> bool
+
+      # Returns a synthesized `map<K, V>` entry type.
+      def map_entry?: () -> bool
+
+      def message_set_wire_format?: () -> bool
+
+      # - `default_json_names`: see File#to_proto
+      def to_proto: (?default_json_names: bool) -> Protostar::Google::Protobuf::DescriptorProto
+    end
+  end
+end

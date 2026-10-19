@@ -1,0 +1,55 @@
+# Generated from lib/protostar/view/scan.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class View
+    # What the generated index builders and the lazy containers share: the
+    # rare paths of the scan, and turning indexed positions into values.
+    # Every check mirrors the eager decoder's, with the same messages and offsets.
+    module Scan
+      # :nodoc: all
+      F: untyped
+
+      UTF_8: untyped
+
+      BINARY: untyped
+
+      # A tag the class has no branch for: an end-group tag, a malformed tag,
+      # an unknown field or a known one with the wrong wire type. The field is
+      # skipped and its range kept for View#unknown_fields.
+      def self?.other: (untyped c, untyped tag, untyped at, untyped ix, untyped u, untyped depth) -> untyped
+
+      # Skips a group's contents and its end tag
+      #
+      # Returns the offset of the end tag, where the contents stop.
+      def self?.group_end: (untyped c, untyped number, untyped depth) -> Integer
+
+      # Checks that a packed run is whole varints, as reading it would
+      def self?.check_varints: (untyped buf, untyped pos, untyped limit) -> untyped
+
+      # A packed run of a closed enum: numbers without a name become unknown fields
+      def self?.packed_closed_enum: (untyped c, untyped pos, untyped limit, untyped ix, untyped u, untyped number, untyped names) -> untyped
+
+      # Returns whether a map entry's value is a closed enum's
+      # unknown number, which sends the whole entry to the unknown fields.
+      def self?.map_unknown_enum?: (untyped buf, untyped pos, untyped length, untyped info, untyped depth) -> bool
+
+      def self?.string: (untyped buf, untyped offset, untyped length, untyped info) -> untyped
+
+      def self?.bytes: (untyped buf, untyped offset, untyped length) -> untyped
+
+      # The value of a varint-encoded kind from the raw unsigned varint;
+      # enums arrive already narrowed to int32
+      def self?.varint_value: (untyped kind, untyped v, untyped info) -> untyped
+
+      # Every element of a repeated scalar field. `entries` holds pairs: a
+      # value (varint kinds) or an offset (fixed kinds) and -1 for one
+      # element, or an offset and a length for a packed run.
+      #
+      # Returns a frozen value.
+      def self?.scalars: (untyped buf, untyped info, untyped entries) -> Array[untyped]
+
+      # A nested view over the segments of a message value
+      def self?.nested: (untyped info, untyped buf, untyped segments, untyped depth) -> untyped
+    end
+  end
+end

@@ -1,0 +1,71 @@
+# Generated from lib/protostar/wire.rb by script/types.rb. Do not edit.
+
+module Protostar
+  # The protobuf binary wire format: wire types, tags, varints, zigzag, and a
+  # Reader and Writer over byte strings that the codec and later layers
+  # (JSON, streaming builders) share.
+  module Wire
+    VARINT: ::Integer
+
+    FIXED64: ::Integer
+
+    LENGTH_DELIMITED: ::Integer
+
+    START_GROUP: ::Integer
+
+    END_GROUP: ::Integer
+
+    FIXED32: ::Integer
+
+    # Wire type numbers to names, for messages
+    NAMES: untyped
+
+    MAX_FIELD_NUMBER: ::Integer
+
+    MASK32: ::Integer
+
+    MASK64: ::Integer
+
+    BINARY: untyped
+
+    # - `number`: field number
+    #
+    # Returns the tag value as written on the wire, before varint encoding.
+    def self.tag: (Integer number, Integer wire_type) -> Integer
+
+    # Returns a frozen binary String holding the varint-encoded tag.
+    def self.tag_bytes: (untyped number, untyped wire_type) -> String
+
+    # - `value`: negative values are written as their 64-bit two's complement
+    #
+    # Returns a frozen binary String.
+    def self.varint: (Integer value) -> String
+
+    # Returns how many bytes `varint` would take; 10 for any negative value.
+    def self.varint_size: (untyped value) -> Integer
+
+    # - `value`: a signed 64-bit (or 32-bit) integer
+    #
+    # Returns the unsigned zigzag form.
+    def self.zigzag: (Integer value) -> Integer
+
+    # - `value`: an unsigned zigzag-encoded integer
+    #
+    # Returns the signed integer it encodes.
+    def self.unzigzag: (Integer value) -> Integer
+
+    # The four little-endian bytes of a NaN as a float, the way C converts a
+    # double NaN to float: sign and the top 23 bits of the payload kept, quiet
+    # bit set. `pack("e")` instead writes the same NaN whatever the value.
+    #
+    # - `nan`: a NaN
+    #
+    # Returns a binary String.
+    def self.float_nan: (Float nan) -> String
+
+    # A run of floats as packed bytes, NaNs written by `float_nan`
+    #
+    # Returns a binary String.
+    def self.pack_floats: (Array[Float | Integer] list) -> String
+  end
+end

@@ -1,0 +1,38 @@
+# Generated from lib/protostar/codec/sizer.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Codec
+    # The first encoding pass computes the encoded size of a message and of
+    # every message and packed run inside it, recorded in `sizes` (an
+    # identity Hash that lives for one encode) so the writer knows each
+    # length prefix before it writes the bytes it covers. The per-class
+    # `__size` methods (EncodeGenerator) do the work; this module has the
+    # parts they share.
+    module Sizer
+      # :nodoc: all
+      F: untyped
+
+      # - `sizes`: compare_by_identity
+      def self?.message: (Message msg, Hash[untyped, untyped] sizes) -> Integer
+
+      # Size of one value, without its tag; a group's end tag is not included either
+      def self?.value: (untyped info, untyped v, untyped sizes) -> untyped
+
+      # Payload size of a packed run, without tag or length prefix
+      def self?.packed: (untyped info, untyped list) -> untyped
+
+      # Size of every entry of a map field, tags and length prefixes included
+      def self?.map: (untyped info, untyped hash, untyped sizes) -> untyped
+
+      # Size of a map entry message: key field then value field, both always written
+      def self?.entry: (untyped info, untyped key, untyped val, untyped sizes) -> untyped
+
+      def self?.unknown: (Array[UnknownField] list) -> untyped
+
+      def self?.check: (untyped info, untyped value) -> untyped
+
+      # Raises EncodeError.
+      def self?.invalid: (untyped info, untyped value) -> untyped
+    end
+  end
+end

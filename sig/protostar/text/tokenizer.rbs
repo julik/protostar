@@ -1,0 +1,68 @@
+# Generated from lib/protostar/text/tokenizer.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Text
+    # Splits text format into tokens the way protoc's io::Tokenizer does:
+    # identifiers, integers (decimal, hex, octal), floats (an `f` suffix
+    # allowed), quoted strings, and single-character symbols. `#` starts a
+    # comment that runs to the end of the line.
+    class Tokenizer
+      # One token: `type` is :identifier, :integer, :float, :string, :symbol
+      # or :eof, `text` its source text, `pos` its byte offset
+      class Token
+        attr_reader type: untyped
+
+        attr_reader text: untyped
+
+        attr_reader pos: untyped
+
+        def initialize: (untyped type, untyped text, untyped pos) -> untyped
+
+        def ==: (untyped other) -> untyped
+      end
+
+      SKIP: ::Regexp
+
+      IDENTIFIER: ::Regexp
+
+      HEX: ::Regexp
+
+      FLOAT: ::Regexp
+
+      INTEGER: ::Regexp
+
+      STRING: ::Regexp
+
+      NUMBER_TAIL: ::Regexp
+
+      URL_CHARS: ::Regexp
+
+      def initialize: (untyped text) -> untyped
+
+      # Returns the next token without consuming it.
+      def peek: () -> Token
+
+      # Returns the next token, consumed.
+      def next: () -> Token
+
+      # What protoc's tokenizer reads in URL mode between `[` and `]`: runs of
+      # URL characters, joined, with whitespace and comments between them
+      # dropped. Call it right after consuming the `[`.
+      #
+      # Returns the text and where it starts.
+      def url_chars: () -> [ String, Integer ]
+
+      # Returns 1-based line and column of a byte position.
+      def line_col: (untyped pos) -> [ Integer, Integer ]
+
+      # Raises ParseError.
+      def fail!: (untyped message, untyped pos) -> untyped
+
+      private
+
+      def scan: () -> untyped
+
+      def number: (untyped type, untyped text, untyped pos) -> untyped
+    end
+  end
+end

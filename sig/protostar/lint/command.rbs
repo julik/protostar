@@ -1,0 +1,57 @@
+# Generated from lib/protostar/lint/command.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    # `protostar lint`, the command line
+    #
+    # ```sh
+    # protostar lint proto/                        # every *.proto under proto/, recursively
+    # protostar lint acme/person.proto --format json
+    # protostar lint proto/ --rules default,documentation --except FIELD_NOT_REQUIRED
+    # protostar lint --explain FIELD_NOT_REQUIRED
+    # ```
+    #
+    # Exits 0 when clean, 1 with warnings (0 with --warnings-ok), 2 with
+    # errors, including mistakes on the command line.
+    class Command
+      USAGE: ::String
+
+      FORMATS: untyped
+
+      EXPLAIN_HINT: ::String
+
+      def initialize: (untyped out, untyped err) -> void
+
+      # Returns the exit status.
+      def run: (Array[String] argv) -> Integer
+
+      private
+
+      def parser: (untyped opts) -> untyped
+
+      def explain: (untyped key) -> untyped
+
+      def list_rules: () -> untyped
+
+      # Include paths and the names of the files to lint. With -I, a path on
+      # disk is named relative to the include path above it. Without, a file's
+      # directory is its include path, and a directory is the include path of
+      # the files under it.
+      def targets: (untyped inputs, untyped include, untyped config) -> untyped
+
+      def virtual: (untyped file, untyped include) -> untyped
+
+      # The diff goes to stdout with text output, to stderr when stdout is JSON
+      # or annotations
+      def fix: (untyped result, untyped runner, write: untyped, show: untyped, ?diff_io: untyped) -> untyped
+
+      def show: (untyped diagnostics, untyped runner, untyped format, untyped opts, untyped result) -> untyped
+
+      def summary: (untyped diagnostics, untyped result) -> untyped
+
+      def count: (untyped n, untyped word) -> untyped
+
+      def color?: (untyped setting) -> untyped
+    end
+  end
+end

@@ -1,0 +1,171 @@
+# Generated from lib/protostar/compiler/lexer.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    # protoc's tokenizer (`io/tokenizer.cc`), byte for byte: the same token
+    # boundaries, the same 0-based lines and columns (tabs advance to the next
+    # multiple of 8), the same error messages and the same comment attachment
+    # in #next_with_comments.
+    class Lexer
+      # A token. The lexer reuses its current token as it advances, as
+      # protoc's Tokenizer does, and copies it into Lexer#previous.
+      class Token
+        # :start, :identifier, :integer, :float, :string, :symbol, :end,
+        # and :whitespace or :newline when asked for.
+        attr_accessor type: Symbol
+
+        # The source text, quotes and escapes included for strings.
+        attr_accessor text: String
+
+        # 0-based.
+        attr_accessor line: Integer
+
+        # 0-based, a tab advancing to the next multiple of 8.
+        attr_accessor column: Integer
+
+        # 0-based column just after the token.
+        attr_accessor end_column: Integer
+
+        def initialize: (type: untyped, text: untyped, line: untyped, column: untyped, end_column: untyped) -> untyped
+
+        # Returns the type, text, line, column and end column.
+        def to_a: () -> Array[untyped]
+
+        def inspect: () -> untyped
+      end
+
+      TAB_WIDTH: ::Integer
+
+      LETTER: untyped
+
+      DIGIT: untyped
+
+      ALNUM: untyped
+
+      OCTAL: untyped
+
+      HEX: untyped
+
+      # \t \n \v \f \r and space
+      WHITESPACE: untyped
+
+      WHITESPACE_NO_NEWLINE: untyped
+
+      UNPRINTABLE: untyped
+
+      ESCAPE: untyped
+
+      ESCAPES: untyped
+
+      attr_reader current: Token
+
+      attr_reader previous: Token
+
+      attr_accessor report_whitespace: untyped
+
+      attr_accessor report_newlines: untyped
+
+      # - `source`: the file's bytes
+      # - `errors`: receives (line, column, message) for every error
+      def initialize: (String source, untyped errors) -> void
+
+      # Advances to the next token, skipping whitespace and comments
+      #
+      # Returns false at the end of input.
+      def next: () -> bool
+
+      # Like #next, but collects the comments around the token boundary the
+      # way protoc attaches them to declarations
+      #
+      # - `prev_trailing`: receives the previous token's trailing comment
+      # - `detached`: receives detached comments
+      # - `next_leading`: receives the next token's leading comment
+      def next_with_comments: (String? prev_trailing, Array[String]? detached, String? next_leading) -> bool
+
+      # protoc's Tokenizer::ParseInteger: decimal, 0x hex or leading-zero octal
+      #
+      # Returns nil when malformed or above `max`.
+      def self.parse_integer: (untyped text, untyped max) -> Integer?
+
+      # protoc's Tokenizer::ParseFloat over text the tokenizer accepted as a number
+      def self.parse_float: (untyped text) -> Float
+
+      # Whether strtod would consume all of `text` as a float, as
+      # Tokenizer::TryParseFloat checks
+      def self.float_text?: (untyped text) -> untyped
+
+      # protoc's Tokenizer::ParseStringAppend: the bytes a string token denotes
+      #
+      # - `text`: token text including the quotes
+      #
+      # Returns a binary String.
+      def self.parse_string: (String text, ?untyped) -> String
+
+      def self.append_utf8: (untyped code, untyped out) -> untyped
+
+      # Returns whether `text` is a valid identifier.
+      def self.identifier?: (untyped text) -> bool
+
+      private
+
+      def add_error: (untyped message) -> untyped
+
+      def next_char: () -> untyped
+
+      def record_to: (untyped target) -> untyped
+
+      def stop_recording: () -> untyped
+
+      def start_token: () -> untyped
+
+      def end_token: () -> untyped
+
+      def try_consume_one: (untyped table) -> untyped
+
+      def try_consume: (untyped byte) -> untyped
+
+      def consume_zero_or_more: (untyped table) -> untyped
+
+      def consume_one_or_more: (untyped table, untyped error) -> untyped
+
+      # Consumes up to `count` hex digits, stopping at the first that is missing
+      def consume_hex: (untyped count) -> untyped
+
+      def consume_string: (untyped delimiter) -> untyped
+
+      def consume_number: (untyped started_with_zero, untyped started_with_dot) -> untyped
+
+      def consume_symbol: () -> untyped
+
+      def consume_line_comment: (untyped content) -> untyped
+
+      def consume_block_comment: (untyped content) -> untyped
+
+      def try_consume_comment_start: () -> untyped
+
+      def try_consume_whitespace: () -> untyped
+
+      def try_consume_newline: () -> untyped
+
+      # tokenizer.cc's CommentCollector
+      class CommentCollector
+        def initialize: (untyped prev_trailing, untyped detached, untyped next_leading) -> untyped
+
+        def buffer_for_line_comment: () -> untyped
+
+        def buffer_for_block_comment: () -> untyped
+
+        def clear_buffer: () -> untyped
+
+        def flush: () -> untyped
+
+        def detach_from_prev: () -> untyped
+
+        def maybe_detach_comment: () -> untyped
+
+        # The destructor: whatever is still buffered leads the next token
+        def finish: () -> untyped
+      end
+    end
+  end
+end

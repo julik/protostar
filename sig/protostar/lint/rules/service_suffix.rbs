@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/service_suffix.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # SERVICE_SUFFIX: A service whose name does not end in `Service`
+      class ServiceSuffix < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

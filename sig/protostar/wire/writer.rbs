@@ -1,0 +1,85 @@
+# Generated from lib/protostar/wire/writer.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Wire
+    # Writes wire-format values into a binary String, or through a small
+    # buffer into a sink: an IO, or anything that takes bytes.
+    #
+    # ```ruby
+    # w = Protostar::Wire::Writer.new
+    # w.write_tag(1, Protostar::Wire::VARINT).write_varint(150)
+    # w.string # => "\x08\x96\x01"
+    #
+    # Protostar::Wire::Writer.new(io).write_bytes("hi").flush
+    # ```
+    class Writer
+      # Bytes buffered before a sink is written to, by default
+      FLUSH_AT: untyped
+
+      # The bytes written so far (for a sink, those not yet flushed).
+      attr_reader string: String
+
+      # The sink, or nil for a String target.
+      attr_reader io: untyped
+
+      # Bytes buffered before the sink is written to.
+      attr_reader flush_at: Integer
+
+      # - `target`: a String to append to
+      #   (it is switched to binary encoding), a sink, or nil for a new String.
+      #   A sink is anything answering `write` (an IO, a socket, a Rack or
+      #   ActionController::Live stream), `<<` (an Array, an Enumerator::Yielder)
+      #   or `call` (a Proc). An IO or StringIO is given the buffer itself and
+      #   anything else a copy, since a sink may keep what it is given.
+      # - `flush_at`: bytes to collect before writing to the sink;
+      #   0 writes on every #flush_if_full
+      def initialize: (?untyped target, ?flush_at: Integer) -> void
+
+      # Returns how bytes are handed to `sink`: :write, :<< or :call.
+      # Raises ArgumentError when it takes none of them.
+      def self.push_method: (untyped sink) -> Symbol
+
+      # - `value`: negative values are written as ten-byte two's complement
+      def write_varint: (Integer value) -> self
+
+      def write_tag: (untyped number, untyped wire_type) -> self
+
+      # - `value`: a signed integer, written zigzag-encoded (sint32, sint64)
+      def write_zigzag: (Integer value) -> self
+
+      def write_fixed32: (untyped value) -> self
+
+      def write_fixed64: (untyped value) -> self
+
+      def write_sfixed32: (untyped value) -> self
+
+      def write_sfixed64: (untyped value) -> self
+
+      def write_float: (untyped value) -> self
+
+      def write_double: (untyped value) -> self
+
+      # Writes a varint length followed by the bytes of `value`, whatever its encoding
+      def write_bytes: (untyped value) -> self
+
+      # Appends the bytes of `value` as they are, whatever its encoding
+      def write_raw: (String value) -> self
+
+      # Writes the buffer to the sink once it holds #flush_at bytes
+      def flush_if_full: () -> self
+
+      # Writes whatever is buffered to the sink. A no-op for a String target.
+      def flush: () -> self
+
+      # Writes the buffer and then `bytes` to the sink, without copying
+      # `bytes` into the buffer first. For a String target, appends them.
+      def write_through: (untyped bytes) -> self
+
+      private
+
+      def deliver_all: (*untyped chunks) -> untyped
+
+      def deliver: (untyped bytes) -> untyped
+    end
+  end
+end

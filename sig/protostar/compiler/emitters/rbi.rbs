@@ -1,0 +1,57 @@
+# Generated from lib/protostar/compiler/emitters/rbi.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    module Emitters
+      # Writes `_pb.rbi` files for Sorbet describing the classes google-protobuf
+      # (or protostar's shim of it) makes from protoc's `_pb.rb`, in the shape
+      # tapioca's protobuf compiler gives them: subclasses of
+      # `Google::Protobuf::AbstractMessage`, repeated fields as
+      # `Google::Protobuf::RepeatedField[T]`, maps as `Google::Protobuf::Map[K, V]`.
+      # Writers take what protoc's RBS says they take. The class methods are
+      # declared on every class, so `Foo.decode` is a `Foo`.
+      class Rbi
+        KEYWORD: untyped
+
+        KEYWORD_CONSTANTS: untyped
+
+        # Methods every object has, which a field's accessor cannot replace;
+        # fixed rather than read from Object, which loaded gems change
+        RESERVED: untyped
+
+        def initialize: () -> untyped
+
+        # Returns a Hash of output path to the RBI.
+        def emit: (Array[Schema::File] files) -> Hash[String, String]
+
+        def file: (Schema::File file) -> String
+
+        private
+
+        def constant: (untyped descriptor) -> untyped
+
+        def blank: (untyped p, untyped first) -> untyped
+
+        def comment: (untyped p, untyped path) -> untyped
+
+        def method: (untyped p, untyped sig, untyped definition) -> untyped
+
+        def enum: (untyped p, untyped enum, untyped path, untyped first) -> untyped
+
+        def message: (untyped p, untyped message, untyped path, untyped first) -> untyped
+
+        def class_methods: (untyped p, untyped name) -> untyped
+
+        # protoc's classes take keywords (or one Hash, which Sorbet sees as keywords)
+        def constructor: (untyped p, untyped message) -> untyped
+
+        def take: (untyped taken, untyped name) -> untyped
+
+        def accessors: (untyped p, untyped field, untyped path, untyped taken) -> untyped
+
+        # The value field of a wrapper type, which gets `_as_value` accessors
+        def wrapped: (untyped field) -> untyped
+      end
+    end
+  end
+end

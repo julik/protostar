@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/comment_message.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # COMMENT_MESSAGE: A message without a comment
+      class CommentMessage < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/package_directory_match.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # PACKAGE_DIRECTORY_MATCH: A file whose directory does not match its package
+      class PackageDirectoryMatch < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

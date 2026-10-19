@@ -1,0 +1,72 @@
+# Generated from lib/protostar/view/generator.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class View
+    # Makes the view class of a message class: Ruby source for its index
+    # builder and its readers, `class_eval`ed into a subclass of View, the
+    # way Codec::DecodeGenerator makes decoders.
+    #
+    # A view of a class with `n` fields keeps one Array, the index:
+    #
+    # ```ruby
+    # [0, n)    per field: an inline varint value, an offset, a flat Array
+    #           of offsets and lengths (merged messages), or the entries of
+    #           a repeated or map field; nil when the field is not set
+    # [n, 2n)   the length belonging to an offset in the first part
+    # [2n, 3n)  decoded values, kept after the first read
+    # 3n        unknown fields as number, wire type, start, end
+    # 3n + 1    the UnknownField list, once asked for
+    # ```
+    module Generator
+      # :nodoc: all
+      F: untyped
+
+      # - `klass`: a message class
+      #
+      # Returns the view class.
+      def self?.install: (Class klass, Array[Message::FieldInfo] fields, Array[[ Symbol, Array[Integer] ]] oneofs) -> Class
+
+      # Names a view must not lose to a field: its own methods and those a
+      # message keeps for itself, so that views and messages have the same readers
+      def self?.reserved: () -> untyped
+
+      def self?.source: (untyped fields, untyped oneofs, untyped reserved) -> untyped
+
+      def self?.initializer: (untyped n) -> untyped
+
+      def self?.scanner: (untyped fields, untyped n) -> untyped
+
+      def self?.branch: (untyped info, untyped n) -> untyped
+
+      # Reads a length prefix into `len`, checked against the limit
+      def self?.length: () -> untyped
+
+      def self?.varint: (untyped var) -> untyped
+
+      # A singular scalar, or one unpacked element of a repeated one
+      def self?.store: (untyped info, untyped var) -> untyped
+
+      def self?.clear_siblings: (untyped info) -> untyped
+
+      # A length-delimited value or group contents at `start`, `len` bytes long
+      def self?.store_segment: (untyped info, untyped n, untyped start) -> untyped
+
+      def self?.group_branch: (untyped info, untyped n) -> untyped
+
+      def self?.enum_branch: (untyped info, untyped n) -> untyped
+
+      def self?.packed_branch: (untyped info, untyped n) -> untyped
+
+      def self?.map_branch: (untyped info, untyped n) -> untyped
+
+      def self?.reader: (untyped info, untyped n) -> untyped
+
+      def self?.memo: (untyped i, untyped m, untyped info, untyped decode) -> untyped
+
+      def self?.default: (untyped info) -> untyped
+
+      # Source turning the raw varint in `v` into the field's value
+      def self?.convert: (untyped info) -> untyped
+    end
+  end
+end

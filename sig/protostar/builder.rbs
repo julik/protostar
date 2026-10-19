@@ -1,0 +1,332 @@
+# Generated from lib/protostar/builder.rb by script/types.rb. Do not edit.
+
+module Protostar
+  # Writes a message's wire bytes as a block runs, without building the
+  # message. Protobuf merges by concatenation, so a builder needs no object
+  # graph: each call writes its field at once.
+  #
+  # ```ruby
+  # bytes = Protostar::Builder.build(Acme::Person) do |pb|
+  #   pb.name "Jane"                                    # written now
+  #   pb.friends(people) { |p| pb.name p.name }         # one element per item
+  #   pb.address { pb.street "x" }                      # nested, length-prefixed when the block ends
+  #   pb.attrs("a" => "b")                              # a map
+  #   pb.created_at Time.now                            # a Timestamp
+  #   pb.extract! user, :email, :phone                  # fields read from an object
+  #   pb.cache!("person/#{id}") { pb.bio bio }          # bytes cached; a hit appends them
+  # end
+  # person = Protostar::Builder.message(Acme::Person) { |pb| ... }
+  # Protostar::Builder.write(io, Acme::Person) { |pb| ... }
+  # ```
+  #
+  # A builder has one method per field name of the message and of every
+  # message reachable from it; inside a nested block the same builder writes
+  # the nested message's fields. Names that are also methods of Object (or of
+  # the builder itself), such as `hash`, `format` or `test`, are reached with
+  # #set!.
+  #
+  # Only what the wire format needs is held back: a nested message is built
+  # into a buffer of its own because its length comes first, and packed
+  # repeated scalars are collected per field and written as one run when
+  # their message ends. Everything else goes straight to the target.
+  #
+  # Values are checked against the descriptor as they are written. Besides
+  # what a message accepts, a builder takes `Time` and `DateTime` for a
+  # `google.protobuf.Timestamp`, a Numeric for a `google.protobuf.Duration`,
+  # a scalar for a wrapper type, a Hash or anything with `to_h` for a
+  # message, and a message instance (written as its encoded bytes). `nil`
+  # writes nothing. Errors raise Error with the path of the field.
+  #
+  # By default a singular field may be written once per message: writing it
+  # again (or a second member of a oneof) raises. With `overwrites: true` the
+  # later value is written as well and wins when the bytes are read, as
+  # protobuf's merge rules say. Such output then relies on its reader
+  # applying those rules (every conforming decoder does, protostar's
+  # included); a reader promised that no field repeats will see the first
+  # value instead.
+  class Builder
+    # Raised for a value a field cannot take, a field the message does not
+    # have, or a field written twice without `overwrites: true`
+    class Error < Protostar::Error
+      # Where the problem is, as in `friends[2].address.street`.
+      attr_reader path: String?
+
+      def initialize: (String message, ?path: String?) -> void
+    end
+
+    # Stands for "no value given" in field methods, as nil is a value (it writes nothing)
+    NONE: untyped
+
+    # A nested message at least this large is handed to a sink as it is
+    BIG: untyped
+
+    EMPTY: untyped
+
+    F: untyped
+
+    RANGES: untyped
+
+    ENUM_RANGE: untyped
+
+    UTF_8: untyped
+
+    BINARY: untyped
+
+    # pack directive of a run of fixed-width values
+    PACK: untyped
+
+    WRAPPERS: untyped
+
+    # Why a second write raises: the start of the message's second half
+    NO_OVERWRITES: ::String
+
+    WELL_KNOWN: untyped
+
+    # - `klass`: the message class, or its descriptor
+    # - `options`: see #initialize
+    #
+    # Returns binary, the message's encoding.
+    def self.build: (untyped klass, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace, ?buffer: Integer, ?chunk_nested_at: Integer?) { (Builder pb) -> void } -> String
+
+    # Builds the bytes and decodes them
+    #
+    # Returns an instance of `klass`.
+    def self.message: (untyped klass, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace, ?buffer: Integer, ?chunk_nested_at: Integer?) { (Builder pb) -> void } -> Message
+
+    # Streams the message to a sink as it is built. Top-level fields go out
+    # as they complete, through a buffer of `buffer:` bytes (64 KiB unless
+    # told otherwise); a nested message goes out once it is complete, or in
+    # pieces with `chunk_nested_at:`. See docs/concepts/streaming.md.
+    #
+    # - `io`: the sink (see #initialize)
+    #
+    # Returns io, after its `flush` when it has one.
+    def self.write: [T < sink] (T io, untyped klass, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace, ?buffer: Integer, ?chunk_nested_at: Integer?) { (Builder pb) -> void } -> T
+
+    # Writes a sequence of messages, each with its length as a varint
+    # before it, as Message#encode_delimited does; read them back with
+    # `decode_delimited`. Each message goes to the sink once it is complete.
+    #
+    # ```ruby
+    # Protostar::Builder.each(file, Acme::Event, rows) do |pb, row|
+    #   pb.name row.name
+    # end
+    # ```
+    #
+    # - `io`: the sink; nil for a new String
+    # - `collection`: one message per element
+    # - yields `pb`: the same builder for every message
+    #
+    # Returns io, or the String when io is nil.
+    def self.each: [T < sink, E] (T io, untyped klass, _Each[E] collection, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace, ?buffer: Integer, ?chunk_nested_at: Integer?) { (Builder pb, E element) -> void } -> T
+                 | [E] (nil io, untyped klass, _Each[E] collection, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace, ?buffer: Integer, ?chunk_nested_at: Integer?) { (Builder pb, E element) -> void } -> String
+
+    # The message's bytes as an Enumerator of binary Strings, made as the
+    # Enumerator is iterated: a Rack body, or anything that pulls. Each
+    # iteration runs the block again.
+    #
+    # ```ruby
+    # body = Protostar::Builder.each_chunk(Acme::Person, buffer: 16_384) { |pb| ... }
+    # body.each { |bytes| socket.write(bytes) }
+    # ```
+    def self.each_chunk: (untyped klass, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace, ?buffer: Integer, ?chunk_nested_at: Integer?) { (Builder pb) -> void } -> Enumerator[String, nil]
+
+    # - `target`: where the bytes go: nil for a new String
+    #
+    # Returns an instance of the builder class for `klass`.
+    def self.new: (untyped klass, ?sink? target, ?cache_store: _CacheStore?, ?overwrites: bool, ?repeated: :append | :replace, ?buffer: Integer, ?chunk_nested_at: Integer?) -> Builder
+
+    # The builder class for a message class: a subclass of Builder with one
+    # method per field name of the message and of every message it reaches.
+    # Made on first use and kept on the message class (in the main Ractor;
+    # other Ractors make their own).
+    def self.for: (untyped klass) -> singleton(Builder)
+
+    # Returns the message class for a class or a descriptor.
+    def self.resolve: (untyped klass) -> singleton(Message)
+
+    # - `klass`: the message class, or its descriptor
+    # - `target`: a String to append to
+    #   (switched to binary encoding), nil for a new String, or a sink: anything
+    #   answering `write` (an IO, a socket, a Rack or ActionController::Live
+    #   stream), `<<` (an Array, an Enumerator::Yielder) or `call` (a Proc).
+    #   Every chunk a sink gets is a binary String; an IO or StringIO is handed
+    #   the builder's buffer, anything else a copy it may keep. A sink's `flush`
+    #   is called by #target!. An error the sink raises is re-raised with
+    #   the field being written added to its message.
+    # - `cache_store`: where #cache! keeps fragments, such as
+    #   `Rails.cache`; without one, #cache! just runs its block
+    # - `overwrites`: let a singular field be written again in the
+    #   same message, the later value winning (see the class notes)
+    # - `repeated`: `:append` (default): each write to a repeated field
+    #   adds elements. `:replace`: assigning a list (or one value without a block)
+    #   replaces what earlier assignments in the same message gave; those lists
+    #   are held until the message ends. Elements built with a block always stream.
+    # - `buffer`: bytes collected before a sink is written to.
+    #   0 writes each top-level field as it completes, for sinks that buffer
+    #   on their own. A nested message larger than the buffer is handed to the
+    #   sink as it is, not copied into the buffer first.
+    # - `chunk_nested_at`: write a singular nested message
+    #   that grows past this many bytes as several occurrences of its field,
+    #   which readers merge into one, so that memory is bounded by this size
+    #   rather than by the message. Needs `overwrites: false` and
+    #   `repeated: :append`. Repeated and map fields are never split.
+    def initialize: (Class | Schema::Message klass, ?untyped target, ?cache_store: untyped, ?overwrites: bool, ?repeated: Symbol, ?buffer: Integer, ?chunk_nested_at: Integer?) -> void
+
+    # Finishes the top-level message: writes the packed runs collected so far,
+    # in field number order.
+    # The builder can keep writing afterwards; call this again to finish again.
+    #
+    # Returns the bytes, or the IO after flushing it.
+    def target!: () -> untyped
+
+    # Returns the class of the message being written: the top-level
+    # one, or the nested message whose block is running.
+    def message_class: () -> singleton(Message)
+
+    # Writes a field by name, for names that have no method of their own.
+    #
+    # ```ruby
+    # pb.set! :name, "Jane"
+    # pb.set!(:address) { pb.street "x" }
+    # pb.set! :friends, people, :name, :id    # each friend gets name and id from an element
+    # pb.set! :address, user, :street, :city  # extract! into the nested message
+    # ```
+    #
+    # - `value`: the value; a collection with a block or attribute names
+    # - `attributes`: read from `value` (or from each element) with #extract!
+    def set!: (String | Symbol name, *untyped value_and_attributes) ?{ (?untyped element) -> void } -> self
+
+    # Writes the named fields with the values of the same names read from
+    # `object`: method calls, or keys for a Hash (Symbol or String keys).
+    def extract!: (untyped object, *String | Symbol names) -> self
+
+    # Writes every field of a Hash (Symbol or String keys), as #set! would
+    def merge!: (Hash[String | Symbol, untyped] hash) -> self
+
+    # Writes messages that are already encoded as the value of a message
+    # field: one String for a singular field, a list of them for a repeated
+    # one (each String is one element). The bytes are written as they are,
+    # unchecked; a group's bytes are its fields, without the group's tags.
+    #
+    # ```ruby
+    # pb.encoded!(:friends, rendered_partials)
+    # ```
+    def encoded!: (String | Symbol name, String | Array[String] bytes) -> self
+
+    # Writes the bytes the block writes, keeping them in the cache store under
+    # `key`; when the store has them, appends them without running the block.
+    # Without a cache store, runs the block.
+    #
+    # - `key`: passed to the store as it is
+    # - `options`: passed to the store's `fetch`, such as `expires_in:`
+    # - yields `pb`: this builder
+    def cache!: (untyped key, **untyped options) { (Builder pb) -> void } -> self
+
+    # #cache! when `condition` holds, else runs the block
+    def cache_if!: (boolish condition, untyped key, **untyped options) { (Builder pb) -> void } -> self
+
+    def inspect: () -> untyped
+
+    private
+
+    def __field: (untyped name) -> untyped
+
+    def __no_field: (untyped name) -> untyped
+
+    # Everything a field method or set! can be given. The block is only
+    # yielded to, never made into a Proc, which would cost an object per call.
+    def __set: (untyped info, untyped value, untyped attributes) -> untyped
+
+    # One value for a field, without a block
+    def __put: (untyped info, untyped value) -> untyped
+
+    # Records that a singular field was written in the current message.
+    #
+    # Returns whether it had been written before (with overwrites allowed).
+    def __mark: (untyped info) -> bool
+
+    def __list: (untyped value) -> untyped
+
+    def __repeated: (untyped info, untyped value) -> untyped
+
+    def __elements: (untyped info, untyped list) -> untyped
+
+    def __each: (untyped info, untyped collection) -> untyped
+
+    def __hash: (untyped hash) -> untyped
+
+    # A message value: an instance, a Hash, a well-known type's Ruby form, or anything with to_h
+    def __message: (untyped info, untyped v, untyped index) -> untyped
+
+    def __encoded: (untyped info, untyped bytes, untyped index) -> untyped
+
+    # Returns whether `v` was a Ruby form of the well-known type and got written.
+    def __well_known: (untyped info, untyped wk, untyped v, untyped index) -> bool
+
+    def __duration: (untyped info, untyped v, untyped index) -> untyped
+
+    # Runs the block with a buffer of its own as the current message, then
+    # writes tag, length and the buffer. Groups need no length and are
+    # written in place between their tags.
+    def __nested: (untyped info, ?untyped index) -> untyped
+
+    # Writes tag, length and `bytes` (then cleared) into `w`. Bytes larger
+    # than a sink's buffer go to the sink as they are, not through the buffer.
+    def __emit: (untyped w, untyped info, untyped bytes) -> untyped
+
+    # After a field of the current message is complete: a sink's buffer is
+    # written when full, and with chunk_nested_at a nested message past the
+    # size is written out as one occurrence of its field
+    def __boundary: () -> untyped
+
+    # Writes the current nested message's bytes so far into its parent, and
+    # so on outwards while each parent is also past the size and may be split
+    def __chunk_out: () -> untyped
+
+    # One length-prefixed message per element, each the top-level message
+    def __sequence: (untyped collection) -> untyped
+
+    def __map: (untyped info, untyped value) -> untyped
+
+    def __varint: (untyped n) -> untyped
+
+    # Writes tag and value of a scalar; with `skip_zero`, writes nothing for the type's zero value
+    def __scalar: (untyped info, untyped v, untyped skip_zero) -> untyped
+
+    # A packed element as it goes into the run: an Integer (enum numbers
+    # resolved, sint zigzagged), a Float, or 1 or 0 for bools
+    def __packed_value: (untyped info, untyped v) -> untyped
+
+    def __flush_pending: () -> untyped
+
+    # A packed run: an Array of fixed-width values, or a writer holding varints
+    def __packed: (untyped info, untyped run) -> untyped
+
+    def __int: (untyped info, untyped v) -> untyped
+
+    def __float: (untyped info, untyped v) -> untyped
+
+    def __utf8: (untyped info, untyped v) -> untyped
+
+    def __enum: (untyped info, untyped v) -> untyped
+
+    # Runs a cache! block into a buffer of its own, in the current message
+    #
+    # Returns the bytes, frozen.
+    def __capture: (untyped block) -> String
+
+    # A cached fragment's singular fields count as written, so that writing
+    # one of them again is caught (or, with overwrites, written even when zero)
+    def __mark_fragment: (untyped bytes) -> untyped
+
+    def __show: (untyped v) -> untyped
+
+    # Where the builder is, for an error from the sink
+    def __where: () -> untyped
+
+    def __error: (untyped info, untyped message, ?untyped index) -> untyped
+
+    def __path: (untyped info, ?untyped index) -> untyped
+  end
+end

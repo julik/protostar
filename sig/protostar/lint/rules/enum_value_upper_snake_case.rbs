@@ -1,0 +1,16 @@
+# Generated from lib/protostar/lint/rules/enum_value_upper_snake_case.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Lint
+    module Rules
+      # ENUM_VALUE_UPPER_SNAKE_CASE: An enum value name that is not UPPER_SNAKE_CASE
+      class EnumValueUpperSnakeCase < Rule
+        REASON: ::String
+
+        EXPLANATION: ::String
+
+        def check: () -> untyped
+      end
+    end
+  end
+end

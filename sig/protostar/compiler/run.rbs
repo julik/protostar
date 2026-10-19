@@ -1,0 +1,52 @@
+# Generated from lib/protostar/compiler/run.rb by script/types.rb. Do not edit.
+
+module Protostar
+  class Compiler
+    # One Compiler#compile call: loads the named files and their imports
+    # depth first, as protoc's importer does (a file is parsed, then its
+    # imports are built, then the file itself), and collects diagnostics in
+    # protoc's order.
+    class Run
+      # :nodoc: all
+      attr_reader diagnostics: Array[Diagnostic]
+
+      # - `names`: the files asked for
+      # - `sources`: file contents to use instead of reading include paths
+      # - `protoc_cli`: behave like protoc's command line (see Linker#initialize);
+      #   false behaves like a bare DescriptorPool, which loads no imports itself
+      # - `all_direct`: check every file loaded as if it had been named, imports
+      #   included (unused imports, deprecated features), as `protostar lint` wants
+      def initialize: (Compiler compiler, Array[String] names, bool source_info, ?sources: Hash[String, String], ?protoc_cli: bool, ?all_direct: bool) -> void
+
+      def failed?: () -> untyped
+
+      # Returns the linker of a file this run built.
+      def linker: (untyped name) -> Linker?
+
+      def call: () -> Array[Schema::File]
+
+      # Records a diagnostic with a 0-based position (nil for none)
+      #
+      # - `spans`: where the renderer underlines, when known
+      def report: (untyped file, untyped position, untyped message, ?untyped severity, ?spans: Array[Diagnostics::Span]) -> untyped
+
+      private
+
+      # The problem's own span, as long as the source location that starts
+      # where it is reported, then the places it relates to
+      def spans: (untyped ast, untyped problem, untyped position) -> untyped
+
+      def span: (untyped ast, untyped position, untyped label, untyped primary) -> untyped
+
+      # An extension number another file already uses is a warning the linker
+      # reports as a diagnostic, so the pool is asked not to print it too
+      def add_to_pool: (untyped name, untyped file) -> untyped
+
+      def list: (untyped file) -> untyped
+
+      def read: (untyped name) -> untyped
+
+      def load: (untyped name, ?direct: untyped) -> Schema::File?
+    end
+  end
+end

@@ -1,0 +1,23 @@
+# Generated from lib/protostar/schema/extension_range.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module Schema
+    # One `extensions` declaration of a message, with its options and features
+    class ExtensionRange < Descriptor
+      attr_reader containing_message: Message
+
+      # Inclusive.
+      attr_reader range: Range[untyped]
+
+      def initialize: (containing_message: untyped, index: untyped, range: untyped) -> untyped
+
+      def file: () -> File
+
+      # Returns first extension number, inclusive.
+      def start: () -> Integer
+
+      # Returns last extension number, inclusive.
+      def end: () -> Integer
+    end
+  end
+end

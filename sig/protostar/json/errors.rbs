@@ -1,0 +1,27 @@
+# Generated from lib/protostar/json/errors.rb by script/types.rb. Do not edit.
+
+module Protostar
+  module JSON
+    # Raised by everything in JSON
+    class Error < Protostar::Error
+    end
+
+    # Raised for JSON that does not describe a message of the class it is
+    # decoded into. #path names the field where the problem was found, as
+    # in `friends[2].name`; it is empty for the top-level value.
+    class ParseError < Error
+      attr_reader path: String
+
+      def initialize: (String message, ?String path) -> void
+    end
+
+    # Raised for a message whose contents have no JSON form: a Timestamp or
+    # Duration out of range, an Any whose type cannot be found, a Value with
+    # no kind set and the like
+    class EncodeError < Error
+      attr_reader path: String
+
+      def initialize: (String message, ?String path) -> void
+    end
+  end
+end
