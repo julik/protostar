@@ -67,6 +67,55 @@ class CliTest < Minitest::Test
     end
   end
 
+  def test_ruby_out_writes_rbs_and_rbi_next_to_the_ruby
+    tmpdir do |dir|
+      assert_equal ["", "", 0], protostar("-I", "proto", "--ruby_out=#{dir}", "acme/person.proto", "acme/editions.proto")
+      assert_equal %w[editions_pb.rb editions_pb.rbi editions_pb.rbs person_pb.rb person_pb.rbi person_pb.rbs],
+        Dir.children(File.join(dir, "acme")).sort
+      files = compiled("acme/person.proto", "acme/editions.proto").select { |f| f.name.start_with?("acme/") }
+      Emitters::ProtostarRbs.new.emit(files).merge(Emitters::ProtostarRbi.new.emit(files)).each do |path, content|
+        assert_equal content, File.read(File.join(dir, path)), path
+      end
+    end
+  end
+
+  def test_no_rbs_and_no_rbi
+    tmpdir do |dir|
+      assert_equal ["", "", 0], protostar("-I", "proto", "--ruby_out=#{dir}", "--no-rbs", "acme/person.proto")
+      assert_equal %w[person_pb.rb person_pb.rbi], Dir.children(File.join(dir, "acme")).sort
+      FileUtils.rm_rf(File.join(dir, "acme"))
+      assert_equal ["", "", 0], protostar("-I", "proto", "--ruby_out=#{dir}", "--no-rbs", "--no-rbi", "acme/person.proto")
+      assert_equal %w[person_pb.rb], Dir.children(File.join(dir, "acme"))
+    end
+  end
+
+  def test_rbs_out_and_rbi_out_put_the_signatures_elsewhere
+    tmpdir do |dir|
+      %w[lib sig rbi].each { |d| Dir.mkdir(File.join(dir, d)) }
+      assert_equal ["", "", 0], protostar("-I", "proto", "--ruby_out=#{dir}/lib", "--rbs_out=#{dir}/sig",
+        "--rbi_out=#{dir}/rbi", "acme/person.proto")
+      assert_equal [%w[person_pb.rb], %w[person_pb.rbs], %w[person_pb.rbi]],
+        %w[lib sig rbi].map { |d| Dir.children(File.join(dir, d, "acme")) }
+      assert_includes File.read(File.join(dir, "rbi/acme/person_pb.rbi")), "< ::Protostar::Message"
+    end
+  end
+
+  def test_declining_an_output_that_is_asked_for
+    assert_equal ["", "--rbi_out and --no-rbi contradict each other.\n", 1],
+      protostar("-I", "proto", "--ruby_out=.", "--rbi_out=.", "--no-rbi", "acme/person.proto")
+  end
+
+  def test_google_out_writes_what_protoc_writes_and_rbi_when_asked
+    tmpdir do |dir|
+      assert_equal ["", "", 0], protostar("-I", "proto", "--google_out=#{dir}", "acme/person.proto")
+      assert_equal %w[person_pb.rb], Dir.children(File.join(dir, "acme"))
+      assert_equal ["", "", 0], protostar("-I", "proto", "--google_out=#{dir}", "--rbi_out=#{dir}", "acme/person.proto")
+      file = compiled("acme/person.proto").find { |f| f.name == "acme/person.proto" }
+      assert_equal Emitters::Rbi.new.file(file), File.read(File.join(dir, "acme/person_pb.rbi"))
+      assert_includes File.read(File.join(dir, "acme/person_pb.rbi")), "< ::Google::Protobuf::AbstractMessage"
+    end
+  end
+
   def test_descriptor_set_flags
     tmpdir do |dir|
       set = File.join(dir, "set.binpb")

@@ -47,9 +47,98 @@ module Protostar
     def to_wire: () -> ::String
   end
 
+  # The descriptors: what a .proto file declares, frozen once built
+  module Schema
+    class Error < Protostar::Error
+    end
+
+    class Descriptor
+      def name: () -> ::String
+      def full_name: () -> ::String
+      def index: () -> ::Integer
+      def options: () -> untyped
+      def to_h: () -> ::Hash[::Symbol, untyped]
+    end
+
+    class File < Descriptor
+      def package: () -> ::String
+      def syntax: () -> ::Symbol
+      def dependencies: () -> ::Array[::String]
+      def messages: () -> ::Array[Message]
+      def enums: () -> ::Array[Enum]
+      def services: () -> ::Array[Service]
+      def all_messages: () -> ::Array[Message]
+      def all_enums: () -> ::Array[Enum]
+      def find_message: (::String full_name) -> Message?
+      def find_enum: (::String full_name) -> Enum?
+      def serialize: (?source_info: bool, ?default_json_names: bool) -> ::String
+    end
+
+    class Message < Descriptor
+      def file: () -> File
+      def containing_message: () -> Message?
+      def fields: () -> ::Array[Field]
+      def oneofs: () -> ::Array[Oneof]
+      def real_oneofs: () -> ::Array[Oneof]
+      def nested_messages: () -> ::Array[Message]
+      def nested_enums: () -> ::Array[Enum]
+      def field: (::Integer | ::String | ::Symbol key) -> Field?
+      def map_entry?: () -> bool
+    end
+
+    class Field < Descriptor
+      def file: () -> File
+      def containing_message: () -> Message?
+      def number: () -> ::Integer
+      def label: () -> ::Symbol
+      def type: () -> ::Symbol
+      def message_type: () -> Message?
+      def enum_type: () -> Enum?
+      def json_name: () -> ::String
+      def oneof: () -> Oneof?
+      def default: () -> untyped
+      def repeated?: () -> bool
+      def map?: () -> bool
+      def presence?: () -> bool
+    end
+
+    class Oneof < Descriptor
+      def containing_message: () -> Message
+      def fields: () -> ::Array[Field]
+      def synthetic?: () -> bool
+    end
+
+    class Enum < Descriptor
+      def file: () -> File
+      def containing_message: () -> Message?
+      def values: () -> ::Array[EnumValue]
+      def value: (::Integer | ::String | ::Symbol key) -> EnumValue?
+      def closed?: () -> bool
+      def open?: () -> bool
+    end
+
+    class EnumValue < Descriptor
+      def number: () -> ::Integer
+      def enum: () -> Enum
+    end
+
+    class Service < Descriptor
+      def file: () -> File
+    end
+
+    class Pool
+      def initialize: () -> void
+      def add: (File file, ?warn: bool) -> File
+      def file: (::String name) -> File?
+      def files: () -> ::Array[File]
+      def find_message: (::String full_name) -> Message?
+      def find_enum: (::String full_name) -> Enum?
+    end
+  end
+
   # Extended by every enum Module
   module Enum
-    def descriptor: () -> untyped
+    def descriptor: () -> Schema::Enum
     def lookup: (::Integer number) -> ::Symbol?
     def resolve: (::Symbol | ::String name) -> ::Integer?
   end
@@ -64,7 +153,7 @@ module Protostar
       ?registry: Types::Registry?
     }
 
-    def self.descriptor: () -> untyped
+    def self.descriptor: () -> Schema::Message
     def self.decode: (::String | ::IO::Buffer bytes, ?recursion_limit: ::Integer, ?frozen: bool) -> instance
     def self.decode_delimited: (::String | ::IO::Buffer | ::IO source, ?recursion_limit: ::Integer, ?frozen: bool) -> instance?
     def self.encode: (instance message) -> ::String
@@ -102,7 +191,7 @@ module Protostar
       type field_key = ::String | ::Symbol | ::Integer | untyped
 
       def klass: () -> untyped
-      def descriptor: () -> untyped
+      def descriptor: () -> Schema::Message
       def fields: () -> ::Array[untyped]
       def oneofs: () -> ::Array[untyped]
       def field: (field_key key) -> untyped
@@ -122,9 +211,9 @@ module Protostar
   # A read-only message over encoded bytes; fields are decoded when read
   class View
     def self.message_class: () -> singleton(Message)
-    def self.descriptor: () -> untyped
+    def self.descriptor: () -> Schema::Message
 
-    def descriptor: () -> untyped
+    def descriptor: () -> Schema::Message
     def []: (::String | ::Symbol name) -> untyped
     def unknown_fields: () -> ::Array[UnknownField]
     def encode: () -> ::String

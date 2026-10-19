@@ -50,7 +50,7 @@ class CliDefaultsTest < Minitest::Test
   def test_output_directory_gets_the_basename
     tmpdir do |dir|
       assert_equal ["", "", 0], protostar("--ruby_out=#{dir}", "--rbs_out=#{dir}", "proto/acme/person.proto")
-      assert_equal %w[person_pb.rb person_pb.rbs], Dir.children(dir).sort
+      assert_equal %w[person_pb.rb person_pb.rbi person_pb.rbs], Dir.children(dir).sort
     end
   end
 
@@ -81,7 +81,7 @@ class CliDefaultsTest < Minitest::Test
       })
       Dir.mkdir(File.join(dir, "out"))
       assert_equal ["", "", 0], protostar("--ruby_out=out", "a/order.proto", "b/money.proto", chdir: dir)
-      assert_equal %w[money_pb.rb order_pb.rb], Dir.children(File.join(dir, "out")).sort
+      assert_equal %w[money_pb.rb money_pb.rbi money_pb.rbs order_pb.rb order_pb.rbi order_pb.rbs], Dir.children(File.join(dir, "out")).sort
       assert_includes File.read(File.join(dir, "out/order_pb.rb")), %(require "money_pb")
     end
   end

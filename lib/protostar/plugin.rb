@@ -7,7 +7,8 @@ module Protostar
   # `protoc-gen-protostar`: a protoc plugin writing the same files as
   # `protostar compile`. The parameter selects the outputs, comma-separated:
   # `ruby` (protostar's native Ruby, the default), `google` (protoc's
-  # google-protobuf Ruby), `rbs` and `grpc`.
+  # google-protobuf Ruby), `rbs`, `rbi` and `grpc`. `ruby` brings its RBS and
+  # RBI along unless the parameter also says `no-rbs` or `no-rbi`.
   #
   #   protoc --plugin=protoc-gen-protostar --protostar_out=ruby,grpc:lib acme/service.proto
   module Plugin
@@ -16,7 +17,9 @@ module Protostar
     Request = Protostar::Google::Protobuf::Compiler::CodeGeneratorRequest
     Response = Protostar::Google::Protobuf::Compiler::CodeGeneratorResponse
     Feature = Response::Feature
-    OUTPUTS = %w[ruby google rbs grpc].freeze
+    OUTPUTS = %w[ruby google rbs rbi grpc].freeze
+    # Parameters that turn off an output `ruby` brings along
+    DECLINE = %w[no-rbs no-rbi].freeze
 
     module_function
 
@@ -51,12 +54,20 @@ module Protostar
     # @param request [Request]
     # @return [Hash{String => String}] file name to content
     def generate(request)
-      outputs = request.parameter.split(",").map(&:strip).reject(&:empty?)
+      parameters = request.parameter.split(",").map(&:strip).reject(&:empty?)
+      unknown = parameters - OUTPUTS - DECLINE
+      unless unknown.empty?
+        raise Protostar::Error, "unknown output #{unknown.first.inspect}; use #{(OUTPUTS + DECLINE).join(", ")}"
+      end
+      outputs = parameters - DECLINE
       outputs = ["ruby"] if outputs.empty?
-      unknown = outputs - OUTPUTS
-      raise Protostar::Error, "unknown output #{unknown.first.inspect}; use #{OUTPUTS.join(", ")}" unless unknown.empty?
       if outputs.include?("ruby") && outputs.include?("google")
         raise Protostar::Error, "ruby and google both write *_pb.rb; ask for one of them"
+      end
+      %w[rbs rbi].each do |kind|
+        declined = parameters.include?("no-#{kind}")
+        raise Protostar::Error, "#{kind} and no-#{kind} contradict each other" if declined && outputs.include?(kind)
+        outputs += [kind] if outputs.include?("ruby") && !declined && !outputs.include?(kind)
       end
       pool = Schema::Pool.new
       # protoc has already warned about extension numbers used twice
@@ -85,6 +96,7 @@ module Protostar
       when "ruby" then Emitters::Ruby.new
       when "google" then Emitters::GoogleRuby.new(pool: pool)
       when "rbs" then outputs.include?("ruby") ? Emitters::ProtostarRbs.new : Emitters::Rbs.new
+      when "rbi" then outputs.include?("ruby") ? Emitters::ProtostarRbi.new : Emitters::Rbi.new
       when "grpc" then Emitters::Grpc.new
       end
     end
