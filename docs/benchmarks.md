@@ -107,6 +107,20 @@ in 25 ms with YJIT, against the C gem's 10 and 7 ms, and allocates 16,806 object
 catalogue. The decode row in the table, measured after the other codec rows, shows the
 slowdown described next.
 
+**Where the codec design comes from.** Keeping fields in instance variables set in one
+fixed order, decoding nested messages from the parent's generated method, and encoding in
+one pass with a length byte patched afterwards are ideas from
+[protoboeuf](https://github.com/Shopify/protoboeuf), the pure-Ruby protobuf code generator
+by Shopify's Ruby and YJIT folks, which showed how fast generated Ruby can decode protobuf
+under YJIT. Thank you. On protoboeuf's own benchmark (`bench/fixtures/benchmark.proto`,
+eleven parking lots, 5 MB, built with seed 42 as its `bench/benchmark.rb` does), measured
+on 2026-10-19 with Ruby 3.4.11 and YJIT, protoboeuf decodes in 27 ms and protostar in 38,
+and both encode in 25 ms; the C gem takes 13 and 10. protoboeuf writes its classes ahead
+of time from protoc's output, while protostar builds them when the schema loads and spends
+some of the difference on things outside protoboeuf's scope, such as the checks the
+conformance suite asks for (UTF-8 validation among them). That comparison is not part of
+`rake bench`, since it needs protoc and protoboeuf's generated classes.
+
 **YJIT depends on what else ran.** Rows measured after other work can be much slower
 than in a fresh process: catalogue decode takes 102 ms in the table and 31 ms alone. In
 the slow state the generated decoders run in
