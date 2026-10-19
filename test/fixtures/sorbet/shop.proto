@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package shop;
+
+import "google/protobuf/timestamp.proto";
+
+message Order {
+  string id = 1;
+  string customer_email = 2;
+  repeated LineItem items = 3;
+  Status status = 4;
+  google.protobuf.Timestamp placed_at = 5;
+}
+
+message LineItem {
+  string sku = 1;
+  int32 quantity = 2;
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_PLACED = 1;
+}
