@@ -3,14 +3,17 @@
 module Protostar
   module Codec
     # Writes a decoding loop for one message class as Ruby source and evals
-    # it into the class as `__decode_fields`. The loop dispatches on the whole
+    # it into the class as `__decode_fields(r, buf, pos, limit, depth,
+    # end_group, frozen)`, which reads the fields between `pos` and `limit`
+    # and returns the position after them. The loop dispatches on the whole
     # tag with one `case` (field number and wire type at once), reads varints
-    # of one byte and fixed-width values inline, and keeps the read position
-    # in a local. Anything it has no branch for (unknown fields, wire type
-    # mismatches, end-group tags, malformed tags) goes to Decoder.field.
-    #
-    # A generic loop over field descriptors spent most of its time in method
-    # calls on the field table; this does the same work with a fraction of them.
+    # of one or two bytes and fixed-width values inline, and keeps the
+    # position and limit in locals. A nested message or group is read by a
+    # call to the child's own `__decode_fields` from the parent's loop, so
+    # each such call site sees one class and YJIT keeps it monomorphic.
+    # Anything without a branch (unknown fields, wire type mismatches,
+    # end-group tags, malformed tags, maps) goes to Decoder through the
+    # reader `r`, moved to the local position and limit first.
     module DecodeGenerator # :nodoc: all
       F = Message::FieldInfo
 
@@ -27,11 +30,8 @@ module Protostar
         <<~RUBY
           # frozen_string_literal: true
           #{packed.join}
-          def __decode_fields(r, depth, end_group, frozen)
+          def __decode_fields(r, buf, pos, limit, depth, end_group, frozen)
             #{"values = @values" unless fields.empty?}
-            buf = r.buffer
-            limit = r.limit
-            pos = r.pos
             while pos < limit
               at = pos
               if (tag = buf.getbyte(pos)) < 0x80
@@ -40,24 +40,22 @@ module Protostar
                 tag = (tag & 0x7F) | (b << 7)
                 pos += 2
               else
-                r.pos = pos
-                tag = r.read_tag_varint
+                tag = r.__seek(pos, limit).read_tag_varint
                 pos = r.pos
               end
               #{branches.empty? ? "if false" : "case tag"}
               #{branches}
               else
-                r.pos = pos
-                if Protostar::Codec::Decoder.field(self, r, tag, at, depth, end_group, frozen)
+                if Protostar::Codec::Decoder.field(self, r.__seek(pos, limit), tag, at, depth, end_group, frozen)
                   @unknown&.freeze
-                  return
+                  return r.pos
                 end
-                limit = r.limit
                 pos = r.pos
               end
             end
-            r.pos = pos
-            Protostar::Codec::Decoder.finish(self, r, end_group)
+            raise Protostar::DecodeError.new("missing end of group \#{end_group}", offset: pos) if end_group != 0
+            @unknown&.freeze
+            pos
           end
         RUBY
       end
@@ -69,11 +67,7 @@ module Protostar
         out << if info.map
           slow("Protostar::Codec::Decoder.map_entry(self, values, self.class.__fields[#{i}], r, depth, frozen)")
         elsif info.message?
-          if info.repeated
-            slow("Protostar::Codec::Decoder.repeated_message(values, self.class.__fields[#{i}], r, depth, frozen, at)")
-          else
-            slow("Protostar::Codec::Decoder.singular_message(values, self.class.__fields[#{i}], r, depth, frozen, at)")
-          end
+          message(info)
         elsif info.kind == F::ENUM
           enum(info)
         else
@@ -83,13 +77,45 @@ module Protostar
           packed_tag = (info.number << 3) | Wire::LENGTH_DELIMITED
           out << "when #{packed_tag} # #{info.name}, packed\n"
           out << if VARINT_KINDS.include?(info.kind)
-            "#{varint("n")}raise Protostar::DecodeError.new(\"length \#{n} runs past the end of the input\", offset: pos) " \
-              "if pos + n > limit\npos = __decode_packed#{i}(r, buf, pos, pos + n, limit, (values[#{i}] ||= []))\n"
+            "#{varint("n")}#{check_length}pos = __decode_packed#{i}(r, buf, pos, pos + n, (values[#{i}] ||= []))\n"
           else
             slow("Protostar::Codec::Decoder.packed(self, values, self.class.__fields[#{i}], r)")
           end
         end
         out
+      end
+
+      # A message or group, read by the child's loop called from here; the
+      # checks and their offsets are those of {Decoder.nested}
+      def message(info)
+        i = info.index
+        src = +"raise Protostar::DecodeError.new(\"recursion limit exceeded\", offset: at) if depth <= 0\n"
+        if info.kind == F::GROUP
+          stop = "limit"
+          group = info.number
+        else
+          src << varint("n") << check_length
+          stop = "pos + n"
+          group = 0
+        end
+        src << if info.repeated
+          "sub = self.class.__fields[#{i}].message_class.__empty\n(values[#{i}] ||= []) << sub\n"
+        else
+          siblings = info.siblings ? info.siblings.map { |s| "values[#{s}] = nil\n" }.join : ""
+          <<~RUBY
+            if (sub = values[#{i}]).nil?
+              #{siblings}sub = values[#{i}] = self.class.__fields[#{i}].message_class.__empty
+            elsif sub.frozen?
+              sub = values[#{i}] = sub.dup
+            end
+          RUBY
+        end
+        src << "pos = sub.__decode_fields(r, buf, pos, #{stop}, depth - 1, #{group}, frozen)\n"
+        src << "sub.freeze if frozen\n"
+      end
+
+      def check_length
+        "raise Protostar::DecodeError.new(\"length \#{n} runs past the end of the input\", offset: pos) if pos + n > limit\n"
       end
 
       VARINT_KINDS = [F::INT32, F::INT64, F::UINT32, F::UINT64, F::SINT32, F::SINT64, F::BOOL].freeze
@@ -100,7 +126,7 @@ module Protostar
       # with the loops inline.
       def packed_method(info)
         <<~RUBY
-          def __decode_packed#{info.index}(r, buf, pos, stop, limit, list)
+          def __decode_packed#{info.index}(r, buf, pos, stop, list)
             while pos < stop
             #{read(info, "stop")}list << v
             end
@@ -111,17 +137,12 @@ module Protostar
 
       # Hands the reader to a Decoder method and picks the position back up
       def slow(call)
-        "r.pos = pos\n#{call}\npos = r.pos\n"
+        "r.__seek(pos, limit)\n#{call}\npos = r.pos\n"
       end
 
       # Source reading a varint into `var`, inline when it is one or two
       # bytes; `lim` is where its input ends (a packed run's end, say)
       def varint(var, lim = "limit")
-        fallback = if lim == "limit"
-          "r.pos = pos\n#{var} = r.read_varint\npos = r.pos\n"
-        else
-          "r.pos = pos\nr.pop_limit(#{lim})\n#{var} = r.read_varint\nr.pop_limit(limit)\npos = r.pos\n"
-        end
         <<~RUBY
           if pos < #{lim} && (#{var} = buf.getbyte(pos)) < 0x80
             pos += 1
@@ -129,7 +150,9 @@ module Protostar
             #{var} = (#{var} & 0x7F) | (b << 7)
             pos += 2
           else
-          #{fallback}end
+            #{var} = r.__seek(pos, #{lim}).read_varint
+            pos = r.pos
+          end
         RUBY
       end
 
@@ -157,8 +180,7 @@ module Protostar
       end
 
       def bytes(info)
-        src = varint("n")
-        src << "raise Protostar::DecodeError.new(\"length \#{n} runs past the end of the input\", offset: pos) if pos + n > limit\n"
+        src = varint("n") << check_length
         src << "v = buf.byteslice(pos, n)\npos += n\n"
         if info.kind == F::BYTES
           src << "v.force_encoding(Encoding::BINARY).freeze\n"

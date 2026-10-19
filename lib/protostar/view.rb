@@ -146,7 +146,7 @@ module Protostar
       depth = @depth
       __each_segment do |offset, length|
         c = Wire::Reader.new(buf, offset, offset + length)
-        msg.__decode_fields(c, depth, 0, frozen)
+        msg.__decode_fields(c, c.buffer, offset, offset + length, depth, 0, frozen)
       end
       msg.freeze if frozen
       msg

@@ -18,7 +18,7 @@ module Protostar
       def decode(klass, bytes, recursion_limit: RECURSION_LIMIT, frozen: false)
         r = Wire::Reader.new(bytes)
         msg = klass.__empty
-        msg.__decode_fields(r, recursion_limit, 0, frozen)
+        msg.__decode_fields(r, r.buffer, 0, r.limit, recursion_limit, 0, frozen)
         msg.freeze if frozen
         msg
       end
@@ -102,12 +102,6 @@ module Protostar
         false
       end
 
-      # Checks the end of a message's fields: a group must have seen its end tag
-      def finish(msg, r, end_group)
-        raise DecodeError.new("missing end of group #{end_group}", offset: r.pos) if end_group != 0
-        msg.__seal_unknown
-      end
-
       def repeated_message(values, info, r, depth, frozen, at)
         sub = info.message_class.__empty
         nested(sub, info, r, depth, frozen, at)
@@ -130,13 +124,16 @@ module Protostar
       # Reads a message or group value into `sub`
       def nested(sub, info, r, depth, frozen, at)
         raise DecodeError.new("recursion limit exceeded", offset: at) if depth <= 0
+        limit = r.limit
         if info.kind == F::GROUP
-          sub.__decode_fields(r, depth - 1, info.number, frozen)
+          pos = sub.__decode_fields(r, r.buffer, r.pos, limit, depth - 1, info.number, frozen)
         else
-          old = r.push_limit(r.read_varint)
-          sub.__decode_fields(r, depth - 1, 0, frozen)
-          r.pop_limit(old)
+          length = r.read_varint
+          pos = r.pos
+          raise DecodeError.new("length #{length} runs past the end of the input", offset: pos) if pos + length > limit
+          pos = sub.__decode_fields(r, r.buffer, pos, pos + length, depth - 1, 0, frozen)
         end
+        r.__seek(pos, limit)
         sub.freeze if frozen
       end
 
