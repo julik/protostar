@@ -30,19 +30,16 @@ module Protostar
       # Returns true when the tag ends the group being read.
       def self?.field: (untyped msg, untyped r, untyped tag, untyped at, untyped depth, untyped end_group, untyped frozen) -> bool
 
-      # Checks the end of a message's fields: a group must have seen its end tag
-      def self?.finish: (untyped msg, untyped r, untyped end_group) -> untyped
+      def self?.repeated_message: (untyped msg, untyped info, untyped r, untyped depth, untyped frozen, untyped at) -> untyped
 
-      def self?.repeated_message: (untyped values, untyped info, untyped r, untyped depth, untyped frozen, untyped at) -> untyped
-
-      def self?.singular_message: (untyped values, untyped info, untyped r, untyped depth, untyped frozen, untyped at) -> untyped
+      def self?.singular_message: (untyped msg, untyped info, untyped r, untyped depth, untyped frozen, untyped at) -> untyped
 
       # Reads a message or group value into `sub`
       def self?.nested: (untyped sub, untyped info, untyped r, untyped depth, untyped frozen, untyped at) -> untyped
 
       def self?.unknown: (untyped msg, untyped r, untyped number, untyped wt, untyped depth) -> untyped
 
-      def self?.enum: (untyped msg, untyped values, untyped info, untyped r) -> untyped
+      def self?.enum: (untyped msg, untyped info, untyped r) -> untyped
 
       # One value of a scalar field other than an enum
       def self?.scalar: (untyped r, untyped info) -> untyped
@@ -52,9 +49,15 @@ module Protostar
       # Keeps a closed enum's number that has no name as an unknown varint field
       def self?.closed_enum_value: (untyped msg, untyped number, untyped buf, untyped start, untyped pos) -> untyped
 
-      def self?.packed: (untyped msg, untyped values, untyped info, untyped r) -> untyped
+      def self?.packed: (untyped msg, untyped info, untyped r) -> untyped
 
-      def self?.map_entry: (untyped msg, untyped values, untyped info, untyped r, untyped depth, untyped frozen) -> untyped
+      def self?.map_entry: (untyped msg, untyped info, untyped r, untyped depth, untyped frozen) -> untyped
+
+      # The Array of a repeated field, made when it has none
+      def self?.list_of: (untyped msg, untyped info) -> untyped
+
+      # Sets a singular field, unsetting the rest of its oneof; returns the value
+      def self?.store: (untyped msg, untyped info, untyped value) -> untyped
     end
   end
 end

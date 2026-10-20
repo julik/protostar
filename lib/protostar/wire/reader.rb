@@ -69,6 +69,15 @@ module Protostar
         @limit = old_limit
       end
 
+      # Moves to `pos` with `limit`, unchecked. Generated decoders keep both
+      # in locals and hand them back before calling into the reader.
+      #: (Integer pos, Integer limit) -> self
+      def __seek(pos, limit) # :nodoc:
+        @pos = pos
+        @limit = limit
+        self
+      end
+
       # Returns an unsigned varint of up to 64 bits. Longer encodings
       # are truncated to 64 bits, as protoc does.
       # Raises DecodeError when truncated or longer than ten bytes.

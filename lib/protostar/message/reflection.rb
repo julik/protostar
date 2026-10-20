@@ -76,7 +76,7 @@ module Protostar
       #: (Message message, field_key key) -> bool
       def set?(message, key)
         info = info!(key)
-        v = message.__values[info.index]
+        v = message.__slot(info.index)
         return false if v.nil?
         return !v.empty? if info.repeated || info.map
         info.presence || !info.zero?(v)
@@ -93,7 +93,7 @@ module Protostar
       def which(message, oneof)
         oneof = @descriptor.oneofs.find { |o| o.name == oneof.to_s } unless oneof.is_a?(Schema::Oneof)
         raise ArgumentError, "#{@descriptor.full_name} has no oneof #{oneof.inspect}" unless oneof
-        oneof.fields.find { |f| !message.__values[@by_number.fetch(f.number).index].nil? }
+        oneof.fields.find { |f| !message.__slot(@by_number.fetch(f.number).index).nil? }
       end
 
       # - `key`: a message or group field,

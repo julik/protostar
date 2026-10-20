@@ -87,6 +87,48 @@ module BenchFixtures
     )
   end
 
+  def library_file
+    @library_file ||= compiled("bench/library.proto", File.read(File.join(__dir__, "library.proto")))
+  end
+
+  def library
+    @library ||= Protostar::Types::Registry.new.define(library_file).fetch("bench.library.Library")
+  end
+
+  # Eleven catalogues of about 440 KB: twenty elements in every repeated
+  # field, a book in about half the slots
+  def libraries
+    random = Random.new(2026)
+    Array.new(11) { fake(library, random) }
+  end
+
+  def fake(klass, random)
+    fields = {}
+    klass.reflection.fields.each do |f|
+      if f.repeated?
+        fields[f.name.to_sym] = Array.new(20) { fake_value(klass, f, random) }
+      elsif !f.proto3_optional? || random.rand < 0.5
+        fields[f.name.to_sym] = fake_value(klass, f, random)
+      end
+    end
+    klass.new(fields)
+  end
+
+  def fake_value(klass, field, random)
+    case field.type
+    when :bool then random.rand < 0.5
+    when :string then "Lorem ipsum ‡" + " dolor" * random.rand(0..6)
+    when :enum then field.enum_type.values.sample(random: random).name.to_sym
+    when :double, :float then random.rand * 1000.0
+    when :message then fake(klass.reflection.message_class(field), random)
+    else random.rand(0..400)
+    end
+  end
+
+  def google_library
+    google_file(library_file).lookup("bench.library.Library").msgclass
+  end
+
   def compiled(name, source)
     Protostar::Compiler.new.compile([name], sources: {name => source}).last
   end

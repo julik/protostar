@@ -46,6 +46,18 @@ module Protostar
       Writer.new.write_varint(value).string.freeze
     end
 
+    # Appends a varint to a binary String and returns it. Negative values are
+    # written as their 64-bit two's complement.
+    #: (String buf, Integer value) -> String
+    def self.append_varint(buf, value)
+      value &= MASK64 if value < 0
+      while value >= 0x80
+        buf << ((value & 0x7F) | 0x80)
+        value >>= 7
+      end
+      buf << value
+    end
+
     # Returns how many bytes `varint` would take; 10 for any negative value.
     #: (untyped value) -> Integer
     def self.varint_size(value)

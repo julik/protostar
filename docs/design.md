@@ -55,16 +55,38 @@ calls, and reads the classes from the RBI. The runtime's own signatures are writ
 
 `Types.define(file)` makes a class per message and a module per enum. Every method on
 them, accessors and codec alike, is generated as Ruby source and `class_eval`ed when the
-class is defined: the decoder is one `case` over whole tag values with one- and two-byte
-varints inline, the encoder is a sizing pass and a writing pass. Nothing is
-`define_method`ed and nothing is cached lazily, so classes are shareable and work in any
-Ractor.
+class is defined. Nothing is `define_method`ed from a block and nothing is cached lazily,
+so classes are shareable and work in any Ractor.
 
-A message is one Array of slots plus its unknown fields, kept byte for byte and written
-back on encode. Repeated fields are Arrays and maps are Hashes, checked when encoded.
-Values are checked and converted on assignment, so a value reads back the way it will
-decode (a float field holds the single-precision value). Closed enums put unknown numbers
-into unknown fields, as protoc does.
+A message keeps each field in an instance variable named after its slot (`@_0`, `@_1`,
+...), never after the field's name, so no field clashes with `@unknown`, its unknown
+fields (kept byte for byte and written back on encode). Every way of making a message
+goes through the generated `__reset`, which sets `@unknown` and then every slot in
+declaration order, so all messages of a class have one object shape and all classes share
+one chain of shapes; YJIT reads and writes fields inline. Readers that return the variable
+as it is are copies of `attr_reader`s. Code that walks fields generically (reflection,
+JSON, text, `==`, the shim) uses the generated `__slot(i)`, `__set_slot(i, v)` and
+`__slots`. Repeated fields are Arrays and maps are Hashes, checked when encoded. Values
+are checked and converted on assignment, so a value reads back the way it will decode (a
+float field holds the single-precision value). Closed enums put unknown numbers into
+unknown fields, as protoc does.
+
+The decoder of a class is a loop over `(buf, pos, limit)` passed as arguments, returning
+the position after the message. It dispatches with one `case` over whole tag values (or,
+past 16 tags, `<` comparisons down to a `case` of at most 16, which YJIT keeps in
+compiled code), reads one- and two-byte varints and fixed-width values inline, maps enum
+numbers to names with a literal `case`, and decodes a nested message by calling the
+child class's own decoder from the parent's loop, so each call site sees one class. Its
+methods live in a module of their own, included into the class, whose constants are the
+fields' descriptors. Anything rare (long varints, unknown fields, maps) goes through a
+`Wire::Reader` moved to the loop's position first.
+
+`encode` makes one pass into a String: a nested message or packed run gets one byte for
+its length, filled in once its bytes are written, and more bytes are spliced in only when
+it is over 127 bytes long. `encode_to(io)` and `encode_delimited(io)` cannot take back
+what a sink was given, so they make two passes: one records every nested length, the
+second writes, flushing as the buffer fills. Both check repeated elements and map entries
+in the same order and write the same bytes.
 
 ## Views
 

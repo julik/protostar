@@ -48,27 +48,30 @@ module Bench
     end
 
     # Median seconds per call of the block
-    def measure
+    def measure(&block)
       n = 1
-      loop do
-        t = now
-        n.times { yield }
-        elapsed = now - t
-        break if elapsed >= BATCH / 4 || n >= 1 << 20
+      while timed(n, &block) < BATCH / 4 && n < 1 << 20
         n *= 2
       end
-      t = now
-      n.times { yield } # warmup at the calibrated size
-      per = (now - t) / n
+      per = timed(n, &block) / n # warmup at the calibrated size
       batch = [(BATCH / per).ceil, 1].max
       samples = []
       deadline = now + BUDGET
-      while samples.size < 3 || (now < deadline && samples.size < 1000)
-        t = now
-        batch.times { yield }
-        samples << (now - t) / batch
-      end
+      samples << timed(batch, &block) / batch while samples.size < 3 || (now < deadline && samples.size < 1000)
       samples.sort[samples.size / 2]
+    end
+
+    # Seconds taken by `n` calls of the block. A plain loop: `n.times { yield }`
+    # runs every row's block through one yield inside Integer#times, and under
+    # YJIT 3.4 each row after the first then measured up to three times slower.
+    def timed(n, &block)
+      t = now
+      i = 0
+      while i < n
+        block.call
+        i += 1
+      end
+      now - t
     end
 
     # Best of `runs` single calls, for operations that take seconds. `prepare`

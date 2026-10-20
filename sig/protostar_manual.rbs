@@ -1,5 +1,5 @@
-# What the inline RBS in lib/ cannot say: class aliases, type aliases and
-# interfaces. Everything else under sig/ (outside sig/protostar/google/) is
+# What the inline RBS in lib/ cannot say: class aliases, type aliases,
+# interfaces and methods made at runtime. Everything else under sig/ (outside sig/protostar/google/) is
 # generated from lib/ by `rake types:generate`; this file is not.
 module Protostar
   class Timestamp = Google::Protobuf::Timestamp
@@ -21,6 +21,10 @@ module Protostar
   class BytesValue = Google::Protobuf::BytesValue
 
   class Message
+    # Freezes the message and everything it holds, after which it is
+    # Ractor.shareable?. Each message class generates its own.
+    def freeze: () -> self
+
     class Reflection
       type field_key = ::String | ::Symbol | ::Integer | untyped
     end

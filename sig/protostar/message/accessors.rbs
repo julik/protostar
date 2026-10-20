@@ -4,8 +4,15 @@ module Protostar
   class Message
     # Writes the field accessors of a message class as Ruby source and evals
     # it into the class. Methods made from source, unlike `define_method`
-    # blocks, can be called from any Ractor, and they read their slot by a
-    # literal index.
+    # blocks, can be called from any Ractor.
+    #
+    # A field lives in an instance variable named after its slot (`@_0`,
+    # `@_1`, ...; FieldInfo#ivar), never after its name, so no field can
+    # clash with `@unknown`. `__reset` sets `@unknown` and then every slot in
+    # order, and every way of making a message goes through it, so all
+    # messages of a class have one object shape, and all classes share one
+    # chain of shapes. The by-index methods (`__slot`, `__set_slot`,
+    # `__slots`) are for code that walks fields generically.
     module Accessors
       # Methods every message has; a field whose accessor would replace one
       # is reachable only through `[]` and `[]=`
@@ -15,7 +22,25 @@ module Protostar
       # - `reserved`: from `reserved`, computed once for many classes
       def self?.install: (Class klass, Array[FieldInfo] fields, Array[[ Symbol, Array[Integer] ]] oneofs, ?Hash[Symbol, bool] reserved) -> untyped
 
+      # A reader that returns the variable as it is can be a copy of an
+      # `attr_reader`, which YJIT reads inline without a method frame
+      def self?.plain_reader?: (untyped info) -> untyped
+
+      # The `attr_reader`s are made in a scratch module under their slot
+      # names, so a field called `_3` cannot get in the way
+      def self?.define_plain_readers: (untyped klass, untyped plain) -> untyped
+
       def self?.reader_source: (untyped name, untyped info) -> untyped
+
+      # `Klass.__empty`, `__reset`, `__load_slots`, `__slot`, `__set_slot`,
+      # `__slots`, `__copy_slots` and `freeze`
+      def self?.slots_source: (untyped fields) -> untyped
+
+      def self?.freeze_source: (untyped f) -> untyped
+
+      # A value as a literal when it has an exact one, otherwise read from
+      # the class's template
+      def self?.literal: (untyped index, untyped value) -> untyped
 
       # The default as a literal when it has an exact one, otherwise a lookup
       def self?.default_literal: (untyped info) -> untyped

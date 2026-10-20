@@ -2,17 +2,20 @@
 
 module Protostar
   module Codec
-    # Writes the two encoding passes of one message class as Ruby source and
-    # evals them into the class: `__size(sizes)`, which returns the encoded
-    # size and records it (and every packed run's) in `sizes`, and
-    # `__write(w, buf, sizes)`, which appends the fields to the Writer's
-    # buffer. Fields come in ascending number order, tags are literal bytes,
-    # one-byte varints are appended inline, and enum names map to numbers
-    # through a literal `case`. Maps, packed runs and unknown fields go to
+    # Writes the encoders of one message class as Ruby source and evals them
+    # into the class. Fields come in ascending number order, tags are literal
+    # bytes, one- and two-byte varints are appended inline, and enum names
+    # map to numbers through a literal `case`. Maps and unknown fields go to
     # Sizer and Encoder.
     #
-    # The generic loop over field descriptors this replaces spent most of
-    # its time on method calls into the field table.
+    # `__encode(buf)` makes one pass into a String: a nested message or
+    # packed run gets one byte for its length, written once its bytes are,
+    # and more bytes are spliced in only when it is over 127 bytes long.
+    #
+    # A sink cannot take back what it was given, so Encoder.encode_to
+    # makes two passes: `__size(sizes)` returns the encoded size and records
+    # it (and every packed run's) in `sizes`, and `__write(w, buf, sizes)`
+    # appends the fields to the Writer's buffer, flushing as it fills.
     module EncodeGenerator # :nodoc: all
       F = Message::FieldInfo
 
@@ -39,7 +42,6 @@ module Protostar
         <<~RUBY
           # frozen_string_literal: true
           def __size(sizes)
-            #{"values = @values" unless fields.empty?}
             total = 0
             #{fields.map { |f| size_field(f) }.join}
             total += Protostar::Codec::Sizer.unknown(@unknown) if @unknown
@@ -47,12 +49,63 @@ module Protostar
           end
 
           def __write(w, buf, sizes)
-            #{"values = @values" unless fields.empty?}
             #{fields.map { |f| write_field(f) }.join}
             Protostar::Codec::Encoder.unknown(w, @unknown) if @unknown
             w.flush_if_full
           end
+
+          def __encode(buf)
+            #{fields.map { |f| encode_field(f) }.join}
+            Protostar::Codec::Encoder.unknown_into(buf, @unknown) if @unknown
+            buf
+          end
         RUBY
+      end
+
+      def encode_field(f)
+        body = if f.map
+          "Protostar::Codec::Encoder.map_into(#{info(f)}, v, buf)\n"
+        elsif f.packed
+          packed_encode(f)
+        elsif f.repeated
+          src = f.message? ? "k = #{info(f)}.message_class\n" : +""
+          src << each_element("#{check(f)}#{append(tag_bytes(f))}#{encode_value(f, "e")}")
+        else
+          "#{append(tag_bytes(f))}#{encode_value(f, "v")}"
+        end
+        "# #{f.name}\n#{present(f)}\n#{body}end\n"
+      end
+
+      # What the sizing pass checks of each element of a repeated field
+      def check(f)
+        return "" if f.kind == F::ENUM
+        "Protostar::Codec::Sizer.invalid(#{info(f)}, e) unless #{valid(f, "e")}\n"
+      end
+
+      def encode_value(f, var)
+        case f.kind
+        when F::MESSAGE then "at = buf.bytesize\nbuf << 0\n#{var}.__encode(buf)\n#{patch_length}"
+        when F::GROUP then "#{var}.__encode(buf)\n#{append(tag_bytes(f, Wire::END_GROUP))}"
+        else write_value(f, var, true)
+        end
+      end
+
+      # Writes the length of what was appended after the byte reserved at `at`
+      def patch_length
+        "if (n = buf.bytesize - at - 1) < 0x80\nbuf.setbyte(at, n)\nelse\n" \
+          "Protostar::Codec::Encoder.patch_length(buf, at, n)\nend\n"
+      end
+
+      def packed_encode(f)
+        src = append(tag_bytes(f, Wire::LENGTH_DELIMITED))
+        case f.kind
+        when *VARINT_KINDS, F::SINT32, F::SINT64, F::ENUM
+          src << "at = buf.bytesize\nbuf << 0\n"
+          src << each_element("#{check(f)}#{write_value(f, "e", true)}") << patch_length
+        else
+          width = (f.kind == F::BOOL) ? 1 : F::FIXED.fetch(f.kind).first
+          each_element(check(f)) << src << write_varint("#{width} * v.size", true) << packed_write(f, true)
+        end
       end
 
       def info(f)
@@ -61,13 +114,12 @@ module Protostar
 
       # The condition under which a field is written, with its value in `v`
       def present(f)
-        i = f.index
         if f.repeated || f.map
-          "unless (v = values[#{i}]).nil? || v.empty?"
+          "unless (v = #{f.ivar}).nil? || v.empty?"
         elsif f.presence
-          "unless (v = values[#{i}]).nil?"
+          "unless (v = #{f.ivar}).nil?"
         else
-          "v = values[#{i}]\nif #{nonzero(f)}"
+          "v = #{f.ivar}\nif #{nonzero(f)}"
         end
       end
 
@@ -118,9 +170,9 @@ module Protostar
       end
 
       # Statements appending packed run `v`'s payload
-      def packed_write(f)
+      def packed_write(f, one_pass = false)
         case f.kind
-        when *VARINT_KINDS, F::SINT32, F::SINT64, F::ENUM then each_element(write_value(f, "e"))
+        when *VARINT_KINDS, F::SINT32, F::SINT64, F::ENUM then each_element(write_value(f, "e", one_pass))
         when F::BOOL then each_element("buf << (e ? 1 : 0)\n")
         when F::FLOAT then "buf << Protostar::Wire.pack_floats(v)\n"
         else "v.pack(#{"#{F::FIXED.fetch(f.kind).last}*".inspect}, buffer: buf)\n"
@@ -199,17 +251,26 @@ module Protostar
         "buf#{bytes.map { |b| " << #{b}" }.join}\n"
       end
 
-      def write_varint(expr)
-        "if (x = #{expr}) < 0x80 && x >= 0\nbuf << x\nelsif x < 0x4000 && x >= 0\nbuf << ((x & 0x7F) | 0x80) << (x >> 7)\nelse\nw.write_varint(x)\nend\n"
+      # `one_pass` code has the String `buf` and no Writer
+      def write_varint(expr, one_pass = false)
+        long = one_pass ? "Protostar::Wire.append_varint(buf, x)" : "w.write_varint(x)"
+        "if (x = #{expr}) < 0x80 && x >= 0\nbuf << x\nelsif x < 0x4000 && x >= 0\nbuf << ((x & 0x7F) | 0x80) << (x >> 7)\nelse\n#{long}\nend\n"
       end
 
-      def write_value(f, var)
+      # Appends String `var` as bytes, whatever its encoding
+      def write_raw(var, one_pass)
+        return "w.write_raw(#{var})\n" unless one_pass
+        # `<<` would raise or re-tag the buffer for a non-ASCII UTF-8 value
+        String.method_defined?(:append_as_bytes) ? "buf.append_as_bytes(#{var})\n" : "[#{var}].pack(\"a*\", buffer: buf)\n"
+      end
+
+      def write_value(f, var, one_pass = false)
         case f.kind
-        when *VARINT_KINDS then write_varint(var)
-        when F::SINT32, F::SINT64 then write_varint("(#{var} << 1) ^ (#{var} >> 63)")
+        when *VARINT_KINDS then write_varint(var, one_pass)
+        when F::SINT32, F::SINT64 then write_varint("(#{var} << 1) ^ (#{var} >> 63)", one_pass)
         when F::BOOL then "buf << (#{var} ? 1 : 0)\n"
-        when F::ENUM then write_varint(enum_number(f, var))
-        when F::STRING, F::BYTES then "#{write_varint("#{var}.bytesize")}w.write_raw(#{var})\n"
+        when F::ENUM then write_varint(enum_number(f, var), one_pass)
+        when F::STRING, F::BYTES then "#{write_varint("#{var}.bytesize", one_pass)}#{write_raw(var, one_pass)}"
         when F::MESSAGE then "#{write_varint("sizes[#{var}]")}#{var}.__write(w, buf, sizes)\n"
         when F::GROUP then "#{var}.__write(w, buf, sizes)\n#{append(tag_bytes(f, Wire::END_GROUP))}"
         when F::FLOAT

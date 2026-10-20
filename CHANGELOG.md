@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The codec is about twice as fast under YJIT, after ideas from [protoboeuf](https://github.com/Shopify/protoboeuf): fields live in instance variables (one object shape per class), nested messages decode from the parent's generated method, and `encode` makes one pass into a String. Large nested messages decode in about half the time, with a third fewer objects allocated; `frozen: true` decode is about four times faster. Defining message classes costs a little more. Internals that reached into `__values` should use `__slot` and `__slots`.
 - For contributors: the gem's own types are written once, as inline RBS in `lib/`. `sig/` and `rbi/protostar.rbi` are generated from them (`rake types:generate`, checked by `rake types:check`), so the RBI now covers all of `lib/`, and `rake steep` typechecks `lib/`. The API docs are built with RDoc 8 (`rake rdoc`) instead of YARD.
 - Sorbet RBI: `--rbi_out=DIR` and the plugin's `rbi` output write a `_pb.rbi` per `.proto`, for protostar's classes next to `--ruby_out` and for google-protobuf's otherwise (in the shape tapioca's protobuf compiler writes). The gem ships `rbi/protostar.rbi` for the runtime API and RBI for the well-known types, which `tapioca gem` picks up.
 - `--ruby_out` writes the `_pb.rbs` and `_pb.rbi` next to each `_pb.rb` by default; `--no-rbs` and `--no-rbi` (plugin: `no-rbs`, `no-rbi`) turn them off, `--rbs_out` and `--rbi_out` put them elsewhere. `--google_out` writes only what protoc writes, as before, and one file to stdout is still only Ruby.

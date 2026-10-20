@@ -49,6 +49,10 @@ module Protostar
       # Restores a limit returned by #push_limit
       def pop_limit: (untyped old_limit) -> untyped
 
+      # Moves to `pos` with `limit`, unchecked. Generated decoders keep both
+      # in locals and hand them back before calling into the reader.
+      def __seek: (Integer pos, Integer limit) -> self
+
       # Returns an unsigned varint of up to 64 bits. Longer encodings
       # are truncated to 64 bits, as protoc does.
       # Raises DecodeError when truncated or longer than ten bytes.

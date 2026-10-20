@@ -327,8 +327,22 @@ module Protostar::Codec::DecodeGenerator
   sig { params(fields: T.untyped).returns(T.untyped) }
   def self.source(fields); end
 
+  CASE_WIDTH = T.let(T.unsafe(nil), Integer)
+
+  sig { params(branches: T::Array[[Integer, String]]).returns(String) }
+  def self.dispatch(branches); end
+
+  sig { returns(T.untyped) }
+  def self.fallback; end
+
+  sig { params(info: Protostar::Message::FieldInfo).returns(T::Array[T.untyped]) }
+  def self.branches(info); end
+
   sig { params(info: T.untyped).returns(T.untyped) }
-  def self.branch(info); end
+  def self.message(info); end
+
+  sig { returns(T.untyped) }
+  def self.check_length; end
 
   VARINT_KINDS = T.let(T.unsafe(nil), T.untyped)
 
@@ -353,8 +367,16 @@ module Protostar::Codec::DecodeGenerator
   sig { params(info: T.untyped).returns(T.untyped) }
   def self.enum(info); end
 
+  sig { params(info: T.untyped).returns(T.untyped) }
+  def self.enum_name(info); end
+
+  ENUM_CASE_MAX = T.let(T.unsafe(nil), Integer)
+
   sig { params(info: T.untyped, var: T.untyped).returns(T.untyped) }
   def self.store(info, var); end
+
+  sig { params(info: T.untyped).returns(T.untyped) }
+  def self.siblings(info); end
 end
 
 module Protostar::Codec::Decoder
@@ -380,14 +402,11 @@ module Protostar::Codec::Decoder
   sig { params(msg: T.untyped, r: T.untyped, tag: T.untyped, at: T.untyped, depth: T.untyped, end_group: T.untyped, frozen: T.untyped).returns(T::Boolean) }
   def self.field(msg, r, tag, at, depth, end_group, frozen); end
 
-  sig { params(msg: T.untyped, r: T.untyped, end_group: T.untyped).returns(T.untyped) }
-  def self.finish(msg, r, end_group); end
+  sig { params(msg: T.untyped, info: T.untyped, r: T.untyped, depth: T.untyped, frozen: T.untyped, at: T.untyped).returns(T.untyped) }
+  def self.repeated_message(msg, info, r, depth, frozen, at); end
 
-  sig { params(values: T.untyped, info: T.untyped, r: T.untyped, depth: T.untyped, frozen: T.untyped, at: T.untyped).returns(T.untyped) }
-  def self.repeated_message(values, info, r, depth, frozen, at); end
-
-  sig { params(values: T.untyped, info: T.untyped, r: T.untyped, depth: T.untyped, frozen: T.untyped, at: T.untyped).returns(T.untyped) }
-  def self.singular_message(values, info, r, depth, frozen, at); end
+  sig { params(msg: T.untyped, info: T.untyped, r: T.untyped, depth: T.untyped, frozen: T.untyped, at: T.untyped).returns(T.untyped) }
+  def self.singular_message(msg, info, r, depth, frozen, at); end
 
   sig { params(sub: T.untyped, info: T.untyped, r: T.untyped, depth: T.untyped, frozen: T.untyped, at: T.untyped).returns(T.untyped) }
   def self.nested(sub, info, r, depth, frozen, at); end
@@ -395,8 +414,8 @@ module Protostar::Codec::Decoder
   sig { params(msg: T.untyped, r: T.untyped, number: T.untyped, wt: T.untyped, depth: T.untyped).returns(T.untyped) }
   def self.unknown(msg, r, number, wt, depth); end
 
-  sig { params(msg: T.untyped, values: T.untyped, info: T.untyped, r: T.untyped).returns(T.untyped) }
-  def self.enum(msg, values, info, r); end
+  sig { params(msg: T.untyped, info: T.untyped, r: T.untyped).returns(T.untyped) }
+  def self.enum(msg, info, r); end
 
   sig { params(r: T.untyped, info: T.untyped).returns(T.untyped) }
   def self.scalar(r, info); end
@@ -407,11 +426,17 @@ module Protostar::Codec::Decoder
   sig { params(msg: T.untyped, number: T.untyped, buf: T.untyped, start: T.untyped, pos: T.untyped).returns(T.untyped) }
   def self.closed_enum_value(msg, number, buf, start, pos); end
 
-  sig { params(msg: T.untyped, values: T.untyped, info: T.untyped, r: T.untyped).returns(T.untyped) }
-  def self.packed(msg, values, info, r); end
+  sig { params(msg: T.untyped, info: T.untyped, r: T.untyped).returns(T.untyped) }
+  def self.packed(msg, info, r); end
 
-  sig { params(msg: T.untyped, values: T.untyped, info: T.untyped, r: T.untyped, depth: T.untyped, frozen: T.untyped).returns(T.untyped) }
-  def self.map_entry(msg, values, info, r, depth, frozen); end
+  sig { params(msg: T.untyped, info: T.untyped, r: T.untyped, depth: T.untyped, frozen: T.untyped).returns(T.untyped) }
+  def self.map_entry(msg, info, r, depth, frozen); end
+
+  sig { params(msg: T.untyped, info: T.untyped).returns(T.untyped) }
+  def self.list_of(msg, info); end
+
+  sig { params(msg: T.untyped, info: T.untyped, value: T.untyped).returns(T.untyped) }
+  def self.store(msg, info, value); end
 end
 
 module Protostar::Codec::EncodeGenerator
@@ -426,6 +451,21 @@ module Protostar::Codec::EncodeGenerator
 
   sig { params(fields: T.untyped).returns(T.untyped) }
   def self.source(fields); end
+
+  sig { params(f: T.untyped).returns(T.untyped) }
+  def self.encode_field(f); end
+
+  sig { params(f: T.untyped).returns(T.untyped) }
+  def self.check(f); end
+
+  sig { params(f: T.untyped, var: T.untyped).returns(T.untyped) }
+  def self.encode_value(f, var); end
+
+  sig { returns(T.untyped) }
+  def self.patch_length; end
+
+  sig { params(f: T.untyped).returns(T.untyped) }
+  def self.packed_encode(f); end
 
   sig { params(f: T.untyped).returns(T.untyped) }
   def self.info(f); end
@@ -445,8 +485,8 @@ module Protostar::Codec::EncodeGenerator
   sig { params(f: T.untyped).returns(T.untyped) }
   def self.packed_size(f); end
 
-  sig { params(f: T.untyped).returns(T.untyped) }
-  def self.packed_write(f); end
+  sig { params(f: T.untyped, one_pass: T.untyped).returns(T.untyped) }
+  def self.packed_write(f, one_pass = T.unsafe(nil)); end
 
   sig { params(f: T.untyped, tag: T.untyped).returns(T.untyped) }
   def self.repeated_size(f, tag); end
@@ -472,17 +512,22 @@ module Protostar::Codec::EncodeGenerator
   sig { params(bytes: T.untyped).returns(T.untyped) }
   def self.append(bytes); end
 
-  sig { params(expr: T.untyped).returns(T.untyped) }
-  def self.write_varint(expr); end
+  sig { params(expr: T.untyped, one_pass: T.untyped).returns(T.untyped) }
+  def self.write_varint(expr, one_pass = T.unsafe(nil)); end
 
-  sig { params(f: T.untyped, var: T.untyped).returns(T.untyped) }
-  def self.write_value(f, var); end
+  sig { params(var: T.untyped, one_pass: T.untyped).returns(T.untyped) }
+  def self.write_raw(var, one_pass); end
+
+  sig { params(f: T.untyped, var: T.untyped, one_pass: T.untyped).returns(T.untyped) }
+  def self.write_value(f, var, one_pass = T.unsafe(nil)); end
 end
 
 module Protostar::Codec::Encoder
   F = T.let(T.unsafe(nil), T.untyped)
 
   BINARY = T.let(T.unsafe(nil), T.untyped)
+
+  PAD = T.let(T.unsafe(nil), T.untyped)
 
   sig { params(msg: T.untyped).returns(String) }
   def self.encode(msg); end
@@ -492,6 +537,12 @@ module Protostar::Codec::Encoder
 
   sig { params(msg: T.untyped, io: T.untyped).returns(T.any(String, IO)) }
   def self.encode_delimited(msg, io); end
+
+  sig { params(buf: T.untyped, at: T.untyped, n: T.untyped).returns(T.untyped) }
+  def self.patch_length(buf, at, n); end
+
+  sig { params(info: T.untyped, hash: T.untyped, buf: T.untyped).returns(T.untyped) }
+  def self.map_into(info, hash, buf); end
 
   sig { params(info: T.untyped, v: T.untyped).returns(Integer) }
   def self.enum_number(info, v); end
@@ -504,6 +555,9 @@ module Protostar::Codec::Encoder
 
   sig { params(info: T.untyped, hash: T.untyped, w: T.untyped, sizes: T.untyped).returns(T.untyped) }
   def self.map(info, hash, w, sizes); end
+
+  sig { params(buf: String, list: T::Array[Protostar::UnknownField]).returns(T.untyped) }
+  def self.unknown_into(buf, list); end
 
   sig { params(w: T.untyped, list: T::Array[Protostar::UnknownField]).returns(T.untyped) }
   def self.unknown(w, list); end
@@ -4621,9 +4675,6 @@ class Protostar::Message
   sig { params(freeze: T.nilable(T::Boolean)).returns(T.self_type) }
   def clone(freeze: T.unsafe(nil)); end
 
-  sig { returns(T.self_type) }
-  def freeze; end
-
   sig { params(other: Protostar::Message).returns(T.self_type) }
   def merge!(other); end
 
@@ -4644,12 +4695,6 @@ class Protostar::Message
 
   sig { returns(T::Array[[String, T.untyped]]) }
   def __shown; end
-
-  sig { returns(T.untyped) }
-  def __values; end
-
-  sig { returns(T.untyped) }
-  def __reset; end
 
   sig { params(field: T.untyped).returns(T.untyped) }
   def __add_unknown(field); end
@@ -4704,6 +4749,9 @@ class Protostar::Message
   alias_method :eql?, :==
 
   alias_method :to_s, :inspect
+
+  sig { returns(T.self_type) }
+  def freeze; end
 end
 
 module Protostar::Message::Accessors
@@ -4713,8 +4761,23 @@ module Protostar::Message::Accessors
   sig { params(klass: T::Class[T.anything], fields: T::Array[Protostar::Message::FieldInfo], oneofs: T::Array[[Symbol, T::Array[Integer]]], reserved: T::Hash[Symbol, T::Boolean]).returns(T.untyped) }
   def self.install(klass, fields, oneofs, reserved = T.unsafe(nil)); end
 
+  sig { params(info: T.untyped).returns(T.untyped) }
+  def self.plain_reader?(info); end
+
+  sig { params(klass: T.untyped, plain: T.untyped).returns(T.untyped) }
+  def self.define_plain_readers(klass, plain); end
+
   sig { params(name: T.untyped, info: T.untyped).returns(T.untyped) }
   def self.reader_source(name, info); end
+
+  sig { params(fields: T.untyped).returns(T.untyped) }
+  def self.slots_source(fields); end
+
+  sig { params(f: T.untyped).returns(T.untyped) }
+  def self.freeze_source(f); end
+
+  sig { params(index: T.untyped, value: T.untyped).returns(T.untyped) }
+  def self.literal(index, value); end
 
   sig { params(info: T.untyped).returns(T.untyped) }
   def self.default_literal(info); end
@@ -4813,6 +4876,9 @@ class Protostar::Message::FieldInfo
 
   sig { returns(T.nilable(Integer)) }
   def index; end
+
+  sig { returns(T.nilable(String)) }
+  def ivar; end
 
   sig { returns(Integer) }
   def kind; end
@@ -7149,6 +7215,9 @@ module Protostar::Wire
   sig { params(value: Integer).returns(String) }
   def self.varint(value); end
 
+  sig { params(buf: String, value: Integer).returns(String) }
+  def self.append_varint(buf, value); end
+
   sig { params(value: T.untyped).returns(Integer) }
   def self.varint_size(value); end
 
@@ -7213,6 +7282,9 @@ class Protostar::Wire::Reader
 
   sig { params(old_limit: T.untyped).returns(T.untyped) }
   def pop_limit(old_limit); end
+
+  sig { params(pos: Integer, limit: Integer).returns(T.self_type) }
+  def __seek(pos, limit); end
 
   sig { returns(Integer) }
   def read_varint; end

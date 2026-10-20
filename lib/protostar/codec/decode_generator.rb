@@ -3,35 +3,42 @@
 module Protostar
   module Codec
     # Writes a decoding loop for one message class as Ruby source and evals
-    # it into the class as `__decode_fields`. The loop dispatches on the whole
+    # it into the class as `__decode_fields(r, buf, pos, limit, depth,
+    # end_group, frozen)`, which reads the fields between `pos` and `limit`
+    # and returns the position after them. The loop dispatches on the whole
     # tag with one `case` (field number and wire type at once), reads varints
-    # of one byte and fixed-width values inline, and keeps the read position
-    # in a local. Anything it has no branch for (unknown fields, wire type
-    # mismatches, end-group tags, malformed tags) goes to Decoder.field.
-    #
-    # A generic loop over field descriptors spent most of its time in method
-    # calls on the field table; this does the same work with a fraction of them.
+    # of one or two bytes and fixed-width values inline, and keeps the
+    # position and limit in locals. A nested message or group is read by a
+    # call to the child's own `__decode_fields` from the parent's loop, so
+    # each such call site sees one class and YJIT keeps it monomorphic.
+    # Anything without a branch (unknown fields, wire type mismatches,
+    # end-group tags, malformed tags, maps) goes to Decoder through the
+    # reader `r`, moved to the local position and limit first.
     module DecodeGenerator # :nodoc: all
       F = Message::FieldInfo
 
       module_function
 
+      # The methods go into a module of their own, included into the class,
+      # whose constants `I<index>` are the fields' Message::FieldInfo objects: a
+      # constant is the cheapest thing a method can name, and these add none
+      # to the message class. (Constants holding the field classes would
+      # give anonymous classes a name.)
       #: (Class klass, Array[Message::FieldInfo] fields) -> untyped
       def install(klass, fields)
-        klass.class_eval(source(fields), "(protostar decoder #{klass.descriptor.full_name})", 1)
+        mod = Module.new
+        fields.each { |info| mod.const_set(:"I#{info.index}", info) }
+        mod.module_eval(source(fields), "(protostar decoder #{klass.descriptor.full_name})", 1)
+        klass.include(mod)
       end
 
       def source(fields)
-        branches = fields.map { |info| branch(info) }.join
+        branches = dispatch(fields.flat_map { |info| branches(info) }.sort_by(&:first))
         packed = fields.select { |info| info.packable && VARINT_KINDS.include?(info.kind) }.map { |info| packed_method(info) }
         <<~RUBY
           # frozen_string_literal: true
           #{packed.join}
-          def __decode_fields(r, depth, end_group, frozen)
-            #{"values = @values" unless fields.empty?}
-            buf = r.buffer
-            limit = r.limit
-            pos = r.pos
+          def __decode_fields(r, buf, pos, limit, depth, end_group, frozen)
             while pos < limit
               at = pos
               if (tag = buf.getbyte(pos)) < 0x80
@@ -40,56 +47,99 @@ module Protostar
                 tag = (tag & 0x7F) | (b << 7)
                 pos += 2
               else
-                r.pos = pos
-                tag = r.read_tag_varint
+                tag = r.__seek(pos, limit).read_tag_varint
                 pos = r.pos
               end
-              #{branches.empty? ? "if false" : "case tag"}
               #{branches}
-              else
-                r.pos = pos
-                if Protostar::Codec::Decoder.field(self, r, tag, at, depth, end_group, frozen)
-                  @unknown&.freeze
-                  return
-                end
-                limit = r.limit
-                pos = r.pos
-              end
             end
-            r.pos = pos
-            Protostar::Codec::Decoder.finish(self, r, end_group)
+            raise Protostar::DecodeError.new("missing end of group \#{end_group}", offset: pos) if end_group != 0
+            @unknown&.freeze
+            pos
           end
         RUBY
       end
 
-      def branch(info)
+      # Tags a `case` takes before it is split. YJIT compiles a `case` on an
+      # Integer as a chain of guards on the values it has seen, at most 20
+      # deep; tags past that leave compiled code. Wider messages first
+      # narrow the tag down with `<` comparisons to a `case` of this many.
+      CASE_WIDTH = 16
+
+      # Source dispatching on `tag`, with the fallback for tags that have no branch
+      #: (Array[[Integer, String]] branches) -> String
+      def dispatch(branches)
+        return fallback if branches.empty?
+        return "case tag\n#{branches.map { |_, src| src }.join}else\n#{fallback}end\n" if branches.size <= CASE_WIDTH
+        mid = (branches.size / CASE_WIDTH / 2.0).ceil * CASE_WIDTH
+        "if tag < #{branches[mid].first}\n#{dispatch(branches[0...mid])}else\n#{dispatch(branches[mid..])}end\n"
+      end
+
+      def fallback
+        <<~RUBY
+          if Protostar::Codec::Decoder.field(self, r.__seek(pos, limit), tag, at, depth, end_group, frozen)
+            @unknown&.freeze
+            return r.pos
+          end
+          pos = r.pos
+        RUBY
+      end
+
+      # The field's tags, each paired with its `when` branch
+      #: (Message::FieldInfo info) -> Array[untyped]
+      def branches(info)
         i = info.index
         tag = (info.number << 3) | info.wire_type
-        out = "when #{tag} # #{info.name}\n"
-        out << if info.map
-          slow("Protostar::Codec::Decoder.map_entry(self, values, self.class.__fields[#{i}], r, depth, frozen)")
+        body = if info.map
+          slow("Protostar::Codec::Decoder.map_entry(self, I#{i}, r, depth, frozen)")
         elsif info.message?
-          if info.repeated
-            slow("Protostar::Codec::Decoder.repeated_message(values, self.class.__fields[#{i}], r, depth, frozen, at)")
-          else
-            slow("Protostar::Codec::Decoder.singular_message(values, self.class.__fields[#{i}], r, depth, frozen, at)")
-          end
+          message(info)
         elsif info.kind == F::ENUM
           enum(info)
         else
           "#{read(info)}#{store(info, "v")}"
         end
-        if info.packable
-          packed_tag = (info.number << 3) | Wire::LENGTH_DELIMITED
-          out << "when #{packed_tag} # #{info.name}, packed\n"
-          out << if VARINT_KINDS.include?(info.kind)
-            "#{varint("n")}raise Protostar::DecodeError.new(\"length \#{n} runs past the end of the input\", offset: pos) " \
-              "if pos + n > limit\npos = __decode_packed#{i}(r, buf, pos, pos + n, limit, (values[#{i}] ||= []))\n"
-          else
-            slow("Protostar::Codec::Decoder.packed(self, values, self.class.__fields[#{i}], r)")
-          end
+        out = [[tag, "when #{tag} # #{info.name}\n#{body}"]]
+        return out unless info.packable
+        packed_tag = (info.number << 3) | Wire::LENGTH_DELIMITED
+        body = if VARINT_KINDS.include?(info.kind)
+          "#{varint("n")}#{check_length}pos = __decode_packed#{i}(r, buf, pos, pos + n, (#{info.ivar} ||= []))\n"
+        else
+          slow("Protostar::Codec::Decoder.packed(self, I#{i}, r)")
         end
-        out
+        out << [packed_tag, "when #{packed_tag} # #{info.name}, packed\n#{body}"]
+      end
+
+      # A message or group, read by the child's loop called from here; the
+      # checks and their offsets are those of Decoder.nested
+      def message(info)
+        i = info.index
+        iv = info.ivar
+        src = +"raise Protostar::DecodeError.new(\"recursion limit exceeded\", offset: at) if depth <= 0\n"
+        if info.kind == F::GROUP
+          stop = "limit"
+          group = info.number
+        else
+          src << varint("n") << check_length
+          stop = "pos + n"
+          group = 0
+        end
+        src << if info.repeated
+          "sub = I#{i}.message_class.allocate.__reset\n(#{iv} ||= []) << sub\n"
+        else
+          <<~RUBY
+            if (sub = #{iv}).nil?
+              #{siblings(info)}sub = #{iv} = I#{i}.message_class.allocate.__reset
+            elsif sub.frozen?
+              sub = #{iv} = sub.dup
+            end
+          RUBY
+        end
+        src << "pos = sub.__decode_fields(r, buf, pos, #{stop}, depth - 1, #{group}, frozen)\n"
+        src << "sub.freeze if frozen\n"
+      end
+
+      def check_length
+        "raise Protostar::DecodeError.new(\"length \#{n} runs past the end of the input\", offset: pos) if pos + n > limit\n"
       end
 
       VARINT_KINDS = [F::INT32, F::INT64, F::UINT32, F::UINT64, F::SINT32, F::SINT64, F::BOOL].freeze
@@ -100,7 +150,7 @@ module Protostar
       # with the loops inline.
       def packed_method(info)
         <<~RUBY
-          def __decode_packed#{info.index}(r, buf, pos, stop, limit, list)
+          def __decode_packed#{info.index}(r, buf, pos, stop, list)
             while pos < stop
             #{read(info, "stop")}list << v
             end
@@ -111,17 +161,12 @@ module Protostar
 
       # Hands the reader to a Decoder method and picks the position back up
       def slow(call)
-        "r.pos = pos\n#{call}\npos = r.pos\n"
+        "r.__seek(pos, limit)\n#{call}\npos = r.pos\n"
       end
 
       # Source reading a varint into `var`, inline when it is one or two
       # bytes; `lim` is where its input ends (a packed run's end, say)
       def varint(var, lim = "limit")
-        fallback = if lim == "limit"
-          "r.pos = pos\n#{var} = r.read_varint\npos = r.pos\n"
-        else
-          "r.pos = pos\nr.pop_limit(#{lim})\n#{var} = r.read_varint\nr.pop_limit(limit)\npos = r.pos\n"
-        end
         <<~RUBY
           if pos < #{lim} && (#{var} = buf.getbyte(pos)) < 0x80
             pos += 1
@@ -129,7 +174,9 @@ module Protostar
             #{var} = (#{var} & 0x7F) | (b << 7)
             pos += 2
           else
-          #{fallback}end
+            #{var} = r.__seek(pos, #{lim}).read_varint
+            pos = r.pos
+          end
         RUBY
       end
 
@@ -157,8 +204,7 @@ module Protostar
       end
 
       def bytes(info)
-        src = varint("n")
-        src << "raise Protostar::DecodeError.new(\"length \#{n} runs past the end of the input\", offset: pos) if pos + n > limit\n"
+        src = varint("n") << check_length
         src << "v = buf.byteslice(pos, n)\npos += n\n"
         if info.kind == F::BYTES
           src << "v.force_encoding(Encoding::BINARY).freeze\n"
@@ -176,7 +222,7 @@ module Protostar
       def enum(info)
         src = info.closed_enum ? "start = pos\n#{varint("v")}" : varint("v")
         src << "v -= 0x1_0000_0000 if (v &= 0xFFFF_FFFF) >= 0x8000_0000\n"
-        src << "if (e = self.class.__fields[#{info.index}].enum_names[v])\n"
+        src << "if (e = #{enum_name(info)})\n"
         src << store(info, "e")
         src << if info.closed_enum
           "else\nProtostar::Codec::Decoder.closed_enum_value(self, #{info.number}, buf, start, pos)\n"
@@ -186,11 +232,24 @@ module Protostar
         src << "end\n"
       end
 
+      # An expression for the name of enum number `v`, nil when it has none:
+      # a literal `case`, or a lookup in the field's table for a large enum
+      def enum_name(info)
+        names = info.enum_names
+        return "I#{info.index}.enum_names[v]" if names.size > ENUM_CASE_MAX
+        "case v\n#{names.map { |n, name| "when #{n} then #{name.inspect}\n" }.join}end"
+      end
+
+      ENUM_CASE_MAX = 256
+
       def store(info, var)
-        i = info.index
-        return "(values[#{i}] ||= []) << #{var}\n" if info.repeated
-        siblings = info.siblings ? info.siblings.map { |s| "values[#{s}] = nil\n" }.join : ""
-        "#{siblings}values[#{i}] = #{var}\n"
+        return "(#{info.ivar} ||= []) << #{var}\n" if info.repeated
+        "#{siblings(info)}#{info.ivar} = #{var}\n"
+      end
+
+      # Clears the other members of the field's oneof
+      def siblings(info)
+        info.siblings ? info.siblings.map { |s| "@_#{s} = nil\n" }.join : ""
       end
     end
   end

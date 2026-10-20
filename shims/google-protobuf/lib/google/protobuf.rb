@@ -82,7 +82,7 @@ module Google
         message.__greplace_unknown(kept) if kept.size != message.unknown_fields.size
         message.class.__fields.each do |info|
           next unless info.map ? info.value.message? : info.message?
-          v = message.__values[info.index]
+          v = message.__slot(info.index)
           case v
           when nil then next
           when Hash then v.each_value { |m| discard_unknown(m) }

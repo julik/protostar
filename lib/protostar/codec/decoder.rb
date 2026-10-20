@@ -18,7 +18,7 @@ module Protostar
       def decode(klass, bytes, recursion_limit: RECURSION_LIMIT, frozen: false)
         r = Wire::Reader.new(bytes)
         msg = klass.__empty
-        msg.__decode_fields(r, recursion_limit, 0, frozen)
+        msg.__decode_fields(r, r.buffer, 0, r.limit, recursion_limit, 0, frozen)
         msg.freeze if frozen
         msg
       end
@@ -72,29 +72,26 @@ module Protostar
         end
         Wire::Reader.check_tag(tag, at)
         info = msg.class.__by_number[number]
-        values = msg.__values
         if info.nil?
           unknown(msg, r, number, wt, depth)
         elsif wt == info.wire_type
           if info.map
-            map_entry(msg, values, info, r, depth, frozen)
+            map_entry(msg, info, r, depth, frozen)
           elsif info.message?
             if info.repeated
-              repeated_message(values, info, r, depth, frozen, at)
+              repeated_message(msg, info, r, depth, frozen, at)
             else
-              singular_message(values, info, r, depth, frozen, at)
+              singular_message(msg, info, r, depth, frozen, at)
             end
           elsif info.kind == F::ENUM
-            enum(msg, values, info, r)
+            enum(msg, info, r)
           elsif info.repeated
-            (values[info.index] ||= []) << scalar(r, info)
+            list_of(msg, info) << scalar(r, info)
           else
-            siblings = info.siblings
-            siblings&.each { |s| values[s] = nil }
-            values[info.index] = scalar(r, info)
+            store(msg, info, scalar(r, info))
           end
         elsif wt == Wire::LENGTH_DELIMITED && info.packable
-          packed(msg, values, info, r)
+          packed(msg, info, r)
         else
           # a wire type that does not match the field makes it unknown, as in protoc
           unknown(msg, r, number, wt, depth)
@@ -102,27 +99,18 @@ module Protostar
         false
       end
 
-      # Checks the end of a message's fields: a group must have seen its end tag
-      def finish(msg, r, end_group)
-        raise DecodeError.new("missing end of group #{end_group}", offset: r.pos) if end_group != 0
-        msg.__seal_unknown
-      end
-
-      def repeated_message(values, info, r, depth, frozen, at)
+      def repeated_message(msg, info, r, depth, frozen, at)
         sub = info.message_class.__empty
         nested(sub, info, r, depth, frozen, at)
-        (values[info.index] ||= []) << sub
+        list_of(msg, info) << sub
       end
 
-      def singular_message(values, info, r, depth, frozen, at)
-        i = info.index
-        sub = values[i]
+      def singular_message(msg, info, r, depth, frozen, at)
+        sub = msg.__slot(info.index)
         if sub.nil?
-          siblings = info.siblings
-          siblings&.each { |s| values[s] = nil }
-          sub = values[i] = info.message_class.__empty
+          sub = store(msg, info, info.message_class.__empty)
         elsif sub.frozen?
-          sub = values[i] = sub.dup
+          sub = msg.__set_slot(info.index, sub.dup)
         end
         nested(sub, info, r, depth, frozen, at)
       end
@@ -130,13 +118,16 @@ module Protostar
       # Reads a message or group value into `sub`
       def nested(sub, info, r, depth, frozen, at)
         raise DecodeError.new("recursion limit exceeded", offset: at) if depth <= 0
+        limit = r.limit
         if info.kind == F::GROUP
-          sub.__decode_fields(r, depth - 1, info.number, frozen)
+          pos = sub.__decode_fields(r, r.buffer, r.pos, limit, depth - 1, info.number, frozen)
         else
-          old = r.push_limit(r.read_varint)
-          sub.__decode_fields(r, depth - 1, 0, frozen)
-          r.pop_limit(old)
+          length = r.read_varint
+          pos = r.pos
+          raise DecodeError.new("length #{length} runs past the end of the input", offset: pos) if pos + length > limit
+          pos = sub.__decode_fields(r, r.buffer, pos, pos + length, depth - 1, 0, frozen)
         end
+        r.__seek(pos, limit)
         sub.freeze if frozen
       end
 
@@ -147,7 +138,7 @@ module Protostar
         msg.__add_unknown(UnknownField.new(number, wt, bytes))
       end
 
-      def enum(msg, values, info, r)
+      def enum(msg, info, r)
         start = r.pos
         n = r.read_int32
         v = info.enum_names[n]
@@ -160,11 +151,9 @@ module Protostar
           v = n
         end
         if info.repeated
-          (values[info.index] ||= []) << v
+          list_of(msg, info) << v
         else
-          siblings = info.siblings
-          siblings&.each { |s| values[s] = nil }
-          values[info.index] = v
+          store(msg, info, v)
         end
       end
 
@@ -205,9 +194,9 @@ module Protostar
         msg.__add_unknown(UnknownField.new(number, Wire::VARINT, bytes))
       end
 
-      def packed(msg, values, info, r)
+      def packed(msg, info, r)
         old = r.push_limit(r.read_varint)
-        list = (values[info.index] ||= [])
+        list = list_of(msg, info)
         kind = info.kind
         if (fixed = F::FIXED[kind])
           width = fixed[0]
@@ -237,7 +226,7 @@ module Protostar
         r.pop_limit(old)
       end
 
-      def map_entry(msg, values, info, r, depth, frozen)
+      def map_entry(msg, info, r, depth, frozen)
         start = r.pos
         old = r.push_limit(r.read_varint)
         key_info = info.key
@@ -290,7 +279,18 @@ module Protostar
           value = value_info.message? ? value_info.message_class.__empty : value_info.default
         end
         value.freeze if frozen
-        (values[info.index] ||= {})[key] = value
+        (msg.__slot(info.index) || msg.__set_slot(info.index, {}))[key] = value
+      end
+
+      # The Array of a repeated field, made when it has none
+      def list_of(msg, info)
+        msg.__slot(info.index) || msg.__set_slot(info.index, [])
+      end
+
+      # Sets a singular field, unsetting the rest of its oneof; returns the value
+      def store(msg, info, value)
+        info.siblings&.each { |s| msg.__set_slot(s, nil) }
+        msg.__set_slot(info.index, value)
       end
     end
   end

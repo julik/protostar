@@ -12,10 +12,10 @@ module Protostar
   # Person.decode(bytes) == person # => true
   # ```
   #
-  # Values are kept in one Array per message, a slot per field. Singular
-  # fields with presence hold nil when unset; fields without presence hold
-  # their value, the default included. Repeated fields hold an Array and maps
-  # a Hash, both allocated on first access.
+  # Each field is kept in an instance variable of its own, a slot per field
+  # (see Accessors). Singular fields with presence hold nil when unset;
+  # fields without presence hold their value, the default included. Repeated
+  # fields hold an Array and maps a Hash, both allocated on first access.
   class Message
     EMPTY_ARRAY = [].freeze
     EMPTY_HASH = {}.freeze
@@ -146,9 +146,7 @@ module Protostar
       # Returns a message with every field unset, bypassing argument parsing.
       #: () -> Message
       def __empty # :nodoc:
-        m = allocate
-        m.__reset
-        m
+        allocate.__reset
       end
 
       def __define(descriptor:, fields:, oneofs:) # :nodoc:
@@ -180,8 +178,7 @@ module Protostar
     def initialize(hash = nil, **fields)
       klass = self.class
       raise NotImplementedError, "#{klass} is abstract; define message classes with Protostar::Types" unless klass.__fields
-      @values = klass.__template.dup
-      @unknown = nil
+      __reset
       __assign(hash) if hash
       __assign(fields) unless fields.empty?
     end
@@ -262,7 +259,7 @@ module Protostar
     # gives a plain Hash), but nested messages always convert field by field
     def __to_h # :nodoc:
       h = {}
-      values = @values
+      values = __slots
       self.class.__fields.each do |info|
         v = values[info.index]
         next if v.nil?
@@ -288,8 +285,8 @@ module Protostar
       return other == self if other.is_a?(View)
       return true if equal?(other)
       return false unless other.instance_of?(self.class)
-      mine = @values
-      theirs = other.__values
+      mine = __slots
+      theirs = other.__slots
       self.class.__fields.each do |info|
         i = info.index
         return false unless Message.__equal_values?(info, mine[i], theirs[i])
@@ -301,15 +298,15 @@ module Protostar
     #: () -> Integer
     def hash
       h = [self.class]
-      self.class.__fields.each { |info| h << Message.__hash_value(info, @values[info.index]) }
+      values = __slots
+      self.class.__fields.each { |info| h << Message.__hash_value(info, values[info.index]) }
       h.hash
     end
 
     # Deep copy; the copy is not frozen
     def initialize_copy(source)
       super
-      @values = @values.map { |v| Message.__copy_value(v) }
-      @unknown = @unknown&.dup&.freeze
+      __copy_slots
     end
 
     # Deep copy, frozen when the original is (or when asked)
@@ -320,21 +317,11 @@ module Protostar
       copy
     end
 
-    # Freezes the message and everything it holds, after which it is Ractor.shareable?
-    #: () -> self
-    def freeze
-      return self if frozen?
-      @values.each do |v|
-        case v
-        when Message then v.freeze
-        when Array then v.each(&:freeze).freeze
-        when Hash then v.each_value(&:freeze).freeze
-        end
-      end
-      @values.freeze
-      @unknown&.freeze
-      super
-    end
+    ##
+    # :method: freeze
+    # Freezes the message and everything it holds, after which it is
+    # Ractor.shareable?. Each message class has its own, generated with its
+    # accessors.
 
     # Merges `other` into this message: singular fields set in `other`
     # replace ours, messages merge recursively, repeated fields append, maps
@@ -345,29 +332,29 @@ module Protostar
         raise Protostar::TypeError, "cannot merge a #{other.class} into a #{self.class.descriptor.full_name}"
       end
       __check_frozen
-      theirs = other.__values
+      theirs = other.__slots
       self.class.__fields.each do |info|
         i = info.index
         v = theirs[i]
         next if v.nil?
         if info.map
           next if v.empty?
-          (@values[i] ||= {}).merge!(info.value.message? ? v.transform_values(&:dup) : v)
+          (__slot(i) || __set_slot(i, {})).merge!(info.value.message? ? v.transform_values(&:dup) : v)
         elsif info.repeated
           next if v.empty?
-          (@values[i] ||= []).concat(info.message? ? v.map(&:dup) : v)
+          (__slot(i) || __set_slot(i, [])).concat(info.message? ? v.map(&:dup) : v)
         elsif info.message?
-          mine = @values[i]
+          mine = __slot(i)
           if mine.nil?
             __clear_siblings(info)
-            @values[i] = v.dup
+            __set_slot(i, v.dup)
           else
-            mine = @values[i] = mine.dup if mine.frozen?
+            mine = __set_slot(i, mine.dup) if mine.frozen?
             mine.merge!(v)
           end
         elsif info.presence || !info.zero?(v)
           __clear_siblings(info)
-          @values[i] = v
+          __set_slot(i, v)
         end
       end
       @unknown = ((@unknown || EMPTY_ARRAY) + other.unknown_fields).freeze unless other.unknown_fields.empty?
@@ -385,9 +372,10 @@ module Protostar
     # Returns whether every required field is set, here and in every nested message.
     #: () -> bool
     def initialized?
-      self.class.__required.each { |info| return false if @values[info.index].nil? }
+      values = __slots
+      self.class.__required.each { |info| return false if values[info.index].nil? }
       self.class.__fields.each do |info|
-        v = @values[info.index]
+        v = values[info.index]
         next if v.nil?
         if info.map
           next unless info.value.message?
@@ -434,23 +422,15 @@ module Protostar
     #: () -> Array[[String, untyped]]
     def __shown # :nodoc:
       shown = []
+      values = __slots
       self.class.__fields.each do |info|
-        v = @values[info.index]
+        v = values[info.index]
         next if v.nil?
         next if (info.repeated || info.map) && v.empty?
         next if !info.presence && !info.repeated && !info.map && info.zero?(v)
         shown << [info.name, v]
       end
       shown
-    end
-
-    def __values # :nodoc:
-      @values
-    end
-
-    def __reset # :nodoc:
-      @values = self.class.__template.dup
-      @unknown = nil
     end
 
     # Appends an unknown field; the decoder's way in
@@ -473,17 +453,17 @@ module Protostar
       __check_frozen
       info = self.class.__fields[index]
       if value.nil?
-        @values[index] = (info.presence || info.repeated || info.map) ? nil : info.default
+        __set_slot(index, (info.presence || info.repeated || info.map) ? nil : info.default)
       else
         value = Coercion.field(info, value)
         __clear_siblings(info)
-        @values[index] = value
+        __set_slot(index, value)
       end
     end
 
     def __clear(index) # :nodoc:
       __check_frozen
-      @values[index] = nil
+      __set_slot(index, nil)
     end
 
     # The stored Array or Hash of a repeated or map field, made on first use
@@ -492,12 +472,12 @@ module Protostar
       if frozen?
         info.map ? EMPTY_HASH : EMPTY_ARRAY
       else
-        @values[index] = info.map ? {} : []
+        __set_slot(index, info.map ? {} : [])
       end
     end
 
     def __get(info) # :nodoc:
-      v = @values[info.index]
+      v = __slot(info.index)
       if info.repeated || info.map
         v || __container(info.index)
       elsif v.nil?
@@ -578,7 +558,7 @@ module Protostar
 
     def __clear_siblings(info)
       siblings = info.siblings
-      siblings&.each { |s| @values[s] = nil }
+      siblings&.each { |s| __set_slot(s, nil) }
     end
 
     def __check_frozen

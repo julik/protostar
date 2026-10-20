@@ -3,23 +3,49 @@
 module Protostar
   module Codec
     # Writes a decoding loop for one message class as Ruby source and evals
-    # it into the class as `__decode_fields`. The loop dispatches on the whole
+    # it into the class as `__decode_fields(r, buf, pos, limit, depth,
+    # end_group, frozen)`, which reads the fields between `pos` and `limit`
+    # and returns the position after them. The loop dispatches on the whole
     # tag with one `case` (field number and wire type at once), reads varints
-    # of one byte and fixed-width values inline, and keeps the read position
-    # in a local. Anything it has no branch for (unknown fields, wire type
-    # mismatches, end-group tags, malformed tags) goes to Decoder.field.
-    #
-    # A generic loop over field descriptors spent most of its time in method
-    # calls on the field table; this does the same work with a fraction of them.
+    # of one or two bytes and fixed-width values inline, and keeps the
+    # position and limit in locals. A nested message or group is read by a
+    # call to the child's own `__decode_fields` from the parent's loop, so
+    # each such call site sees one class and YJIT keeps it monomorphic.
+    # Anything without a branch (unknown fields, wire type mismatches,
+    # end-group tags, malformed tags, maps) goes to Decoder through the
+    # reader `r`, moved to the local position and limit first.
     module DecodeGenerator
       # :nodoc: all
       F: untyped
 
+      # The methods go into a module of their own, included into the class,
+      # whose constants `I<index>` are the fields' Message::FieldInfo objects: a
+      # constant is the cheapest thing a method can name, and these add none
+      # to the message class. (Constants holding the field classes would
+      # give anonymous classes a name.)
       def self?.install: (Class klass, Array[Message::FieldInfo] fields) -> untyped
 
       def self?.source: (untyped fields) -> untyped
 
-      def self?.branch: (untyped info) -> untyped
+      # Tags a `case` takes before it is split. YJIT compiles a `case` on an
+      # Integer as a chain of guards on the values it has seen, at most 20
+      # deep; tags past that leave compiled code. Wider messages first
+      # narrow the tag down with `<` comparisons to a `case` of this many.
+      CASE_WIDTH: ::Integer
+
+      # Source dispatching on `tag`, with the fallback for tags that have no branch
+      def self?.dispatch: (Array[[ Integer, String ]] branches) -> String
+
+      def self?.fallback: () -> untyped
+
+      # The field's tags, each paired with its `when` branch
+      def self?.branches: (Message::FieldInfo info) -> Array[untyped]
+
+      # A message or group, read by the child's loop called from here; the
+      # checks and their offsets are those of Decoder.nested
+      def self?.message: (untyped info) -> untyped
+
+      def self?.check_length: () -> untyped
 
       VARINT_KINDS: untyped
 
@@ -45,7 +71,16 @@ module Protostar
 
       def self?.enum: (untyped info) -> untyped
 
+      # An expression for the name of enum number `v`, nil when it has none:
+      # a literal `case`, or a lookup in the field's table for a large enum
+      def self?.enum_name: (untyped info) -> untyped
+
+      ENUM_CASE_MAX: ::Integer
+
       def self?.store: (untyped info, untyped var) -> untyped
+
+      # Clears the other members of the field's oneof
+      def self?.siblings: (untyped info) -> untyped
     end
   end
 end

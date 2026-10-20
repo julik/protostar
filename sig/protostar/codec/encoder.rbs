@@ -2,15 +2,19 @@
 
 module Protostar
   module Codec
-    # The second encoding pass writes fields in ascending number order, then
-    # unknown fields verbatim, using the sizes the first pass recorded. The
-    # per-class `__write` methods (EncodeGenerator) do the work; this
-    # module has the entry points and the parts they share.
+    # Encodes messages: in one pass into a String, or in two (sizes first)
+    # into a sink. Fields go in ascending number order, then unknown fields
+    # verbatim. The per-class `__encode` and `__write` methods
+    # (EncodeGenerator) do the work; this module has the entry points and
+    # the parts they share.
     module Encoder
       # :nodoc: all
       F: untyped
 
       BINARY: untyped
+
+      # Zero bytes to splice in for a length longer than its reserved byte
+      PAD: untyped
 
       # Returns a binary String.
       def self?.encode: (untyped msg) -> String
@@ -18,6 +22,14 @@ module Protostar
       def self?.encode_to: (untyped msg, untyped io) -> untyped
 
       def self?.encode_delimited: (untyped msg, untyped io) -> (String | IO)
+
+      # Writes length `n` into the byte reserved for it at `at`, splicing in
+      # as many more as the varint needs
+      def self?.patch_length: (untyped buf, untyped at, untyped n) -> untyped
+
+      # Every entry of a map field, in insertion order, key then value, for
+      # the one-pass encoder; checks what Sizer.entry checks
+      def self?.map_into: (untyped info, untyped hash, untyped buf) -> untyped
 
       # Returns the number of an enum value as stored (Symbol or Integer).
       # Raises EncodeError for a name the enum does not have or an Integer out of int32 range.
@@ -31,6 +43,9 @@ module Protostar
 
       # Every entry of a map field, in insertion order, key then value
       def self?.map: (untyped info, untyped hash, untyped w, untyped sizes) -> untyped
+
+      # `buf` is binary, so `<<` appends the bytes as they are
+      def self?.unknown_into: (String buf, Array[UnknownField] list) -> untyped
 
       def self?.unknown: (untyped w, Array[UnknownField] list) -> untyped
     end

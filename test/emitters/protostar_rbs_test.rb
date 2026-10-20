@@ -152,7 +152,8 @@ class ProtostarRbsTest < Minitest::Test
     writers = rbs.scan(/^ {6}attr_writer ([a-z_]+)\(/).flatten.map { |n| "#{n}=" }
     defs = rbs.scan(/^ {6}def ([a-z_?]+):/).flatten - ["initialize"]
     names = (readers + writers + defs).map(&:to_sym).sort
-    assert_equal cart.public_instance_methods(false).reject { |m| m.start_with?("__") }.sort, names
+    own = cart.public_instance_methods(false).reject { |m| m.start_with?("__") || Protostar::Message.method_defined?(m) }
+    assert_equal own.sort, names
     refute_includes rbs, "attr_reader hash", "a field named like a Message method has no reader"
     refute_includes rbs, "_const", "no google-protobuf readers"
     refute_includes rbs, "Google::Protobuf::RepeatedField"
